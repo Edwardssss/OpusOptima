@@ -1,0 +1,63 @@
+# Build and compilation artifacts
+build/
+result/
+log/
+cmake-build-debug/
+cmake-build-release/
+cmake-build-relwithdebinfo/
+cmake-build-minsizerel/
+dist/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.lib
+*.exe
+*.out
+
+# IDE and editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+*.bak
+
+# CMake and toolchain
+CMakeUserPresets.json
+CMakePresets.json
+.cmake/
+compile_commands.json
+cmake_install.cmake
+CMakeCache.txt
+CTestTestfile.cmake
+DartConfiguration.tcl
+
+# Testing and benchmark artifacts
+Testing/
+test-artifacts/
+*.gcda
+*.gcno
+
+# Dependencies and submodule build outputs
+third_party/benchmark/build/
+third_party/HiGHS/build/
+third_party/spdlog/build/
+third_party/googletest/build/
+
+# Generated files
+*.log
+*.dep
+.ninja_deps
+.ninja_log
+build.ninja
+
+# OS-specific files
+Thumbs.db
+.AppleDouble
+.LSOverride
+._*
