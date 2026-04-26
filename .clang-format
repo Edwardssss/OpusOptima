@@ -1,0 +1,31 @@
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+
+PointerAlignment: Left
+AccessModifierOffset: 0
+
+NamespaceIndentation: None
+CompactNamespaces: true
+
+BreakBeforeBraces: Attach
+
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortEnumsOnASingleLine: true
+
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros: true
+AlignTrailingComments: true
+AlignOperands: Align
+
+IndentPPDirectives: AfterHash
+IndentGotoLabels: false
+
+PenaltyReturnTypeOnItsOwnLine: 10000
