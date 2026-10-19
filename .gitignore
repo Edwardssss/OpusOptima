@@ -61,3 +61,6 @@ Thumbs.db
 .AppleDouble
 .LSOverride
 ._*
+
+# Other files to ignore
+progress_doc/
