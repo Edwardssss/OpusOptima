@@ -12,14 +12,17 @@ namespace opusoptima::solvers {
 namespace {
 
 // Axial direction table, identical to `core::kAxialDirections`.
+// Verifier direction order (`third_party/omsim/sim.c: direction_for_offset`):
+// 0:(1,0) 1:(0,1) 2:(-1,1) 3:(-1,0) 4:(0,-1) 5:(1,-1). Using this order is what
+// makes an emitted rotation mean the same cell to the native gate.
 constexpr std::array<core::HexCoord, 6> kSteps = {
-    core::HexCoord{1, 0}, core::HexCoord{1, -1}, core::HexCoord{0, -1},
-    core::HexCoord{-1, 0}, core::HexCoord{-1, 1}, core::HexCoord{0, 1},
+    core::HexCoord{1, 0}, core::HexCoord{0, 1}, core::HexCoord{-1, 1},
+    core::HexCoord{-1, 0}, core::HexCoord{0, -1}, core::HexCoord{1, -1},
 };
 
 // `arm1` geometry: reach 3, and `r` moves the facing one step down the table.
 constexpr int kArmReach = 3;
-constexpr int kRotateStep = -1;
+constexpr int kRotateStep = 1;
 // Ticks reserved per transfer component inside one period.
 constexpr int kArmSlotTicks = 4;
 
@@ -144,7 +147,7 @@ io::SolutionData ComposeAssemblyMachine(const io::PuzzleData& puzzle) {
     for (const auto& placement : placements) {
         PushObject(machine, "input", placement.reagent, {1, 0, placement.source, 0, 0});
         PushObject(machine, "arm1", placement.base, {kArmReach, placement.grab, 0, 0, 0},
-                   {{'G', tick}, {kRotateStep < 0 ? 'r' : 'R', tick + 1}, {'X', tick + 2}});
+                   {{'G', tick}, {kRotateStep > 0 ? 'r' : 'R', tick + 1}, {'X', tick + 2}});
         tick += kArmSlotTicks;
     }
     PushObject(machine, "out-std", targets.front(), {1, 0, 0, 0, 0});

@@ -16,14 +16,15 @@ struct HexStep {
     int r{};
 };
 
-constexpr std::array<HexStep, 6> kSteps = {{{1, 0}, {1, -1}, {0, -1}, {-1, 0}, {-1, 1}, {0, 1}}};
+// Verifier direction order (`third_party/omsim/sim.c: direction_for_offset`).
+constexpr std::array<HexStep, 6> kSteps = {{{1, 0}, {0, 1}, {-1, 1}, {-1, 0}, {0, -1}, {1, -1}}};
 
 // Component geometry: an `arm1` grabs at its own reach along its facing
 // direction, rotates by one 60-degree step and resets, leaving the atom one step
 // away. `kGrabDirection` is the arm facing, `kDropStep` the signed rotation.
 constexpr int kArmReach = 3;
 constexpr int kGrabDirection = 3; // west
-constexpr int kDropStep = -1;     // `r`: one counter-clockwise step
+constexpr int kDropStep = 1;      // `r`: one step in the verifier direction order
 
 struct Port {
     core::HexCoord cell{};
@@ -88,7 +89,7 @@ io::SolutionData ComposeTransferMachine(const io::PuzzleData& puzzle) {
     machine.solutionName = "Composed direct transfer";
     PushObject(machine, "input", reagent, {1, 0, sourceIndex, 0, 0});
     PushObject(machine, "arm1", base, {kArmReach, kGrabDirection, 0, 0, 0},
-               {{'G', 0}, {kDropStep < 0 ? 'r' : 'R', 1}, {'X', 2}});
+               {{'G', 0}, {kDropStep > 0 ? 'r' : 'R', 1}, {'X', 2}});
     PushObject(machine, "out-std", outputPort.cell, {1, 0, 0, 0, 0});
     return machine;
 }
