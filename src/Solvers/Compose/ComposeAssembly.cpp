@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cstddef>
-#include <map>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -11,7 +10,6 @@
 namespace opusoptima::solvers {
 namespace {
 
-// Axial direction table, identical to `core::kAxialDirections`.
 // Verifier direction order (`third_party/omsim/sim.c: direction_for_offset`):
 // 0:(1,0) 1:(0,1) 2:(-1,1) 3:(-1,0) 4:(0,-1) 5:(1,-1). Using this order is what
 // makes an emitted rotation mean the same cell to the native gate.
@@ -20,11 +18,9 @@ constexpr std::array<core::HexCoord, 6> kSteps = {
     core::HexCoord{-1, 0}, core::HexCoord{0, -1}, core::HexCoord{1, -1},
 };
 
-// `arm1` geometry: reach 3, and `r` moves the facing one step down the table.
+// `arm1` geometry: reach 3, and `r` advances the facing by one table step.
 constexpr int kArmReach = 3;
 constexpr int kRotateStep = 1;
-// Ticks reserved per transfer component inside one period.
-constexpr int kArmSlotTicks = 4;
 
 struct Cell {
     int q{};
@@ -33,8 +29,16 @@ struct Cell {
     friend auto operator<=>(const Cell&, const Cell&) = default;
 };
 
-Cell ToCell(core::HexCoord coord) {
-    return {coord.q, coord.r};
+Cell Add(Cell a, Cell b) {
+    return {a.q + b.q, a.r + b.r};
+}
+
+Cell Subtract(Cell a, Cell b) {
+    return {a.q - b.q, a.r - b.r};
+}
+
+Cell Scale(Cell a, int k) {
+    return {a.q * k, a.r * k};
 }
 
 Cell Step(int direction) {
@@ -42,21 +46,12 @@ Cell Step(int direction) {
     return {step.q, step.r};
 }
 
-Cell Add(Cell a, Cell b) {
-    return {a.q + b.q, a.r + b.r};
-}
-
-Cell Scale(Cell a, int k) {
-    return {a.q * k, a.r * k};
-}
-
-Cell Subtract(Cell a, Cell b) {
-    return {a.q - b.q, a.r - b.r};
-}
-
-bool SameDirection(Cell delta, int direction) {
-    const Cell step = Step(direction);
-    return delta.q == step.q && delta.r == step.r;
+int DirectionOf(Cell delta) {
+    for (int direction = 0; direction < 6; ++direction) {
+        const Cell step = Step(direction);
+        if (delta.q == step.q && delta.r == step.r) return direction;
+    }
+    return -1;
 }
 
 int PushObject(io::SolutionData& machine, const char* type, Cell position, std::vector<int> body,
@@ -70,7 +65,7 @@ int PushObject(io::SolutionData& machine, const char* type, Cell position, std::
     return static_cast<int>(machine.objects.size()) - 1;
 }
 
-// A single-atom reagent source that carries `element`, or -1.
+// Single-atom reagent source carrying `element`, or -1.
 int SingleAtomSourceIndex(const io::PuzzleData& puzzle, core::AtomType element) {
     for (std::size_t i = 0; i < puzzle.inputs.size(); ++i) {
         const auto& molecule = puzzle.inputs[i];
@@ -80,6 +75,68 @@ int SingleAtomSourceIndex(const io::PuzzleData& puzzle, core::AtomType element) 
     }
     return -1;
 }
+
+struct Arm {
+    std::size_t atom{};
+    Cell base{};
+    Cell reagent{};
+    int grab{};
+};
+
+// One transfer component per product atom. An arm sweeps a radius-three ring
+// between its reagent cell and its target cell; the two intermediate ring cells
+// must stay clear of every other atom cell, otherwise the gate reports a motion
+// collision. Backtracking keeps the search cheap: a failed arm only retries its
+// own six facings.
+class Placement {
+    public:
+    explicit Placement(std::vector<Cell> targets) : targets_(std::move(targets)) {}
+
+    [[nodiscard]] const std::vector<Arm>& Arms() const noexcept {
+        return arms_;
+    }
+
+    bool Solve() {
+        occupied_ = std::set<Cell>(targets_.begin(), targets_.end());
+        return Visit(0);
+    }
+
+    private:
+    bool Visit(std::size_t index) {
+        if (index == targets_.size()) return true;
+        const Cell target = targets_[index];
+        for (int grab = 0; grab < 6; ++grab) {
+            const int drop = ((grab + kRotateStep) % 6 + 6) % 6;
+            const Cell base = Subtract(target, Scale(Step(drop), kArmReach));
+            const Cell reagent = Add(base, Scale(Step(grab), kArmReach));
+            if (used_.count(base) || used_.count(reagent)) continue;
+            if (occupied_.count(base) || occupied_.count(reagent)) continue;
+            const std::array<Cell, 2> sweep = {
+                Add(base, Add(Scale(Step(grab), 2), Step(drop))),
+                Add(base, Add(Step(grab), Scale(Step(drop), 2))),
+            };
+            bool blocked = false;
+            for (const Cell& cell : sweep) {
+                if (used_.count(cell)) blocked = true;
+                if (occupied_.count(cell) && cell != target) blocked = true;
+            }
+            if (blocked) continue;
+            used_.insert(base);
+            used_.insert(reagent);
+            arms_.push_back({index, base, reagent, grab});
+            if (Visit(index + 1)) return true;
+            arms_.pop_back();
+            used_.erase(base);
+            used_.erase(reagent);
+        }
+        return false;
+    }
+
+    std::vector<Cell> targets_;
+    std::set<Cell> occupied_;
+    std::set<Cell> used_;
+    std::vector<Arm> arms_;
+};
 
 } // namespace
 
@@ -98,70 +155,30 @@ io::SolutionData ComposeAssemblyMachine(const io::PuzzleData& puzzle) {
                                     "single-atom reagent source");
 
     const auto& output = puzzle.outputs.front();
-    // Product frame: atom 0 sits on the output port, every other atom keeps its
-    // relative offset, so the machine is a function of the molecule alone.
-    const auto origin = ToCell(output.atoms.front().position);
     std::vector<Cell> targets;
     targets.reserve(output.atoms.size());
-    for (const auto& atom : output.atoms) targets.push_back(Subtract(ToCell(atom.position), origin));
+    for (const auto& atom : output.atoms) targets.push_back(Cell{atom.position.q, atom.position.r});
+
+    Placement placement(targets);
+    if (!placement.Solve())
+        throw std::invalid_argument("composed assembly found no collision-free arm placement");
 
     io::SolutionData machine;
     machine.puzzleName = puzzle.name;
     machine.solutionName = "Composed assembly";
-    std::set<Cell> occupied;
-    occupied.insert(targets.front()); // the output port
-
-    struct Placement {
-        std::size_t atom{};
-        Cell target{};
-        Cell reagent{};
-        Cell base{};
-        int grab{};
-        int source{};
-    };
-    std::vector<Placement> placements;
-
-    for (std::size_t i = 0; i < targets.size(); ++i) {
-        const Cell target = targets[i];
-        const int source = SingleAtomSourceIndex(puzzle, output.atoms[i].type);
-        bool placed = false;
-        for (int grab = 0; grab < 6 && !placed; ++grab) {
-            const int drop = ((grab + kRotateStep) % 6 + 6) % 6;
-            // target = base + reach*drop and reagent = base + reach*grab, so the
-            // reagent cell follows from the target and the two facing directions.
-            const Cell base = Subtract(target, Scale(Step(drop), kArmReach));
-            const Cell reagent = Add(base, Scale(Step(grab), kArmReach));
-            if (occupied.count(base) || occupied.count(reagent)) continue;
-            occupied.insert(base);
-            occupied.insert(reagent);
-            placements.push_back({i, target, reagent, base, grab, source});
-            placed = true;
-        }
-        if (!placed) throw std::invalid_argument("composed assembly found no free arm placement");
+    for (const auto& arm : placement.Arms()) {
+        const int source = SingleAtomSourceIndex(puzzle, output.atoms[arm.atom].type);
+        PushObject(machine, "input", arm.reagent, {1, 0, source, 0, 0});
+        PushObject(machine, "arm1", arm.base, {kArmReach, arm.grab, 0, 0, 0},
+                   {{'G', 0}, {kRotateStep > 0 ? 'r' : 'R', 1}, {'X', 2}});
     }
-
-    // Components are pipelined: each transfer arm grabs, rotates and releases in
-    // its own slot of the period so two arms never sweep through the same cells at
-    // the same time.
-    int tick = 0;
-    for (const auto& placement : placements) {
-        PushObject(machine, "input", placement.reagent, {1, 0, placement.source, 0, 0});
-        PushObject(machine, "arm1", placement.base, {kArmReach, placement.grab, 0, 0, 0},
-                   {{'G', tick}, {kRotateStep > 0 ? 'r' : 'R', tick + 1}, {'X', tick + 2}});
-        tick += kArmSlotTicks;
-    }
-    PushObject(machine, "out-std", targets.front(), {1, 0, 0, 0, 0});
-
-    // Bonding stations: the engine model (`third_party/omsim/sim.c`, `BONDING`)
-    // bonds the atom on the bonder cell with the atom one step along its facing,
-    // so a bond between two adjacent product cells maps to exactly one posture.
+    // The gate matches the product against the puzzle frame, so the output port
+    // sits at the world origin and the atoms are placed on their puzzle cells.
+    PushObject(machine, "out-std", Cell{0, 0}, {1, 0, 0, 0, 0});
     for (const auto& bond : output.bonds) {
-        const Cell a = Subtract(ToCell(bond.from), origin);
-        const Cell b = Subtract(ToCell(bond.to), origin);
-        const Cell delta = Subtract(b, a);
-        int facing = -1;
-        for (int direction = 0; direction < 6; ++direction)
-            if (SameDirection(delta, direction)) facing = direction;
+        const Cell a{bond.from.q, bond.from.r};
+        const Cell b{bond.to.q, bond.to.r};
+        const int facing = DirectionOf(Subtract(b, a));
         if (facing < 0)
             throw std::invalid_argument("composed assembly requires adjacent bonded atoms");
         PushObject(machine, "bonder", a, {1, facing, 0, 0, 0});

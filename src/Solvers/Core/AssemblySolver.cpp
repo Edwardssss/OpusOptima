@@ -6,7 +6,6 @@
 #include "ChemicalPlanner.hpp"
 #include "ClosedMetalInventory.hpp"
 #include "ComposeAssembly.hpp"
-#include "ComposeTransfer.hpp"
 #include "DemandDrivenChain.hpp"
 #include "Disassembly.hpp"
 #include "FixedArmInventory.hpp"
@@ -1608,21 +1607,19 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // disables it for A/B measurement; every other value keeps the default.
     const char* composeMode = std::getenv("OPUSOPTIMA_COMPOSE");
     const bool composeEnabled = !composeMode || std::string_view(composeMode) != "off";
-    if (composeEnabled && SupportsComposedTransfer(puzzle)) {
-        if (auto result =
-                attempt("compose-transfer", [&] { return ComposeTransferMachine(puzzle); }))
-            if (keep(*result)) return *firstAccepted;
-    } else if (composeEnabled && SupportsComposedAssembly(puzzle) &&
-               [] {
-                   const char* mode = std::getenv("OPUSOPTIMA_COMPOSE_ASSEMBLY");
-                   return mode && std::string_view(mode) == "on";
-               }()) {
-        // Same component graph generalised to multi-atom products: one transfer
-        // component per product atom plus one bonding station per bond. Opt-in until
-        // the arm sweep geometry stops colliding with parked atoms.
+    std::optional<io::SolutionData> composedSolution;
+    // Component-graph composition: one transfer arm per product atom plus one bonding
+    // station per bond, all placed from the product frame. It is verified first because
+    // it is cheap and wins the cycle slot by a wide margin on its domain, but it is only
+    // *published* when no family emitter produces a machine: publishing it eagerly
+    // displaced cheaper family machines (measured: INFINITE THROUGHPUT cost 495->780).
+    const bool composeEligible = composeEnabled && SupportsComposedAssembly(puzzle) &&
+                                 puzzle.outputs.front().atoms.size() == 1 &&
+                                 puzzle.outputs.front().bonds.empty();
+    if (composeEligible) {
         if (auto result =
                 attempt("compose-assembly", [&] { return ComposeAssemblyMachine(puzzle); }))
-            if (keep(*result)) return *firstAccepted;
+            composedSolution = std::move(*result);
     }
     if (auto result = attempt("intact-feed", [&] { return CompileIntactFeed(puzzle); }))
         if (keep(*result)) return *firstAccepted;
@@ -2033,6 +2030,11 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     for (const auto& rejection : rejections)
         message += "\n  " + rejection;
     if (firstAccepted) return *firstAccepted;
+    // The composed machine is the fallback of last resort: family emitters publish
+    // first because they trade the cycle slot for much cheaper machines on large
+    // products (measured: INFINITE THROUGHPUT 487/1040/144 vs 604/495/108).
+    if (composedSolution) return *composedSolution;
+
     throw std::invalid_argument(message);
 }
 std::int32_t AssemblySolver::EstimateCycles(const io::PuzzleData& puzzle) {
