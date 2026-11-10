@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <optional>
 #include <set>
+#include <utility>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -314,6 +315,26 @@ std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzz
     }
     if (variants.empty())
         throw std::invalid_argument("composed assembly found no collision-free arm placement");
+    // Object-graph validity: every variant must be a self-contained machine. Rejecting
+    // here keeps a malformed layout from reaching the gate or the archive (an invalid
+    // graph used to crash a widened run instead of falling back to the families).
+    for (auto& variant : variants) {
+        bool hasOutput = false;
+        std::set<std::pair<int, int>> seen;
+        for (const auto& object : variant.objects) {
+            if (object.typeName == "out-std") hasOutput = true;
+            if (object.typeName == "input") {
+                const int index = object.bodyData.size() > 2 ? object.bodyData[2] : -1;
+                if (index < 0 || static_cast<std::size_t>(index) >= puzzle.inputs.size())
+                    throw std::invalid_argument("composed assembly produced an invalid source index");
+            }
+            if (!seen.insert({object.position.q, object.position.r}).second &&
+                object.typeName != "bonder" && object.typeName != "input")
+                throw std::invalid_argument("composed assembly produced overlapping components");
+        }
+        if (!hasOutput || variant.objects.size() < 3)
+            throw std::invalid_argument("composed assembly produced an incomplete machine");
+    }
     return variants;
 }
 
