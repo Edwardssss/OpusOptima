@@ -1384,7 +1384,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // consumed a construction/submission slot.
     const bool composeOnline =
         SupportsComposedAssembly(puzzle) &&
-        (puzzle.outputs.front().atoms.size() == 1 ||
+        (puzzle.outputs.front().atoms.size() == 1 || ComposedAssemblyRequiresChemistry(puzzle) ||
          (puzzle.inputs.size() == 1 && puzzle.outputs.front().atoms.size() <= 4));
     if (composeEnabled && composeOnline && verify &&
         std::chrono::steady_clock::now() < Deadline()) {

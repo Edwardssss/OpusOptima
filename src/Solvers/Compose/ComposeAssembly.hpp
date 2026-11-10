@@ -19,6 +19,10 @@ namespace opusoptima::solvers {
 /// can fall back to another family.
 bool SupportsComposedAssembly(const io::PuzzleData& puzzle);
 
+/// `true` when at least one product atom has no same-type single-atom reagent
+/// source, i.e. the machine must go through a chemistry glyph station.
+bool ComposedAssemblyRequiresChemistry(const io::PuzzleData& puzzle);
+
 /// Every composed variant, cheapest first: the shared-ring layout (one arm feeding
 /// several product cells) and the per-atom layout (one arm per atom). The portfolio
 /// verifies each and keeps the one that wins the most objective slots.
