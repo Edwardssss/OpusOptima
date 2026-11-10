@@ -9,6 +9,7 @@
 #include "HexSimulator.hpp"
 #include "MachineState.hpp"
 #include "RecipeMilp.hpp"
+#include "RepoRoot.hpp"
 
 namespace {
 
@@ -26,13 +27,7 @@ constexpr std::size_t kInitialSaltInputs = 10U;
 constexpr int kExtraInputGroups = 5;
 
 std::filesystem::path GetRepoRoot() {
-    auto cursor = std::filesystem::path(__FILE__).parent_path();
-    while (!cursor.empty()) {
-        if (std::filesystem::exists(cursor / "CMakeLists.txt")) return cursor;
-        cursor = cursor.parent_path();
-    }
-    throw std::runtime_error("Cannot locate repository root");
-}
+    return opusoptima::test::RepoRoot(__FILE__);}
 
 } // namespace
 

@@ -4,21 +4,16 @@
 #include <gtest/gtest.h>
 
 #include "BinaryParser.hpp"
+#include "GreedyPlanner.hpp"
 #include "HexSimulator.hpp"
 #include "MachineState.hpp"
-#include "GreedyPlanner.hpp"
 #include "RecipeMilp.hpp"
+#include "RepoRoot.hpp"
 
 namespace {
 
 std::filesystem::path GetRepoRoot() {
-    auto cursor = std::filesystem::path(__FILE__).parent_path();
-    while (!cursor.empty()) {
-        if (std::filesystem::exists(cursor / "CMakeLists.txt")) return cursor;
-        cursor = cursor.parent_path();
-    }
-    throw std::runtime_error("Cannot locate repository root");
-}
+    return opusoptima::test::RepoRoot(__FILE__);}
 
 } // namespace
 

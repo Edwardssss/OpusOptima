@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "assembly_sha256": "fd804fadedbf1b991ed37f3ec7325b2160317f0585e3e908fb73f246a038368d",
+  "method": "Hash-locked static resource decoding and PNG IHDR inspection; no assembly load or game execution",
+  "scope": "Main-grid asset binding and dimensions for this installation only; not collision, raster or game observation equivalence",
+  "resource": {
+    "manifest_name": " ​          ",
+    "payload_offset": 532092,
+    "length": 160279,
+    "sha256": "eef517f43433d996124680b192922637ab7b1b1ba1ec6455db0f15c8888cfa5b"
+  },
+  "decoder": {
+    "branch": "normal same-assembly caller; reflected/missing-caller branches not generalized",
+    "key": "dc03e7be",
+    "argument_xor": "5af63869",
+    "record_key_length": 3,
+    "key_derivation": "a8eb01b0 ^ 0ecf9c63 ^ 4d301b6b ^ 37176106",
+    "metadata_hash": "b95cf74d0ecf9c63",
+    "normal_state": "00188886"
+  },
+  "method_il_hashes": {
+    "06000aab": "bc31e54df62754f21c1b8120b19587a2624bcc962038bde33fca9cfa2f441af2",
+    "06000aa9": "9b78deb26534fa42ed0cbb6a517edd2f95e81c69058b533d39118848def0ec28",
+    "0600097d": "f45ff9ce13800551584e24e50d27d8709d90f75559dedf3b3480a8d047cb1eb3",
+    "06000789": "aab76ee9d6161d8f7991bb04e807ce38983128e612d628f63471733221abd822",
+    "0600006b": "765aa7494a3d9a4b661b446735698824cda45a3db8403d1adb06090fc740f05a",
+    "06000e9a": "9ceae23c11eefd11fcb3fd74cdfeecb17a3909974c92f9174f2eeb0b2c3a2f88",
+    "06000e9b": "e3d0788d902bc55456da0f923eb39ea5f3618f72a8ba5346193dfda484f63266",
+    "06000e9c": "3a8c2553fb9d5b230ba7316dc61ac95b1375dab2c82b0e008789d4f256267209",
+    "06000e9d": "568cd4a70f579800d6728ba6651f8d6f687fdbd0a41dcdaf908dddd3a337df41",
+    "0600071a": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "060007fa": "0e8a37993234814e55283b14b5cb452546cc03d4a78ee99beb7994cd6f6de80a",
+    "06000e9e": "63f7e565d0cd2ff5061c99a3f430a35c221b127749b90386527d218ac9dcd03a",
+    "060008fa": "90619d505ca9ecb843f66b0a3495d7e40b75544c54606ac25f333d251025cf25",
+    "060008fc": "d34b7ed5c932032e16e00b4ff9f1f09e575b2a6410616b21cec2389f20d66faf",
+    "06000790": "c2eb40200077001680c81f0b8a400414e8c82e5ebe73712c4cd962ea65163f30",
+    "06000793": "64850c3c5c69a193267efbafed86b6f30ef6cebd1352da9708f1fedddaae3c97",
+    "060010e8": "3c30f79a385c20058be7f347acf04d35f6e00d2fe10af9115b761c8da276f086",
+    "060010ed": "639ddc6ebbfe6a5e2cfd29feb0e21fe86158e3c265bf2d84fdc775c2a9e00186"
+  },
+  "loader_strings": [
+    {
+      "argument": "5af611f9",
+      "payload_offset": 10640,
+      "file_offset": 542732,
+      "record_key": "6cb286",
+      "flags": "40000007",
+      "text": "Content"
+    },
+    {
+      "argument": "5af64e65",
+      "payload_offset": 30220,
+      "file_offset": 562312,
+      "record_key": "cbe057",
+      "flags": "40000004",
+      "text": ".png"
+    },
+    {
+      "argument": "5af71521",
+      "payload_offset": 77128,
+      "file_offset": 609220,
+      "record_key": "6631f4",
+      "flags": "40000004",
+      "text": ".psd"
+    }
+  ],
+  "textures": [
+    {
+      "argument": "5af75435",
+      "payload_offset": 93276,
+      "file_offset": 625368,
+      "record_key": "8ab6ee",
+      "flags": "40000025",
+      "text": "textures/board/hex_tile.lighting/left",
+      "asset": "textures/board/hex_tile.lighting/left.png",
+      "sha256": "2db084044cd64132361e20b6eb0caabcb7196010440b3a04c3adadfdbd5bb96b",
+      "width": 82,
+      "height": 71,
+      "psd_override_present": false
+    },
+    {
+      "argument": "5af754e1",
+      "payload_offset": 93320,
+      "file_offset": 625412,
+      "record_key": "025b73",
+      "flags": "40000026",
+      "text": "textures/board/hex_tile.lighting/right",
+      "asset": "textures/board/hex_tile.lighting/right.png",
+      "sha256": "7c1fe2c11cd89e36dd1a9c2a88bfaf7983543c987665e9cdc974d43295a8657b",
+      "width": 82,
+      "height": 71,
+      "psd_override_present": false
+    },
+    {
+      "argument": "5af754dc",
+      "payload_offset": 93365,
+      "file_offset": 625457,
+      "record_key": "4c2335",
+      "flags": "40000027",
+      "text": "textures/board/hex_tile.lighting/bottom",
+      "asset": "textures/board/hex_tile.lighting/bottom.png",
+      "sha256": "53ce58d8a918cbb0f30542916c2f16e716bfcd9da6f471432f77d6617b8dca02",
+      "width": 82,
+      "height": 71,
+      "psd_override_present": false
+    },
+    {
+      "argument": "5af7548a",
+      "payload_offset": 93411,
+      "file_offset": 625503,
+      "record_key": "43a20d",
+      "flags": "40000024",
+      "text": "textures/board/hex_tile.lighting/top",
+      "asset": "textures/board/hex_tile.lighting/top.png",
+      "sha256": "34897c68cd2091a6e5292b742750854a29809ac390e07490b950d97d0ac0b8e4",
+      "width": 82,
+      "height": 71,
+      "psd_override_present": false
+    }
+  ],
+  "binding_chain": [
+    "0600006b writes four decoded texture loads to 04000411",
+    "060008fa checks equal dimensions and stores first texture in 04000867",
+    "060008fc reads 04000627 dimensions; 06000790 initializes main singleton 040006bf",
+    "06000793 maps x=size.X*(Q+0.5f*R), y=size.Y*R",
+    "060010e8 and 060010ed consume that same main singleton"
+  ],
+  "loader_chain": [
+    "06000e9a joins Content and decoded path; 06000e9b chooses PNG without PSD override",
+    "06000e9c -> 06000e9d -> 0600071a (IMG_Load, SDL2_image.dll)",
+    "06000e9d reads surface dimensions; 060007fa/06000e9e do not resize",
+    "06000e9b writes image dimensions to 04000627"
+  ]
+}

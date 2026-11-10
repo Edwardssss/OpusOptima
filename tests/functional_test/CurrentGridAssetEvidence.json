@@ -1,0 +1,491 @@
+{
+  "schema": 1,
+  "assembly_sha256": "ee4d1740609cbc09b5eb52244acc63da32f9e3cc280309049ceb7b708d20e1c5",
+  "certification_eligible": false,
+  "status": "conditional-static-asset-evidence-only",
+  "scope": "Read-only resource decoding and PNG IHDR dimensions; no assembly load or game execution",
+  "resource": {
+    "payload_offset": 534876,
+    "length": 161228,
+    "sha256": "eb30da8c127cda59067d17dc3f396465f50a1cd4275b92db5ccbb264190addc3"
+  },
+  "decoder": {
+    "header_masks": [
+      "8a92",
+      "cb69"
+    ],
+    "record_key_length": 3,
+    "conditional_metadata_hash": "76af7af6e310bfc0",
+    "conditional_normal_state": "703c6bb8",
+    "key": "aa688a0f",
+    "argument_xor": "d2d32f94",
+    "flags_xor": "cfc9ad3a",
+    "normal_first_state_update": "(0 & 0x0fffff72) ^ 0x1a84",
+    "assumptions": [
+      "Same-assembly normal caller and stack guards succeed",
+      "Runtime cache initialization uses zero before decoding",
+      "No alternate initialization or anti-tamper branch"
+    ]
+  },
+  "cache_integer_proof": {
+    "status": "conditional-integer-il-zero-roundtrip",
+    "method_il_sha256": {
+      "06000913": "96f05055a88820a820c19fa12fdabba098f70198221812c80267f219c7586982",
+      "06000914": "d7a6faaa4e9b66556a5e0086ace2c58426b4b6bfc1c85b430bdc2f1c1ffcb961"
+    },
+    "encrypted_zero": {
+      "04000526": "a8d058e7",
+      "04000527": "e1b1ded8"
+    },
+    "decrypted_zero": 0,
+    "assumptions": [
+      "Both methods take the successful caller and stack guard branches",
+      "Runtime initialization invokes this setter with zero before the getter"
+    ]
+  },
+  "dimension_leaf_proof": {
+    "status": "exact-il-leaf-dataflow-only",
+    "metadata_proof": {
+      "status": "exact-metadata-signatures-and-owners-only",
+      "fields": {
+        "04000b54": {
+          "owner": "020003c9",
+          "flags": 6,
+          "signature": "0608"
+        },
+        "04000b55": {
+          "owner": "020003c9",
+          "flags": 6,
+          "signature": "0608"
+        },
+        "040012b3": {
+          "owner": "020004e2",
+          "flags": 6,
+          "signature": "060c"
+        },
+        "040012b4": {
+          "owner": "020004e2",
+          "flags": 6,
+          "signature": "060c"
+        },
+        "040009d4": {
+          "owner": "02000375",
+          "flags": 38,
+          "signature": "06118f24"
+        },
+        "0400022a": {
+          "owner": "02000206",
+          "flags": 38,
+          "signature": "06128dec"
+        },
+        "04000a00": {
+          "owner": "0200037b",
+          "flags": 6,
+          "signature": "06118f24"
+        }
+      },
+      "methods": {
+        "06000cee": {
+          "owner": "020003c9",
+          "flags": 6278,
+          "signature": "2002010808"
+        },
+        "0600133b": {
+          "owner": "020004e2",
+          "flags": 6278,
+          "signature": "2002010c0c"
+        },
+        "06000b3d": {
+          "owner": "02000375",
+          "flags": 134,
+          "signature": "200008"
+        },
+        "06000b3e": {
+          "owner": "02000375",
+          "flags": 134,
+          "signature": "200008"
+        },
+        "06000646": {
+          "owner": "02000206",
+          "flags": 134,
+          "signature": "2000118f24"
+        },
+        "06000cf1": {
+          "owner": "020003c9",
+          "flags": 134,
+          "signature": "2000119388"
+        }
+      },
+      "value_type_base": "TypeRef 010000e4 System.ValueType",
+      "scope": "Metadata identity only; assembly resolution, verification and runtime initialization are not proved"
+    },
+    "method_il_sha256": {
+      "06000cee": "f2f51980aa68673e2cfa7ff4a4f45d6f4e84418117bd69355d63fb347c2b0d72",
+      "0600133b": "acdfbe8613df94f6ab86d1d0cc78ed237fe2066d611ba2401ed976db2e358ca7",
+      "06000b3d": "95f4675aec3d0831b5c91d99aa64fdd8d0dc8e811cc1bf772271e454eee84c32",
+      "06000b3e": "2992d96cbb7d73a7186105ddf697e91eb535bb16c9ab3a10264585d624fe5a5e",
+      "06000646": "b1a1a6818aab4ef0e2f8d3f0b0eb8d42edfcf1a5145826e52da55741b3e2bd3b",
+      "06000cf1": "aacfe16228c07ba62829de8848132b88bc9619f9c2a89af68364ccf69a57b2db"
+    },
+    "index2_constructor": {
+      "x_field": "04000b54",
+      "y_field": "04000b55"
+    },
+    "surface_dimension_getters": {
+      "stored_index2_field": "040009d4",
+      "width_method": "06000b3d",
+      "height_method": "06000b3e"
+    },
+    "texture_dimension_getter": {
+      "method": "06000646",
+      "texture_field": "0400022a",
+      "dimension_field": "04000a00"
+    },
+    "index2_to_vector2": {
+      "method": "06000cf1",
+      "conversion": "conv.r4 for each int32 component",
+      "constructor": "0600133b",
+      "x_field": "040012b3",
+      "y_field": "040012b4"
+    },
+    "unproved_obligations": [
+      "Caller initialization and runtime metadata resolution",
+      "Conditional callers returning normally and complete runtime initialization",
+      "Native surface dimensions and floating-point execution environment"
+    ]
+  },
+  "dimension_wiring_proof": {
+    "status": "exact-il-conditional-managed-wiring-only",
+    "metadata_proof": {
+      "status": "exact-metadata-signatures-owners-and-method-implementation-flags-only",
+      "fields": {
+        "040009d3": {
+          "owner": "02000375",
+          "flags": 38,
+          "signature": "061188a4"
+        },
+        "040009d4": {
+          "owner": "02000375",
+          "flags": 38,
+          "signature": "06118f24"
+        },
+        "040009d5": {
+          "owner": "02000375",
+          "flags": 38,
+          "signature": "0608"
+        },
+        "040009d6": {
+          "owner": "02000375",
+          "flags": 38,
+          "signature": "061d05"
+        },
+        "04000a00": {
+          "owner": "0200037b",
+          "flags": 6,
+          "signature": "06118f24"
+        },
+        "0400022a": {
+          "owner": "02000206",
+          "flags": 38,
+          "signature": "06128dec"
+        },
+        "0400022b": {
+          "owner": "02000206",
+          "flags": 38,
+          "signature": "06128dec"
+        },
+        "0400022c": {
+          "owner": "02000206",
+          "flags": 38,
+          "signature": "06128dec"
+        },
+        "0400022d": {
+          "owner": "02000206",
+          "flags": 38,
+          "signature": "06128dec"
+        },
+        "0400044b": {
+          "owner": "02000285",
+          "flags": 38,
+          "signature": "06119388"
+        },
+        "04000449": {
+          "owner": "02000285",
+          "flags": 22,
+          "signature": "06128a14"
+        },
+        "0400044a": {
+          "owner": "02000285",
+          "flags": 22,
+          "signature": "06128a14"
+        },
+        "040008fa": {
+          "owner": "02000335",
+          "flags": 22,
+          "signature": "06128b78"
+        },
+        "0400054d": {
+          "owner": "020002de",
+          "flags": 6,
+          "signature": "06128cc4"
+        },
+        "040008c2": {
+          "owner": "02000331",
+          "flags": 6,
+          "signature": "06128818"
+        }
+      },
+      "methods": {
+        "06000644": {
+          "owner": "02000206",
+          "implementation_flags": 0,
+          "flags": 6278,
+          "signature": "200401128dec128dec128dec128dec"
+        },
+        "06000b3b": {
+          "owner": "02000375",
+          "implementation_flags": 0,
+          "flags": 6278,
+          "signature": "2003011188a4118f241d05"
+        },
+        "06000b3c": {
+          "owner": "02000375",
+          "implementation_flags": 0,
+          "flags": 6278,
+          "signature": "2004011188a408081d05"
+        },
+        "06000cf7": {
+          "owner": "020003c9",
+          "implementation_flags": 0,
+          "flags": 2198,
+          "signature": "000202118f24118f24"
+        },
+        "0600080c": {
+          "owner": "02000285",
+          "implementation_flags": 0,
+          "flags": 6278,
+          "signature": "200101118f24"
+        },
+        "0600080d": {
+          "owner": "02000285",
+          "implementation_flags": 0,
+          "flags": 6289,
+          "signature": "000001"
+        }
+      },
+      "scope": "Declaration identity only; type resolution, external dispatch and initialization remain unproved"
+    },
+    "method_il_sha256": {
+      "06000644": "176af7eb128422bcb13e9a47b6120fa1163f3d866c234d458b90929ca4abe98b",
+      "06000b3b": "b6788c66e6843a86a9b96df9111ab0aaa01a0daaf87a765f606578eacfe3d0cf",
+      "06000b3c": "e50acc538d75b3c3b9693a680d35caa0e81c8fd7a9f86a82b6d29d291e407ee4",
+      "06000cf7": "054377f571cde9ad2d823bfce9cd3d96daf6308c27fcc53df0d83955eb676ef6",
+      "0600080c": "88369f793fd6881e3016cd68c233e416d2af817d75d798a0ff912ecad73d274c",
+      "0600080d": "e62324dbb57ccdbb1c78c0b656101c2c73d4739f769d4ca7beea391454f8c460"
+    },
+    "surface_constructor": {
+      "method": "06000b3b",
+      "stored_dimensions": "argument 2 -> 040009d4",
+      "precondition": "Base constructor and both assertion calls return normally",
+      "integer_overflow": "Size and stride multiplications are unchecked int32"
+    },
+    "surface_dimension_adapter": {
+      "method": "06000b3c",
+      "constructor": "06000cee",
+      "target": "06000b3b"
+    },
+    "texture_bundle": {
+      "method": "06000644",
+      "dimension_field": "04000a00",
+      "inequality_method": "06000cf7",
+      "comparisons": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          1,
+          4
+        ]
+      ],
+      "mismatch": "throw after any unequal width or height",
+      "successful_stores": [
+        "0400022a",
+        "0400022b",
+        "0400022c",
+        "0400022d"
+      ]
+    },
+    "grid_constructor": {
+      "method": "0600080c",
+      "conversion": "06000cf1",
+      "vector_field": "0400044b"
+    },
+    "grid_static_initializer": {
+      "method": "0600080d",
+      "main_grid": "040008fa -> 0400054d -> 040008c2 -> 06000646 -> 0600080c -> 04000449",
+      "secondary_grid": {
+        "dimensions": [
+          66,
+          57
+        ],
+        "index_constructor": "06000cee",
+        "grid_constructor": "0600080c",
+        "static_field": "0400044a"
+      }
+    },
+    "unproved_obligations": [
+      "Runtime type resolution, dispatch and external base constructor",
+      "Assertion behavior and runtime initialization success",
+      "Native loader dimensions and pixel conversion semantics"
+    ]
+  },
+  "pixel_fixture_proof": {
+    "status": "exact-il-bounded-byte-array-fixtures-only",
+    "method_il_sha256": {
+      "06000b40": "e700e95ee4188143b86a29eb760e6cb55c718f3b71697bea43a409f2d0148dc6",
+      "06000ed5": "86b2f33fa3f582346b296970ef1380b2b4a97bc13779466e2ccf6875aab553fe"
+    },
+    "flip_fixture_count": 36,
+    "premultiply_alpha_channel_pairs": 65536,
+    "assumptions": [
+      "Width and height getters return the supplied nonnegative dimensions",
+      "Array.Copy has byte-array memmove semantics and calls return normally",
+      "Premultiply pixels are tightly packed four-byte elements"
+    ],
+    "scope": "Finite modeled inputs only; not a proof of all dimensions, metadata dispatch or native pixel layout"
+  },
+  "loader_strings": [
+    {
+      "argument": "d2d30604",
+      "payload_offset": 10640,
+      "record_key": "bd8908",
+      "flags": "40000007",
+      "text": "Content"
+    },
+    {
+      "argument": "d2d356b3",
+      "payload_offset": 31015,
+      "record_key": "f2f649",
+      "flags": "40000004",
+      "text": ".png"
+    },
+    {
+      "argument": "d2d21f0f",
+      "payload_offset": 77979,
+      "record_key": "4fce37",
+      "flags": "40000004",
+      "text": ".psd"
+    }
+  ],
+  "textures": [
+    {
+      "argument": "d2d24077",
+      "payload_offset": 94179,
+      "record_key": "62daaa",
+      "flags": "40000025",
+      "text": "textures/board/hex_tile.lighting/left",
+      "asset": "textures/board/hex_tile.lighting/left.png",
+      "sha256": "2db084044cd64132361e20b6eb0caabcb7196010440b3a04c3adadfdbd5bb96b",
+      "width": 82,
+      "height": 71,
+      "psd_override_present": false
+    },
+    {
+      "argument": "d2d25f9b",
+      "payload_offset": 94223,
+      "record_key": "0406d3",
+      "flags": "40000026",
+      "text": "textures/board/hex_tile.lighting/right",
+      "asset": "textures/board/hex_tile.lighting/right.png",
+      "sha256": "7c1fe2c11cd89e36dd1a9c2a88bfaf7983543c987665e9cdc974d43295a8657b",
+      "width": 82,
+      "height": 71,
+      "psd_override_present": false
+    },
+    {
+      "argument": "d2d25fa8",
+      "payload_offset": 94268,
+      "record_key": "9949e4",
+      "flags": "40000027",
+      "text": "textures/board/hex_tile.lighting/bottom",
+      "asset": "textures/board/hex_tile.lighting/bottom.png",
+      "sha256": "53ce58d8a918cbb0f30542916c2f16e716bfcd9da6f471432f77d6617b8dca02",
+      "width": 82,
+      "height": 71,
+      "psd_override_present": false
+    },
+    {
+      "argument": "d2d25ffe",
+      "payload_offset": 94314,
+      "record_key": "082335",
+      "flags": "40000024",
+      "text": "textures/board/hex_tile.lighting/top",
+      "asset": "textures/board/hex_tile.lighting/top.png",
+      "sha256": "34897c68cd2091a6e5292b742750854a29809ac390e07490b950d97d0ac0b8e4",
+      "width": 82,
+      "height": 71,
+      "psd_override_present": false
+    }
+  ],
+  "dimension_flow": {
+    "native_import": {
+      "method_token": "060009f4",
+      "library": "SDL2_image.dll",
+      "entry_point": "IMG_Load"
+    },
+    "premultiply_selector": {
+      "argument": "d2d21e4c",
+      "payload_offset": 78296,
+      "record_key": "08bb95",
+      "flags": "4000000d",
+      "text": "atom.lighting"
+    },
+    "managed_chain": [
+      "06000ed4: surface w/h -> 06000b3c",
+      "06000b3c: Index2(w,h) -> 06000b3b",
+      "06000b3b: Index2 -> 040009d4",
+      "06000b40: vertical row swap only",
+      "06000ed5: RGB premultiply only",
+      "06000ed2: 06000b3d/06000b3e -> texture dimensions",
+      "06000644: equal dimensions -> 0400022a",
+      "0600080d: 06000646 -> 0600080c -> 04000449"
+    ],
+    "external_assumption": "IMG_Load and SDL_ConvertSurfaceFormat preserve PNG IHDR dimensions"
+  },
+  "method_il_sha256": {
+    "0600077a": "726790a6ba77534dad28eaa46bff20a3bebfbc047482fd98edaf0cb34d0df037",
+    "0600077c": "5195f794182b195536c17dbfccee3f4c9d6f3c6a29d4353bb7e5c709d56a20db",
+    "060007ea": "aab76ee9d6161d8f7991bb04e807ce38983128e612d628f63471733221abd822",
+    "0600090c": "3fb6c1bb4128b093954afed13b5594e062390349be2962a6508e836d4b7e1e1f",
+    "06000913": "96f05055a88820a820c19fa12fdabba098f70198221812c80267f219c7586982",
+    "06000914": "d7a6faaa4e9b66556a5e0086ace2c58426b4b6bfc1c85b430bdc2f1c1ffcb961",
+    "0600097b": "23579579faec471a6d03dc7cf30f619e52fb2c3515d41a46886ae73d2541400c",
+    "06000702": "b1822260dfdcdb59999ce988751bdd715cb89cc612bb71a3db5037289d369811",
+    "06000ed1": "c10e672b83429e334d8514f36f0b751ac93142beafaa10b0b886457169cdfd4c",
+    "06000ed2": "70bdee4c00d2edb97c4571f8d966574d70a5b3a41fd1a0d01e714629a26fe229",
+    "06000ed3": "63e5b1d8d6a612ec14d33a00636404e00938ddeb68e9ea46b6c7c70d305698e8",
+    "06000ed4": "ab4725b3cedcbfd96b6c1174a1db9b6a3e89fd817d82ed28582680a2864b49f6",
+    "06000ed5": "86b2f33fa3f582346b296970ef1380b2b4a97bc13779466e2ccf6875aab553fe",
+    "06000e1c": "580d0c2095aa19df588973e5073f5bf0a02622437677ad8a4af0e1aa8bfbdc0a",
+    "06000b3b": "b6788c66e6843a86a9b96df9111ab0aaa01a0daaf87a765f606578eacfe3d0cf",
+    "06000b3c": "e50acc538d75b3c3b9693a680d35caa0e81c8fd7a9f86a82b6d29d291e407ee4",
+    "06000b3d": "95f4675aec3d0831b5c91d99aa64fdd8d0dc8e811cc1bf772271e454eee84c32",
+    "06000b3e": "2992d96cbb7d73a7186105ddf697e91eb535bb16c9ab3a10264585d624fe5a5e",
+    "06000b40": "e700e95ee4188143b86a29eb760e6cb55c718f3b71697bea43a409f2d0148dc6",
+    "06000644": "176af7eb128422bcb13e9a47b6120fa1163f3d866c234d458b90929ca4abe98b",
+    "06000646": "b1a1a6818aab4ef0e2f8d3f0b0eb8d42edfcf1a5145826e52da55741b3e2bd3b",
+    "0600080c": "88369f793fd6881e3016cd68c233e416d2af817d75d798a0ff912ecad73d274c",
+    "0600080d": "e62324dbb57ccdbb1c78c0b656101c2c73d4739f769d4ca7beea391454f8c460",
+    "06000cf1": "aacfe16228c07ba62829de8848132b88bc9619f9c2a89af68364ccf69a57b2db"
+  },
+  "unproved_obligations": [
+    "Actual runtime guard stack and cache initialization",
+    "Native image loading and conversion dimension semantics",
+    "Collision, continuous coverage, raster and metric equivalence"
+  ]
+}

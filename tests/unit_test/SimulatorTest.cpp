@@ -9,6 +9,7 @@
 #include "HexSimulator.hpp"
 #include "MachineState.hpp"
 #include "PuzzleSpecs.hpp"
+#include "RepoRoot.hpp"
 
 // Type-level using declarations (NOT using namespace)
 using opusoptima::core::ArmState;
@@ -21,13 +22,7 @@ using opusoptima::core::MachineState;
 namespace {
 
 std::filesystem::path GetRepoRoot() {
-    std::filesystem::path cursor = std::filesystem::path(__FILE__).parent_path();
-    while (!cursor.empty()) {
-        if (std::filesystem::exists(cursor / "CMakeLists.txt")) return cursor;
-        cursor = cursor.parent_path();
-    }
-    throw std::runtime_error("Cannot locate repository root");
-}
+    return opusoptima::test::RepoRoot(__FILE__);}
 
 } // namespace
 

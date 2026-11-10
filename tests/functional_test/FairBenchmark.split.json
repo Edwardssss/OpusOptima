@@ -1,0 +1,1053 @@
+{
+  "version": 1,
+  "seed": "opusoptima-holdout-v1",
+  "holdoutFraction": 0.2,
+  "algorithm": "sha256-seed-rank-floor-v1",
+  "entries": [
+    {
+      "sha256": "00302be6ed80eaf22db13160ab1eee0f336f383f8e2a54f0c2e68e3da9d2f7f3",
+      "files": [
+        "campaign/ch2/P021.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "04d711ec7ff1226fc69ad618fec81b47b4f6c8d5130b8355ca36f0961b6cc83b",
+      "files": [
+        "journal/journal5/P087.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "08be6d62721aa3bac6252d5ee0fcb57dc726f1516e66a975d97898601fc39d3d",
+      "files": [
+        "workshop-versions/w2868339730.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "0bac244500f7e1d2c2fe228588b7417ba8e001c4e3796d5a15b5ceaad5f6dfde",
+      "files": [
+        "journal/journal2/P060.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "0d83143ba5f1523f3d902e0a91c54a299a4fecacf5fab9a6d4e876ef428902d3",
+      "files": [
+        "campaign/ch5/P042.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "0f87ae0d3c39e01ac6c39b2ec6a4e0bd5482bdbc8843a61cd286479a49a3c1a8",
+      "files": [
+        "campaign/ch3/P027.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "0fc635faffffe4cd897897b7da7843533bc57f533d3bf259a67c774a18820bd6",
+      "files": [
+        "journal/journal3/P065.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "0feefe90a9841d377cb87998a68ecb270b34ca88fcdedeeaf95a814e22763192",
+      "files": [
+        "journal/journal1/P054.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "1066bc2f1f650d60942eb976fbafdf0a878a306d82b846dfed161086caa90718",
+      "files": [
+        "campaign/ch2/P020.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "110016dc843ede12392f6dc506092177ad9a1ade3cbe95d0d84bba8b3d58fef3",
+      "files": [
+        "edge-cases/c988640836512960.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "12619312a79ff82b818b7539e47e3405ae281bc0eccb3faee008b9b8ceadce4e",
+      "files": [
+        "tourney-2019/week2.puzzle",
+        "workshop-versions/w1698784331.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "1536331c91bfeb026e152a8992c14ce86e2287b9a5b53fac0133b63fde0540cb",
+      "files": [
+        "easy/double-conduit.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "160f11ef6afe38b8563b28ce4fc917406fe9331d04d682878e0b20f97410304f",
+      "files": [
+        "workshop-versions/w2788067038.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "172055db59ea5bd4f5cf30eb12fc0c9a9f657bbe9b596dd9ea7f55ea063812ac",
+      "files": [
+        "journal/journal5/P085.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "18644c2c82408f41543a677060d629b8728f901066150883ba8990d8d8e52101",
+      "files": [
+        "journal/journal5/P088.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "1a4bace5797bf20c7e37709d0bc8156fdf9636181972759fd79b4c13e7f4a904",
+      "files": [
+        "tourney-2019/week10a.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "1b3293233d72f6b1317ea173a34561792d29981f6eceb5dded24d9f2a0201bec",
+      "files": [
+        "campaign/ch3/P028.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "1dc60983f29d5ee9cb08decc14dd5cfb6e9bd95ce4bd7ff36c03375158a3e8a3",
+      "files": [
+        "journal/journal8/P104.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "1dde3b221c2a3db13a017de44c05b4b9c6bbf9f11ce98d31262f2a98c28cea4d",
+      "files": [
+        "journal/journal1/P056.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "1e5411b3f530301dd7c5383ad1815d96c059b94d33079a03e8d83983c2b4de5a",
+      "files": [
+        "edge-cases/conduit-bug.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "2120aa967df7ec4a6e20aa1c1b6bc43555ec353c2ade6870ddad4a70941b49f8",
+      "files": [
+        "campaign/ch1-and-prologue/P015.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "2637c0fea292443d757f7e22f026eb60e574fa1571d304e55b32501872de78d3",
+      "files": [
+        "journal/journal7/P096.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "266e6feeb29d88dccd7b5cc5db5f7a87d04be3cf70cba0ac3d63874efd5765a5",
+      "files": [
+        "tourney-2021/OM2021_W6.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "26ac388a67da42153c7eceaf024911d5aa528f13f50ee84c9dcffd70015be117",
+      "files": [
+        "tourney-2019/weekEX.puzzle",
+        "workshop-versions/w1698789743.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "284971e280345a355a3163a10a9d04b65db18225c6ea3a7854c2a9438f1fd93e",
+      "files": [
+        "campaign/ch3/P030b.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "28ecbc47816168546ba94869f8c836c15f7f146d49ec0092efd20444a424fdd1",
+      "files": [
+        "edge-cases/c544897394273089.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "29ffa73862f9062ebb9b6e70046fad2e03aa52baeb68c56ffe8370b1932d72d3",
+      "files": [
+        "campaign/ch3/P026.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "303de6d65a36f114f6e8886075d6e5389e2a2e655b6201416b877b1f7d3726e7",
+      "files": [
+        "tourney-2021/OM2021_W5.puzzle",
+        "workshop-versions/w2450512434.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "321f9b7587a24b845cc5938bcf226178e0a79c550226b51da1774a8dcef7c302",
+      "files": [
+        "campaign/ch2/P019.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "329bfd906486e8bc4b8c658d9fc7f78e76f0c9727514763760f2c3cf7a030203",
+      "files": [
+        "journal/journal9-p/P107.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "3406d841e6b960f1482880137f172c78bb67d26c101b00d9f280e536071d42b1",
+      "files": [
+        "campaign/ch2/P022.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "36344f514c319ca3757e322e306fdfe3e55e8a7b11a22d0da385944dac27ab66",
+      "files": [
+        "campaign/ch5/P040.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "3d49bf1c0bab43274089844c2391259dd7a7849828eb2e23b859fe7399c78a3c",
+      "files": [
+        "campaign/ch1-and-prologue/P014.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "3d4d0c74146bd3fd498a472f551f700e54273fd54ca69a466090662cfba03f43",
+      "files": [
+        "easy/easy-infinite-product.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "3f81a325b767e69395b12e8d4108fa3d09080120b6770e0f57182c6062a08f63",
+      "files": [
+        "campaign/ch1-and-prologue/P010.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "422db8f0374edd3d1ed433ecc0a9214c6603d97c25f9b1068bddbdd59951db4e",
+      "files": [
+        "workshop-versions/w2565611826.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "426d0058a75dc8f532f2b1059d3dce661b2901a8eea22b1ea10c65e247c98c0e",
+      "files": [
+        "tourney-2021/OM2021_W0.puzzle",
+        "workshop-versions/w2450560971.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "42cc7c3b237c0b006ebdb7bf7cd8a24da39acf6c1977efba0cf0a1fca10b652d",
+      "files": [
+        "workshop-versions/w2868328394.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "44598f0a0f60d0505dfeafa178ced677f67d8007d3c40aef7ac309600aaeb284",
+      "files": [
+        "workshop-versions/w2788066950.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "44b4ecd18f62dde55217c4dd4257edc1976166894fd30cf5343347e8f792d47b",
+      "files": [
+        "tourney-2020/OM2020_W7_HighGlossFinish.puzzle",
+        "workshop-versions/w2501728349.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "459f635e56a2482516ee93475af9d3c62eddaaae4b16a1c9d776364a3af438ad",
+      "files": [
+        "journal/journal1/P058.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "4ad52e80d599ae574371dfba892edc707bcebd252826e69f074ae1d82447628e",
+      "files": [
+        "workshop-versions/w2946693353.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "4f6b71eabed83fa14c1f9ec7d9974331f17e1f381c2ff3d8ab36df20f0808ca1",
+      "files": [
+        "workshop-versions/w2788066123.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "526f899ee10f2592688549fb79bca40464b9564e934d1c4475b6ccbf152bf770",
+      "files": [
+        "campaign/ch5/P039.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "5378287feed391857fae1b57c5a2f9af3f29244985f457562bb18f36bafb286f",
+      "files": [
+        "journal/journal3/P066.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "53c979c88a37c9fa386bf2407d4a7d0a72eb5967c14b0d15197bde293fb5fe80",
+      "files": [
+        "journal/journal4/P072.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "550b9c1cb1e7ec0415f49c48be5f48a7aaa2bb6734abe505d855b5a4a74824da",
+      "files": [
+        "tourney-2021/OM2021_W2.puzzle",
+        "workshop-versions/w2450511665.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "55240fc37ecb9fbfce1b21c4d5f5b0b723c7f54a63df5134c0315aeb5cef3cf8",
+      "files": [
+        "campaign/ch1-and-prologue/P013.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "55c49c466adbf78f13cc574ec1311e0722dbffb5546fc27ed8ac9b0c51515a33",
+      "files": [
+        "journal/journal1/P057.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "5724e9d4f80bcf85c2d61f74a918f3488791002dab0796402700c9b021405416",
+      "files": [
+        "workshop-versions/w2946687073.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "58daac9ad1d3353623e5f604fffbdcd96eb4ea7364440f6556dc328a14305402",
+      "files": [
+        "campaign/ch2/P016.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "5911f6b188e90618b06622d00e73dfea1db1c66652eff0aa3685a6d5c760c7dc",
+      "files": [
+        "journal/journal7/P099.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "5a3aa5c6bde4273b70cbcba3ad9fc687f26e13d88183805f61766fcdf27a54df",
+      "files": [
+        "campaign/ch4/P035.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "5e131b3a32697f6162b29f1d8d6b1fcebcf6125dc950c05e6b4d4362b0de0d22",
+      "files": [
+        "campaign/ch4/P033.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "63df4fe926be58fae1465f55708769b3acbf5ddc4711cc7ab5b2b0c33da38d81",
+      "files": [
+        "workshop-versions/w2946682999.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "63e0500c304f9d876048753dc1792cf6e730930f8619c1c6560c71aecb00d4ab",
+      "files": [
+        "edge-cases/OM2025_6_Bulk_Transmutation.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "64da536150776b2955afc610e90011f21b6c4c88f7266e306e90c8d595d26e7f",
+      "files": [
+        "tourney-2019/week1.puzzle",
+        "workshop-versions/w1611998067.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "65c4fc73d89603383cb2de314a57f7bf2677004abae2de43dd00cdd60df3cc57",
+      "files": [
+        "easy/just-salt.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "662fedfe38541a726bdd1426228df655955447b6393be59b639edc02d70755a4",
+      "files": [
+        "campaign/ch4/P036.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "665f279f7337c5b956459e3a988625ff4c35b0a5bea119be9d55b106cb5cb31c",
+      "files": [
+        "edge-cases/c394042722190770.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "6833a371f947c4b7d993a68f9c22e92399fab38d09aeec464f32862524fda719",
+      "files": [
+        "journal/journal1/P055.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "6c4bbc37f78b3bd385aa46e2fafc4a494d5350b8e6dbabe06d65ac8ea478b299",
+      "files": [
+        "workshop-versions/w2513871683.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "6c8d8aa1155b664544b54f7ebbfd6653271dd611e92a85f3321ec65e93df5150",
+      "files": [
+        "campaign/ch1-and-prologue/P007.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "6e993c03ded33c41e3d48f0c0bd13624aacbf8216bf31295ff4bd152fdee8157",
+      "files": [
+        "workshop-versions/w2868331650.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "73148f31f7c97a06cfd5aa0f91462989a2171241c2af4555b6fbba76157e2f8a",
+      "files": [
+        "campaign/ch1-and-prologue/P009.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "7440aa6cad2160c924c42c639903abf2cd471268f375733de0653e18eb5ca82c",
+      "files": [
+        "journal/journal4/P071.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "758b664ec71d6a520a46518934333657ac8219a0d8a1f3c2f5fcf86c024a4159",
+      "files": [
+        "workshop-versions/w2839120106.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "78a08a99b2a48816455ea686e39e4e031ab34851c9564745a6e26a33101ef3f9",
+      "files": [
+        "workshop-versions/w2788067624.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "797f84e9332551520dc1bbd43a7ba6828aa7fdcfa455025658800045000fc1ec",
+      "files": [
+        "campaign/ch5/P038.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "7b837aa2b936018ab0e5d6761542bb7e46c93c2315dba21169129f2881a360bf",
+      "files": [
+        "journal/journal9-p/P108.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "7c4eaaad5ea8b7cf87b4ffab3e76a86c9e594b6ddbc5b1a78f68316d4d5e71f8",
+      "files": [
+        "workshop-versions/w2788067760.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "7edd19f86d7c94d8273bd44155556a6cb5c81018b62894d9507e54d313376b1b",
+      "files": [
+        "campaign/ch2/P017.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "803e8d4a0dd59acb0adc7c7bc99b8b450cafc04f05f955fedc792926fe771e55",
+      "files": [
+        "tourney-2020/OM2020_W4_VolatilityAndTranquility.puzzle",
+        "workshop-versions/w2501727977.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "804defe5e2d270ce2bfb13134c974543a8f4c5181b5f100e8b9baea7f3815e27",
+      "files": [
+        "journal/journal2/P059.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "862778334213244045f29eee7856e5af21e5a18cee4c80cd7c2cbe0d22786ef0",
+      "files": [
+        "tourney-2020/OM2020_W1_PotentPotables.puzzle",
+        "workshop-versions/w2501727721.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "89d6e08e875463d086c872eaca29bf00a36963ccd74ac6d911c7351f3b8e90dd",
+      "files": [
+        "journal/journal7/P098.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "8a0e9ccf4934180919ce3320b42527d8d8c50de60527a87895f41b76743e1fbd",
+      "files": [
+        "workshop-versions/w2946684660.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "8a844d4dcd95a76e534a978ba5fefe661a74526a6c1d997f4dd879e316b41d1c",
+      "files": [
+        "tourney-2019/week4.puzzle",
+        "workshop-versions/w1698785238.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "8c3c893f9da6659fa62405523a0ba643baeb08aa729eb7efe3ae5248605be0f3",
+      "files": [
+        "edge-cases/c787675896468236.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "91cd335ce8f64414d10bdee87bdeec1ab3748708ac7df730a413f24185d89828",
+      "files": [
+        "journal/journal2/P063.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "94871b173a9eb9ff1ba9c1a1561242dd90a6258feb1655afc91af18abf61de45",
+      "files": [
+        "campaign/ch1-and-prologue/P008.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "9a6d6d9035c895e5f0da62f49864b846cd3d0c27ab771f7d03e2d42f20b8780f",
+      "files": [
+        "tourney-2019/week7.puzzle",
+        "workshop-versions/w1698787731.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "9d93a44fe3a78e01b532cac3dca4040394780e386bad58124832ba961e7b6234",
+      "files": [
+        "workshop-versions/w2946682691.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "9eadeb7bd314604f4e792f98fbe8a2239b1b2d4f93d4729afabd679e3aab991c",
+      "files": [
+        "edge-cases/area-test-1776837428738.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "a1e56266bfc36f47ebe5c4a1f3ffb05f296c3f34a5d486d1b269de838a838147",
+      "files": [
+        "campaign/ch4/P034.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "a43b1f6b77c128e87d85d7c987e038260a076df51ab6636e81a42f0ca23bf904",
+      "files": [
+        "campaign/ch4/P037.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "a4c6d3285aaba7e1ad5ac7b113d6951c4b374d70dca32eda3df62594aef730ae",
+      "files": [
+        "tourney-2020/OM2020_W5_Overloaded.puzzle",
+        "workshop-versions/w2501728107.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "a7d3c0bf70c983e366e3e38026ebf81daf0164f2c47cdcdfe05840b1fc7841b6",
+      "files": [
+        "workshop-versions/w2946684529.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "a94b5296f16049658883a5dcf649e54d297c601d04cecbf2abfc825f1b9313ab",
+      "files": [
+        "tourney-2021/OM2021_W3.puzzle",
+        "workshop-versions/w2450512021.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "a96324de93b01c0b40817f6698885cc4fe611b045f71f85e62eb1da6d99fc615",
+      "files": [
+        "workshop-versions/w2788066771.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "ac8d3e1be757be88f6d5d5b27f5c862c2e938fefd528aa0a7a5a15087c0089a0",
+      "files": [
+        "journal/journal8/P102.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "aeb771ff431de9da5d75ae4dc0697b4a37b9162a15ef9b2c221e44a2d8353c96",
+      "files": [
+        "tourney-2019/week3.puzzle",
+        "workshop-versions/w1698785633.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "b00a8d1f99e7b999a0f68b275abe75c9346ac9460547ae054b236e8e5662b0d3",
+      "files": [
+        "campaign/ch3/P025.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "b0171cdfa8c49c0dfdff5ddf42f7448529a5bb0d0874281bdceb134056f691ef",
+      "files": [
+        "journal/journal7/P095.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "b2c4209920e6ddd1f986de6a82afc677ad11e01112bfec98ef15a66d00191cb3",
+      "files": [
+        "journal/journal4/P070.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "b44ad2117eaa060df7b532f8d6960e844eca335f0dba5c9de574e3f456538cdc",
+      "files": [
+        "easy/easy-conduit.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "b4769272576a72f7277cf5c1c4f14219452fbc4f5ca8ec74f284abfa730949ff",
+      "files": [
+        "workshop-versions/w2788067896.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "b7b0160e404b80db48bbe36c90740fe91f92259accf159b52516b3938be6902a",
+      "files": [
+        "campaign/ch3/P029.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "b9231732968244e2e6e78f91d4ddc219c3f0ef5df3bb09aeef56386f57949a4a",
+      "files": [
+        "easy/infinite-row-condition.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "b965f7b1d465d9a45c6f5ee0b8f5bbbc43636cba956ec2fdad03368c2da92f72",
+      "files": [
+        "tourney-2021/OM2021_W9_00.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "bb847c759911a23ec2cac39f9464b0ae50af6cf8185fd0c904faab01a07bd936",
+      "files": [
+        "journal/journal2/P061.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "bbf3d947815d2dfb8880ca8e7c2711832384aa73157444a1e7e11864ff71db69",
+      "files": [
+        "tourney-2019/week8.puzzle",
+        "workshop-versions/w1698788220.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "bc2e1110d16097bdd87e0dc5edd5d013b17e46247aef3f1637bc16420d342364",
+      "files": [
+        "campaign/ch2/P018.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "bc46fd4ea40dd2e64bfa5c3ea6bb5dfd0825092c90b2cbe28d18efc6335b131a",
+      "files": [
+        "tourney-2020/OM2020_W3_SwampFiber.puzzle",
+        "workshop-versions/w2501727889.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "bdaa166dc72259e0b05604b9afd93e37d9c9d02194ce3c6d3c8daa07d2168131",
+      "files": [
+        "tourney-2021/OM2021_W8.puzzle",
+        "workshop-versions/w2450512809.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "be4a3de246f05a5d79a7859ac4f29299f0c22cb170d853ccca03c5f1f8b809b1",
+      "files": [
+        "campaign/ch5/P041.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "be50ec6b23479aad283f97f429557e27005aae272988c0b1ca035ddc81516e7a",
+      "files": [
+        "workshop-versions/w2539581468.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "c15dcf8f1d9a4bf4ffd260bea830cf9fbf9fe00e69695831330b3f5e6ff4bfcb",
+      "files": [
+        "journal/journal4/P069.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "c55097d66a06eb06ebbe8fa0c393113d4bd4b9219fcebb47768ddc182a43d71a",
+      "files": [
+        "journal/journal8/P101.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "c981409c12177444b93de45bc4920d15a9e96352efc2b34df71d6581722d755a",
+      "files": [
+        "tourney-2020/OM2020_W0_ConnectTheDots.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "c9e88773423e6a434bb80f4f585d12d544644f1a84a7b93ab0c26a9e31acd47d",
+      "files": [
+        "journal/journal7/P097.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "cb1a991db5c3e0133d9702415761ea5e09206d792aa77daa2067b73530b722d3",
+      "files": [
+        "campaign/ch1-and-prologue/P012.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "cb6c9528173b15e67b322642605b69a085a72c02d7982ce13f9ea7c9b21cf9bf",
+      "files": [
+        "workshop-versions/w2788067677.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "cca2722a648e4edbfd5a9591bd5bb45644dbfccae8fff9cd3d1c5e74bbf8fdcf",
+      "files": [
+        "campaign/ch4/P031b.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "cd9b4ea973f563081635a7e9205086ba9f8d42d79f0f3c086475040520767b4d",
+      "files": [
+        "workshop-versions/w2946683186.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "ce508e51718aea1b06034c65d2328af52f11bbd64fce33537c0fcf9589bd7cc9",
+      "files": [
+        "journal/journal8/P103.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "cf12f5cef991ef459c49d883b9d9c11dc77477e1a6fb9e0d5318601393e62bde",
+      "files": [
+        "journal/journal3/P064.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "cfba9c0596849c07951f1c3a9d068d0d37298c1497d4815348ace256676f9d2e",
+      "files": [
+        "workshop-versions/w2829050875.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "d61cc536e4f2754d8e0c7d38bc7c36a0d4376a0cde1b72b7777af4e8de8b9855",
+      "files": [
+        "tourney-2020/OM2020_W8_MetalCalculus.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "d7ad2f775f881d86c7356270a6a034ad0db4a0c5453674b1552a2249bf4af9ef",
+      "files": [
+        "workshop-versions/w2827119474.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "d7f02044049159f32b74abbdb74e1e0576363db2ed6e306e330468518d94cd59",
+      "files": [
+        "journal/journal2/P062.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "d80bd027f952d5012921ea8ac5b183d80355a1dff45d56c06e46fc9d56c73845",
+      "files": [
+        "journal/journal8/P100.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "dca90f6ce36a8142f01e5614625f424a43003c20add828662ba80fe5665e9476",
+      "files": [
+        "tourney-2021/OM2021_W4.puzzle",
+        "workshop-versions/w2450512232.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "deecf24d221ec96d52c1756ecb990e8328ad2d8ac9ccb820f6731545f81c9779",
+      "files": [
+        "workshop-versions/w2788066279.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "e1912394e6f784dbca797ded0d120c18f7ce0c6af6550cc53fb73231323c6629",
+      "files": [
+        "workshop-versions/w2946687209.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "e42f1f113019034aba06b478045e7bfb4da560026acc4eb3349cb5da6d221098",
+      "files": [
+        "tourney-2021/OM2021_W7.puzzle",
+        "workshop-versions/w2450512626.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "e445c554b8f8937b8db20402e0200e451fcf33d82978836477a81aea931a0589",
+      "files": [
+        "journal/journal5/P089.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "e55f57a6a08212fec13a9b35e14735e5f1d4e19a8e2579354445e917f6aa7407",
+      "files": [
+        "journal/journal3/P067.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "e59c2d6b12106f046adaede07933b202f7233a224ce1a7fe90fe7502b0606696",
+      "files": [
+        "journal/journal3/P068.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "e5ccff40c0591da409f4c55cc3414dd781981f2219309a322ce890c7e2dcc9af",
+      "files": [
+        "journal/journal5/P086.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "e645d0a55074afea93da53d02178ded26c22b4f61ebcef4a99c9c5d3c9f714e4",
+      "files": [
+        "easy/infinite-throughput.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "e8b19d31047f4775c36fb6ffd056d90dfdce664156017e0d6811c0e5f96b0a76",
+      "files": [
+        "campaign/ch5/P043.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "e9a0742771cf23f47b0edf3d3ef110b027eafd192cdd17054f271a2c6a79ae9a",
+      "files": [
+        "campaign/ch4/P032.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "f158add578ba35f7fab916ff93436e16e6a6d7b399c530a3d55327c429eba909",
+      "files": [
+        "edge-cases/infinite-internal-bonds.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "f2d0ed7603184392cbea1375b0a4c9079b7acb1711c921fd0aa8989e416dc41f",
+      "files": [
+        "tourney-2019/week6.puzzle"
+      ],
+      "split": "holdout"
+    },
+    {
+      "sha256": "f4bdc881b7d73a668b068b79beed4a688411ea3bf401240067fe43c94b9d78e5",
+      "files": [
+        "tourney-2021/OM2021_W1.puzzle",
+        "workshop-versions/w2450508212.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "f58f0f1f0a6a9b344795685920c6e82b47daba1fe93177ffc6aca2651dbacb58",
+      "files": [
+        "tourney-2020/OM2020_W6_ActivePolymerase.puzzle",
+        "workshop-versions/w2501728219.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "f5922439eb7b2e1b96b5598f36fcfab651943413f93d437fc2dbf01b0a3f7681",
+      "files": [
+        "tourney-2020/OM2020_W2_AmalgamatedGoldRing.puzzle",
+        "workshop-versions/w2501727808.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "f613a067402a497ada41d9db55153c321f3d6d886ba6f9907b8f42d2410896e3",
+      "files": [
+        "workshop-versions/w2788066865.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "f7504fc54fcc4ff2d472d6141ba49d03e44a45e36a5bde0568a20fbaf22b1dab",
+      "files": [
+        "tourney-2019/week5.puzzle",
+        "workshop-versions/w1698786588.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "f7ea45f6c09c41db560e66b6fe1fdfdfd81529bc40921a9862b5d413ca2904cf",
+      "files": [
+        "workshop-versions/w2946683261.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "fa8528643a245a316747c4a3ad368c3705350896fbe568bfd53963d404f61337",
+      "files": [
+        "workshop-versions/w2591419339.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "fabd74d390976af87315f052b85adde723e442f9c5c5fddf874d938e64a33146",
+      "files": [
+        "campaign/ch3/P024.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "fbd2541433f0449625d8f760d6e86afa9d2580e7d231d453976ab064a8b73706",
+      "files": [
+        "campaign/ch1-and-prologue/P011.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "fc6a70ebe6fa7a539ad89d8ddf2d0f6c0cce2022bafce0b998df875c1bf1c19b",
+      "files": [
+        "edge-cases/c654382114940518.puzzle"
+      ],
+      "split": "development"
+    },
+    {
+      "sha256": "fe57c5d3937ade1e39aa1906f3a7ab9930932ec7547d2bbc3c028ad9cedd4e08",
+      "files": [
+        "journal/journal9-p/P106.puzzle"
+      ],
+      "split": "development"
+    }
+  ]
+}

@@ -1,10 +1,12 @@
 #include <cstddef>
+#include <limits>
 #include <span>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "BinaryParser.hpp"
+#include "BinaryWriter.hpp"
 #include "UnitTestConstants.hpp"
 
 using opusoptima::test::BufferBuilder;
@@ -68,6 +70,53 @@ TEST(SolutionParseUnitTest, ParsesArmInstructions) {
     ASSERT_EQ(sol.objects[0].instructions.size(), static_cast<std::size_t>(kInstrCount));
     EXPECT_EQ(sol.objects[0].instructions[0].action, 'G');
     EXPECT_EQ(sol.objects[0].instructions[1].action, 'X');
+}
+
+TEST(SolutionParseUnitTest, PreservesSignedInt32TapePositionsThroughCodec) {
+    const std::vector<opusoptima::io::ArmInstruction> instructions = {
+        {'G', std::numeric_limits<std::int32_t>::min()}, {'r', -20001},
+        {'g', -20000}, {'R', 20000}, {'O', 20001},
+        {'B', std::numeric_limits<std::int32_t>::max()}};
+    opusoptima::io::SolutionData solution;
+    solution.objects = {{"arm1", {}, instructions, {1, 0, 0, 0, 0}}};
+    const auto bytes = opusoptima::io::BinaryWriter::WriteSolution(solution);
+    const auto parsed = opusoptima::io::BinaryParser::ParseSolution(bytes);
+    ASSERT_EQ(parsed.objects.size(), 1U);
+    ASSERT_EQ(parsed.objects[0].instructions.size(), instructions.size());
+    for (std::size_t index = 0; index < instructions.size(); ++index) {
+        EXPECT_EQ(parsed.objects[0].instructions[index].parameter, instructions[index].parameter);
+        EXPECT_EQ(parsed.objects[0].instructions[index].action, instructions[index].action);
+    }
+    EXPECT_EQ(opusoptima::io::BinaryWriter::WriteSolution(parsed), bytes);
+}
+
+TEST(SolutionParseUnitTest, RejectsInstructionCountsAndByteTruncationAtTheActualRead) {
+    const auto parseError = [](int count, int payloadBytes, const char* expected) {
+        SCOPED_TRACE(count);
+        SCOPED_TRACE(payloadBytes);
+        BufferBuilder builder;
+        builder.Buffer() = BuildMinimalSolution();
+        builder.Buffer().resize(builder.Buffer().size() - 4);
+        builder.PushI32(1);
+        builder.PushVStr("arm1");
+        builder.PushU8(1);
+        for (int field = 0; field < 5; ++field) builder.PushI32(0);
+        builder.PushI32(count);
+        for (int byte = 0; byte < payloadBytes; ++byte) builder.PushU8(0);
+        try {
+            static_cast<void>(opusoptima::io::BinaryParser::ParseSolution(builder.Span()));
+            FAIL() << "Expected instruction structure rejection";
+        } catch (const opusoptima::io::ParseError& error) {
+            EXPECT_STREQ(error.what(), expected);
+        }
+    };
+    parseError(-1, 4, "Negative instruction count");
+    parseError(std::numeric_limits<std::int32_t>::max(), 4, "Invalid instruction count");
+    for (int bytes = 0; bytes < 5; ++bytes)
+        parseError(1, bytes, "Invalid instruction count");
+    // A full entry passes the count gate; the separate i32 footer is still mandatory.
+    for (int bytes = 5; bytes < 9; ++bytes)
+        parseError(1, bytes, "Unexpected EOF while reading i32");
 }
 
 TEST(SolutionParseUnitTest, HandlesZeroInstructionsArm) {
@@ -149,7 +198,46 @@ TEST(SolutionParseUnitTest, HandlesMultipleObjects) {
     EXPECT_EQ(sol.objects[2].typeName, "arm1");
 }
 
-TEST(SolutionParseUnitTest, StopsWhenObjectCountExceedsData) {
+TEST(SolutionParseUnitTest, RejectsInvalidCountsBeforeReadingEntries) {
+    for (const int count : {-1, 1, std::numeric_limits<int>::max()}) {
+        for (const bool metrics : {false, true}) {
+            SCOPED_TRACE(count);
+            SCOPED_TRACE(metrics);
+            BufferBuilder builder;
+            builder.PushI32(7);
+            builder.PushVStr("");
+            builder.PushVStr("");
+            if (!metrics) builder.PushI32(0);
+            builder.PushI32(count);
+            try {
+                static_cast<void>(opusoptima::io::BinaryParser::ParseSolution(builder.Span()));
+                FAIL() << "Expected invalid count to be rejected";
+            } catch (const opusoptima::io::ParseError& error) {
+                EXPECT_STREQ(error.what(), metrics ? "Invalid metrics count" : "Invalid object count");
+            }
+        }
+    }
+}
+
+TEST(SolutionParseUnitTest, AcceptsMinimumSizeObjectsAndZeroMetrics) {
+    for (const int count : {0, 1, 2}) {
+        BufferBuilder builder;
+        builder.PushI32(7);
+        builder.PushVStr("");
+        builder.PushVStr("");
+        builder.PushI32(0);
+        builder.PushI32(count);
+        for (int i = 0; i < count; ++i) {
+            builder.PushVStr("");
+            builder.PushU8(1);
+            for (int field = 0; field < 7; ++field) builder.PushI32(0);
+        }
+        const auto solution = opusoptima::io::BinaryParser::ParseSolution(builder.Span());
+        EXPECT_EQ(solution.objects.size(), static_cast<std::size_t>(count));
+    }
+}
+
+TEST(SolutionParseUnitTest, RejectsWhenObjectCountExceedsData) {
     const auto base = BuildMinimalSolution();
     std::vector<std::byte> buffer(base.begin(), base.end() - 4);
     constexpr int kClaimedObjects = 5;
@@ -165,7 +253,7 @@ TEST(SolutionParseUnitTest, StopsWhenObjectCountExceedsData) {
         obj.PushI32(0);
     const auto& tail = obj.Buffer();
     buffer.insert(buffer.end(), tail.begin(), tail.end());
-    const auto sol = opusoptima::io::BinaryParser::ParseSolution(
-        std::span<const std::byte>(buffer.data(), buffer.size()));
-    EXPECT_EQ(sol.objects.size(), 1U);
+    EXPECT_THROW(opusoptima::io::BinaryParser::ParseSolution(
+                     std::span<const std::byte>(buffer.data(), buffer.size())),
+                 opusoptima::io::ParseError);
 }

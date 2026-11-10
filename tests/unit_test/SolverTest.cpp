@@ -1,19 +1,43 @@
 #include <cstddef>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "HexGrid.hpp"
-#include "PuzzleSpecs.hpp"
 #include "AStar.hpp"
 #include "GreedyPlanner.hpp"
+#include "HexGrid.hpp"
+#include "PuzzleSpecs.hpp"
 #include "RecipeMilp.hpp"
+#include "RepoRoot.hpp"
 
 namespace {
 
 constexpr int kUnreachableGoalQ = 5;
 
 } // namespace
+
+TEST(SolverRegistryTest, RecommendedDefaultAndExplicitBackendsKeepTheirIdentity) {
+    using opusoptima::solvers::BaseSolver;
+    const auto recommended = BaseSolver::Create();
+    ASSERT_NE(recommended, nullptr);
+    EXPECT_EQ(recommended->Name(), "AssemblySolver");
+    for (const auto& [alias, expected] :
+         std::vector<std::pair<std::string, std::string>>{
+             {"assembly", "AssemblySolver"}, {"default", "GreedyPlannerSolver"},
+             {"single-atom", "SingleAtomSolver"}, {"diatomic", "DiatomicSolver"},
+             {"greedy", "GreedyPlannerSolver"}, {"milp", "RecipeMilp"},
+             {"mip", "RecipeMilp"}, {"AssemblySolver", "AssemblySolver"},
+             {"SingleAtomSolver", "SingleAtomSolver"}, {"DiatomicSolver", "DiatomicSolver"},
+             {"GreedyPlannerSolver", "GreedyPlannerSolver"}, {"RecipeMilp", "RecipeMilp"}}) {
+        const auto solver = BaseSolver::Create(alias);
+        ASSERT_NE(solver, nullptr) << alias;
+        EXPECT_EQ(solver->Name(), expected) << alias;
+    }
+    EXPECT_EQ(BaseSolver::Create("unknown-solver"), nullptr);
+    EXPECT_EQ(BaseSolver::Create(""), nullptr);
+}
 
 // A* unit tests
 
@@ -34,7 +58,7 @@ TEST(AStarTest, FindsDirectPath) {
 
 TEST(AStarTest, EmptyStartGoalSame) {
     opusoptima::solvers::AStar astar;
-    auto result = astar.FindPath({.q=1, .r=-1}, {.q=1, .r=-1});
+    auto result = astar.FindPath({.q = 1, .r = -1}, {.q = 1, .r = -1});
     EXPECT_TRUE(result.found);
     EXPECT_EQ(result.path.size(), 1U);
     EXPECT_EQ(result.path[0], opusoptima::core::HexCoord(1, -1));
@@ -43,9 +67,9 @@ TEST(AStarTest, EmptyStartGoalSame) {
 TEST(AStarTest, AvoidsObstacles) {
     opusoptima::solvers::AStar astar;
     // Block the direct path along (1,0), (2,0)
-    astar.AddObstacle({.q=1, .r=0});
-    astar.AddObstacle({.q=2, .r=0});
-    auto result = astar.FindPath({.q=0, .r=0}, {.q=3, .r=0});
+    astar.AddObstacle({.q = 1, .r = 0});
+    astar.AddObstacle({.q = 2, .r = 0});
+    auto result = astar.FindPath({.q = 0, .r = 0}, {.q = 3, .r = 0});
     EXPECT_TRUE(result.found);
     // Path should still reach the goal via a detour
     EXPECT_EQ(result.path.front(), opusoptima::core::HexCoord(0, 0));
@@ -109,7 +133,7 @@ TEST(RecipeMilpTest, InsufficientInput) {
 // GreedyPlanner unit tests
 
 TEST(GreedyPlannerTest, PlansForEasyInfiniteProduct) {
-    const auto repo = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
+    const auto repo = opusoptima::test::RepoRoot(__FILE__);
     const auto puzzlePath = repo / "asset/puzzle/easy/easy-infinite-product.puzzle";
     const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzleFile(puzzlePath);
 

@@ -1,0 +1,3854 @@
+{
+  "schema": 1,
+  "assembly_sha256": "fd804fadedbf1b991ed37f3ec7325b2160317f0585e3e908fb73f246a038368d",
+  "method": "Hash-locked PE/CLI byte-only inspection; no assembly load, game execution or native build",
+  "scope": "Numerical constants and selected static IL data flow, not a game replay or full collision/area equivalence proof; no complete method bodies are bundled",
+  "publication_evidence_level": "model-only; evidence below does not establish the existing fixed clearance or raster uncertainty envelopes",
+  "reference_source": {
+    "repository": "https://github.com/ianh/omsim",
+    "revision": "a88d12d8d100784aa525ee90259255b869bcba38",
+    "file": "collision.c",
+    "git_blob_sha1": "22a4555d82ff3bd38bc52473e1d05ba7310d4571",
+    "sha256": "a2df55f5a12ec8a107c6408e44d7e4373447b6741a8f59259829c2f6f96558b5",
+    "facts": {
+      "hex_size_x": 82,
+      "hex_size_y": 71,
+      "atom_radius": 29,
+      "produced_atom_radius": 15,
+      "arm_base_radius": 20
+    },
+    "evidence_kind": "Pinned upstream source, not original-game execution"
+  },
+  "original_game_static_il": {
+    "simulation_initializer": {
+      "method_token": "060010d4",
+      "method_name": ".Sim..cctor",
+      "method_il_sha256": "4fc9226182fa4bd0691cbc4e1fa2c25e27b195b6ce6088d554ba5ef02d5dea68",
+      "il_bytes": 355,
+      "references": [
+        {
+          "offset": 5,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 10,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 15,
+          "opcode": "0x80",
+          "token": "0400111d",
+          "name": ".Sim.#=qXBDEQZI3Sg2TDgsTOIIvWCJNxndNg6n64_NpG5fC$Oc="
+        },
+        {
+          "offset": 25,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 30,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 35,
+          "opcode": "0x80",
+          "token": "0400111e",
+          "name": ".Sim.#=qlFDctPp8OUPICzuj56DdqL6pqiCDiU3nivmv8lwuvsI="
+        },
+        {
+          "offset": 45,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 50,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 55,
+          "opcode": "0x80",
+          "token": "0400111f",
+          "name": ".Sim.#=quhbwR$wyg9HJ9nCR27rFSzN$_sWVDhG6TMYlXUCM5TU="
+        },
+        {
+          "offset": 65,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 70,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 75,
+          "opcode": "0x80",
+          "token": "04001120",
+          "name": ".Sim.#=qpxeaV$LlbBfyoV20akF_ylJJ0$f9Lv$Q4RQuUX40_24="
+        },
+        {
+          "offset": 85,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 90,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 95,
+          "opcode": "0x80",
+          "token": "04001121",
+          "name": ".Sim.#=q5q5SiuEwnhVn0IfJPwix9q1$E6xygK8vd95DifCBEcs="
+        },
+        {
+          "offset": 105,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 110,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 115,
+          "opcode": "0x80",
+          "token": "04001122",
+          "name": ".Sim.#=qEijAvVx7$AvtoWNC0J8mTYabo25_SUAsN7Mq5$Bvjxc="
+        },
+        {
+          "offset": 125,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 130,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 135,
+          "opcode": "0x80",
+          "token": "04001123",
+          "name": ".Sim.#=qWRCPDEeGeZRsNjkxPFEGczY_t0zXYdbb_f7v4B3SZmA="
+        },
+        {
+          "offset": 145,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 150,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 155,
+          "opcode": "0x80",
+          "token": "04001124",
+          "name": ".Sim.#=qohJX_I3RAFokcAGi9wyHcJ1fkOq8A8GrF$3kKMmmirM="
+        },
+        {
+          "offset": 165,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 170,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 175,
+          "opcode": "0x80",
+          "token": "04001125",
+          "name": ".Sim.#=qkML44Ybk_wdkfXrfLQViqSgEjpU3cDIoiLbToqHd9Jc="
+        },
+        {
+          "offset": 181,
+          "opcode": "0x80",
+          "token": "04001126",
+          "name": ".Sim.#=qrEfTya64A$rStUtuec72a1GwQJV6S5TjxgGa7N$qErc="
+        },
+        {
+          "offset": 191,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 196,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 201,
+          "opcode": "0x80",
+          "token": "04001127",
+          "name": ".Sim.#=q7T0OdUDzGcZmTOrDNKrN101TOMP23NIcv1tQr_pqKN8="
+        },
+        {
+          "offset": 211,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 216,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 221,
+          "opcode": "0x80",
+          "token": "04001128",
+          "name": ".Sim.#=qUQughjo7etlgcCWnVaDSYmYAwHB1cb6a$8oT9O3R0BE="
+        },
+        {
+          "offset": 231,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 236,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 241,
+          "opcode": "0x80",
+          "token": "04001129",
+          "name": ".Sim.#=qN_WPDTvUWLbHIj5c6rpyhSbqQlpR0IvZyncqoULGkjc="
+        },
+        {
+          "offset": 251,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 256,
+          "opcode": "0x28",
+          "token": "06000768",
+          "name": ".#=qbEggsKmFg4ZbTtVeqxkV0w==.#=q0YiCqsA5rXqC7xYKFiuCdw=="
+        },
+        {
+          "offset": 261,
+          "opcode": "0x80",
+          "token": "0400112a",
+          "name": ".Sim.#=q3XK1pVzHPe38lRIH37$4$UVoK5woYPajpnTp2zNMZM4="
+        },
+        {
+          "offset": 266,
+          "opcode": "0x73",
+          "token": "06000afe",
+          "name": ".#=qWxm1_nJLz5iiIAaUxMDLfM18YoL_Ucu3DX7V2EYYb3M=..ctor"
+        },
+        {
+          "offset": 271,
+          "opcode": "0x80",
+          "token": "04001136",
+          "name": ".Sim.#=qhk_yoX_VU5wJHxvlq6laCCCwrvNMoHKPcpGrwecuE2w="
+        },
+        {
+          "offset": 280,
+          "opcode": "0x73",
+          "token": "06000c72",
+          "name": ".HexIndex..ctor"
+        },
+        {
+          "offset": 285,
+          "opcode": "0x80",
+          "token": "04001137",
+          "name": ".Sim.#=qpUdCEfnZ2Cf$aZ8wX$NzVg=="
+        },
+        {
+          "offset": 294,
+          "opcode": "0x73",
+          "token": "06000c72",
+          "name": ".HexIndex..ctor"
+        },
+        {
+          "offset": 299,
+          "opcode": "0x80",
+          "token": "04001138",
+          "name": ".Sim.#=qQFaNwjcJkZg0xix9wlSFeQ=="
+        },
+        {
+          "offset": 309,
+          "opcode": "0x80",
+          "token": "04001139",
+          "name": ".Sim.#=qe7r$hIFGz3uxptHQRgARDLUWypvLNgegVMcu1qlgiWY="
+        },
+        {
+          "offset": 319,
+          "opcode": "0x80",
+          "token": "0400113a",
+          "name": ".Sim.#=qe5CYJPfrpzkGmQX5PtvTjj4WrJ381A_0TMjJrGm4c7M="
+        },
+        {
+          "offset": 329,
+          "opcode": "0x80",
+          "token": "0400113b",
+          "name": ".Sim.#=qdYaPXvWlT46RBBI2FQdYCIA5xO7$Rgc9sqo65X$jCuM="
+        },
+        {
+          "offset": 339,
+          "opcode": "0x80",
+          "token": "0400113c",
+          "name": ".Sim.#=qxxx1XXTu_nhGHJKc4OfObOUVm523ubZ65IYlVG9UfGc="
+        },
+        {
+          "offset": 349,
+          "opcode": "0x80",
+          "token": "0400113d",
+          "name": ".Sim.#=qzneNHtEYEK4le7jcnrvL74Oyr1qD4eU0lwBMW5_Z4gg="
+        }
+      ]
+    },
+    "simulation_float_assignments": [
+      {
+        "literal_offset": 304,
+        "operand_bytes": "0000e841",
+        "float32": 29.0,
+        "write_offset": 309,
+        "field_token": "04001139"
+      },
+      {
+        "literal_offset": 314,
+        "operand_bytes": "00007041",
+        "float32": 15.0,
+        "write_offset": 319,
+        "field_token": "0400113a"
+      },
+      {
+        "literal_offset": 324,
+        "operand_bytes": "0000a041",
+        "float32": 20.0,
+        "write_offset": 329,
+        "field_token": "0400113b"
+      },
+      {
+        "literal_offset": 334,
+        "operand_bytes": "0000c041",
+        "float32": 24.0,
+        "write_offset": 339,
+        "field_token": "0400113c"
+      },
+      {
+        "literal_offset": 344,
+        "operand_bytes": "0000a041",
+        "float32": 20.0,
+        "write_offset": 349,
+        "field_token": "0400113d"
+      }
+    ],
+    "collider_radius_selector": {
+      "method_token": "0600110f",
+      "method_name": ".#=qtthMJUXHm0M4PgZEySqlPQ==..ctor",
+      "method_il_sha256": "78f358ccb579f4bd2e18014e4786db8a28cd0c380f93901c772fa9822ac6894f",
+      "il_bytes": 45,
+      "references": [
+        {
+          "offset": 2,
+          "opcode": "0x7d",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 9,
+          "opcode": "0x7d",
+          "token": "04001152",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qiLyt4WQxk9FFg$$$zZOg9g=="
+        },
+        {
+          "offset": 22,
+          "opcode": "0x7e",
+          "token": "04001139",
+          "name": ".Sim.#=qe7r$hIFGz3uxptHQRgARDLUWypvLNgegVMcu1qlgiWY="
+        },
+        {
+          "offset": 27,
+          "opcode": "0x7d",
+          "token": "04001153",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=q_JHhK58vE4ic_4UI$pIiqA=="
+        },
+        {
+          "offset": 34,
+          "opcode": "0x7e",
+          "token": "0400113b",
+          "name": ".Sim.#=qdYaPXvWlT46RBBI2FQdYCIA5xO7$Rgc9sqo65X$jCuM="
+        },
+        {
+          "offset": 39,
+          "opcode": "0x7d",
+          "token": "04001153",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=q_JHhK58vE4ic_4UI$pIiqA=="
+        }
+      ]
+    },
+    "collider_radius_selector_instructions": [
+      {
+        "offset": 14,
+        "opcode": "0x3"
+      },
+      {
+        "offset": 15,
+        "opcode": "0x2c"
+      },
+      {
+        "offset": 17,
+        "opcode": "0x3"
+      },
+      {
+        "offset": 18,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 19,
+        "opcode": "0x2e"
+      },
+      {
+        "offset": 21,
+        "opcode": "0x2"
+      },
+      {
+        "offset": 22,
+        "opcode": "0x7e",
+        "token": "04001139"
+      },
+      {
+        "offset": 27,
+        "opcode": "0x7d",
+        "token": "04001153"
+      },
+      {
+        "offset": 32,
+        "opcode": "0x2a"
+      },
+      {
+        "offset": 33,
+        "opcode": "0x2"
+      },
+      {
+        "offset": 34,
+        "opcode": "0x7e",
+        "token": "0400113b"
+      },
+      {
+        "offset": 39,
+        "opcode": "0x7d",
+        "token": "04001153"
+      },
+      {
+        "offset": 44,
+        "opcode": "0x2a"
+      }
+    ],
+    "collider_radius_semantics": "Constructor categories 0/1 select field 04001139; other categories select 0400113b. Full category meanings and integration coverage remain unproven here.",
+    "collider_pair_filter_instructions": [
+      {
+        "offset": 1018,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1020,
+        "opcode": "0x7b",
+        "token": "04001152"
+      },
+      {
+        "offset": 1025,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1027,
+        "opcode": "0x7b",
+        "token": "04001152"
+      },
+      {
+        "offset": 1032,
+        "opcode": "0x28",
+        "token": "0600130b"
+      },
+      {
+        "offset": 1037,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1039,
+        "opcode": "0x7b",
+        "token": "04001153"
+      },
+      {
+        "offset": 1044,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1046,
+        "opcode": "0x7b",
+        "token": "04001153"
+      },
+      {
+        "offset": 1051,
+        "opcode": "0x58"
+      },
+      {
+        "offset": 1052,
+        "opcode": "0x41"
+      },
+      {
+        "offset": 1057,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1059,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1064,
+        "opcode": "0x2c"
+      },
+      {
+        "offset": 1066,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1068,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1073,
+        "opcode": "0x16"
+      },
+      {
+        "offset": 1074,
+        "opcode": "0xfe01"
+      },
+      {
+        "offset": 1076,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 1078,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1079,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1081,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1083,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1088,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1089,
+        "opcode": "0x2e"
+      },
+      {
+        "offset": 1091,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1093,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1098,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1099,
+        "opcode": "0xfe01"
+      },
+      {
+        "offset": 1101,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 1103,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1104,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1106,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1108,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1113,
+        "opcode": "0x18"
+      },
+      {
+        "offset": 1114,
+        "opcode": "0x2e"
+      },
+      {
+        "offset": 1116,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1118,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1123,
+        "opcode": "0x18"
+      },
+      {
+        "offset": 1124,
+        "opcode": "0xfe01"
+      },
+      {
+        "offset": 1126,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 1128,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1129,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1131,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1133,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1138,
+        "opcode": "0x19"
+      },
+      {
+        "offset": 1139,
+        "opcode": "0x2e"
+      },
+      {
+        "offset": 1141,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1143,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1148,
+        "opcode": "0x19"
+      },
+      {
+        "offset": 1149,
+        "opcode": "0xfe01"
+      },
+      {
+        "offset": 1151,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 1153,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1154,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1156,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1157,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1159,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1161,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1166,
+        "opcode": "0x2d"
+      },
+      {
+        "offset": 1168,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1170,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1175,
+        "opcode": "0x2d"
+      },
+      {
+        "offset": 1177,
+        "opcode": "0x7e",
+        "token": "0400111f"
+      },
+      {
+        "offset": 1182,
+        "opcode": "0x28",
+        "token": "06000d0b"
+      },
+      {
+        "offset": 1187,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1189,
+        "opcode": "0x38"
+      },
+      {
+        "offset": 1194,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1196,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1201,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1202,
+        "opcode": "0x33"
+      },
+      {
+        "offset": 1204,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1206,
+        "opcode": "0x7b",
+        "token": "04001151"
+      },
+      {
+        "offset": 1211,
+        "opcode": "0x17"
+      },
+      {
+        "offset": 1212,
+        "opcode": "0x33"
+      },
+      {
+        "offset": 1214,
+        "opcode": "0x7e",
+        "token": "04001120"
+      },
+      {
+        "offset": 1219,
+        "opcode": "0x28",
+        "token": "06000d0b"
+      },
+      {
+        "offset": 1224,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1226,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 1228,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1230,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1232,
+        "opcode": "0x5f"
+      },
+      {
+        "offset": 1233,
+        "opcode": "0x2c"
+      },
+      {
+        "offset": 1235,
+        "opcode": "0x7e",
+        "token": "04001121"
+      },
+      {
+        "offset": 1240,
+        "opcode": "0x28",
+        "token": "06000d0b"
+      },
+      {
+        "offset": 1245,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1247,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 1249,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1251,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1253,
+        "opcode": "0x5f"
+      },
+      {
+        "offset": 1254,
+        "opcode": "0x2c"
+      },
+      {
+        "offset": 1256,
+        "opcode": "0x7e",
+        "token": "04001122"
+      },
+      {
+        "offset": 1261,
+        "opcode": "0x28",
+        "token": "06000d0b"
+      },
+      {
+        "offset": 1266,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1268,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 1270,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1272,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1274,
+        "opcode": "0x5f"
+      },
+      {
+        "offset": 1275,
+        "opcode": "0x2c"
+      },
+      {
+        "offset": 1277,
+        "opcode": "0x7e",
+        "token": "04001123"
+      },
+      {
+        "offset": 1282,
+        "opcode": "0x28",
+        "token": "06000d0b"
+      },
+      {
+        "offset": 1287,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1289,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 1291,
+        "opcode": "0x16"
+      },
+      {
+        "offset": 1292,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1294,
+        "opcode": "0x14"
+      },
+      {
+        "offset": 1295,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 1297,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 1299,
+        "opcode": "0x2c"
+      }
+    ],
+    "collider_pair_filter_semantics": {
+      "distance_gate": "Vector2.Distance(positionA,positionB) < radiusA+radiusB; category dispatch follows only below this strict threshold",
+      "unordered_error_category_pairs": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "other_pairs": "No collision error emitted by this dispatch; area observation still follows the pair loop",
+      "scope": "Static dispatch for constructed collider records only; category meanings, insertion completeness and float-distance equivalence are separate obligations"
+    },
+    "manual_radius_overrides": [
+      {
+        "offset": 720,
+        "opcode": "0x12"
+      },
+      {
+        "offset": 722,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 724,
+        "opcode": "0x7b",
+        "token": "0400095a"
+      },
+      {
+        "offset": 729,
+        "opcode": "0x7d",
+        "token": "04001152"
+      },
+      {
+        "offset": 734,
+        "opcode": "0x12"
+      },
+      {
+        "offset": 736,
+        "opcode": "0x7e",
+        "token": "0400113c"
+      },
+      {
+        "offset": 741,
+        "opcode": "0x7d",
+        "token": "04001153"
+      },
+      {
+        "offset": 891,
+        "opcode": "0x12"
+      },
+      {
+        "offset": 893,
+        "opcode": "0x19"
+      },
+      {
+        "offset": 894,
+        "opcode": "0x7d",
+        "token": "04001151"
+      },
+      {
+        "offset": 899,
+        "opcode": "0x12"
+      },
+      {
+        "offset": 901,
+        "opcode": "0x7e",
+        "token": "040006bf"
+      },
+      {
+        "offset": 906,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 908,
+        "opcode": "0x6f",
+        "token": "06000793"
+      },
+      {
+        "offset": 913,
+        "opcode": "0x7d",
+        "token": "04001152"
+      },
+      {
+        "offset": 918,
+        "opcode": "0x12"
+      },
+      {
+        "offset": 920,
+        "opcode": "0x7e",
+        "token": "0400113d"
+      },
+      {
+        "offset": 925,
+        "opcode": "0x7d",
+        "token": "04001153"
+      }
+    ],
+    "hex_mapper": {
+      "method_token": "06000793",
+      "method_name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qmlAugxoGXUyZZDE77VbjYBo6tH0crnU1cfQUSeJU4Lw=",
+      "method_il_sha256": "64850c3c5c69a193267efbafed86b6f30ef6cebd1352da9708f1fedddaae3c97",
+      "il_bytes": 60,
+      "references": [
+        {
+          "offset": 1,
+          "opcode": "0x7b",
+          "token": "040006c1",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qdhp9gDb$cXL0qGOuc$SwEw=="
+        },
+        {
+          "offset": 6,
+          "opcode": "0x7b",
+          "token": "040012ae",
+          "name": ".Vector2.X"
+        },
+        {
+          "offset": 12,
+          "opcode": "0x7b",
+          "token": "04000b1f",
+          "name": ".HexIndex.Q"
+        },
+        {
+          "offset": 24,
+          "opcode": "0x7b",
+          "token": "04000b20",
+          "name": ".HexIndex.R"
+        },
+        {
+          "offset": 34,
+          "opcode": "0x7b",
+          "token": "040006c1",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qdhp9gDb$cXL0qGOuc$SwEw=="
+        },
+        {
+          "offset": 39,
+          "opcode": "0x7b",
+          "token": "040012af",
+          "name": ".Vector2.Y"
+        },
+        {
+          "offset": 45,
+          "opcode": "0x7b",
+          "token": "04000b20",
+          "name": ".HexIndex.R"
+        },
+        {
+          "offset": 54,
+          "opcode": "0x73",
+          "token": "060012ff",
+          "name": ".Vector2..ctor"
+        }
+      ]
+    },
+    "hex_mapper_selected_instructions": [
+      {
+        "offset": 1,
+        "opcode": "0x7b",
+        "token": "040006c1"
+      },
+      {
+        "offset": 6,
+        "opcode": "0x7b",
+        "token": "040012ae"
+      },
+      {
+        "offset": 12,
+        "opcode": "0x7b",
+        "token": "04000b1f"
+      },
+      {
+        "offset": 17,
+        "opcode": "0x6b"
+      },
+      {
+        "offset": 18,
+        "opcode": "0x22",
+        "float32": 0.5,
+        "operand_bytes": "0000003f"
+      },
+      {
+        "offset": 24,
+        "opcode": "0x7b",
+        "token": "04000b20"
+      },
+      {
+        "offset": 29,
+        "opcode": "0x6b"
+      },
+      {
+        "offset": 30,
+        "opcode": "0x5a"
+      },
+      {
+        "offset": 31,
+        "opcode": "0x58"
+      },
+      {
+        "offset": 32,
+        "opcode": "0x5a"
+      },
+      {
+        "offset": 34,
+        "opcode": "0x7b",
+        "token": "040006c1"
+      },
+      {
+        "offset": 39,
+        "opcode": "0x7b",
+        "token": "040012af"
+      },
+      {
+        "offset": 45,
+        "opcode": "0x7b",
+        "token": "04000b20"
+      },
+      {
+        "offset": 50,
+        "opcode": "0x6b"
+      },
+      {
+        "offset": 51,
+        "opcode": "0x5a"
+      }
+    ],
+    "hex_mapper_semantics": "float32 scale.X*(float32 Q + 0.5f*float32 R), scale.Y*float32 R",
+    "hex_mapper_scale_initializer": {
+      "method_token": "06000790",
+      "method_name": ".#=qCvxvS41ffy4ncqM9GXDncA==..cctor",
+      "method_il_sha256": "c2eb40200077001680c81f0b8a400414e8c82e5ebe73712c4cd962ea65163f30",
+      "il_bytes": 50,
+      "references": [
+        {
+          "offset": 0,
+          "opcode": "0x7e",
+          "token": "04000a0d",
+          "name": ".#=qYvTiK9VDCmYy71z$Jrr6mw==.#=qjeTjqWCDHbWbBvaexbmblA=="
+        },
+        {
+          "offset": 5,
+          "opcode": "0x7b",
+          "token": "04000067",
+          "name": ".#=q4arbqNZnVaoY0uQA2fWpSbkDGkZtIlfa$qy03q$3NLU=.#=qdBTOBUXGOtPCYEHE$VCkgw=="
+        },
+        {
+          "offset": 10,
+          "opcode": "0x7b",
+          "token": "04000411",
+          "name": ".#=qZ7ThbxB3d45X8uYn2VWmsg==.#=qspODJfROPErGDjHMcg_mKQ=="
+        },
+        {
+          "offset": 15,
+          "opcode": "0x6f",
+          "token": "060008fc",
+          "name": ".#=qnmbYHiSale4gxJssplSEPOt$jL556N_vZVLjl4ypJrY=.#=qC0wu_KOnwBZg9TJiJS0ImA=="
+        },
+        {
+          "offset": 20,
+          "opcode": "0x73",
+          "token": "0600078f",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==..ctor"
+        },
+        {
+          "offset": 25,
+          "opcode": "0x80",
+          "token": "040006bf",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=q2IzFHdHQPxPAk6BGxoHutg=="
+        },
+        {
+          "offset": 34,
+          "opcode": "0x73",
+          "token": "06000cba",
+          "name": ".Index2..ctor"
+        },
+        {
+          "offset": 39,
+          "opcode": "0x73",
+          "token": "0600078f",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==..ctor"
+        },
+        {
+          "offset": 44,
+          "opcode": "0x80",
+          "token": "040006c0",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qE_ixmVOQiyd7aJ_NWlRb8A=="
+        }
+      ]
+    },
+    "main_grid_asset_write": {
+      "method_token": "0600006b",
+      "method_il_sha256": "765aa7494a3d9a4b661b446735698824cda45a3db8403d1adb06090fc740f05a",
+      "instructions": [
+        {
+          "offset": 3759,
+          "opcode": "0x2"
+        },
+        {
+          "offset": 3760,
+          "opcode": "0x7b",
+          "token": "04000067"
+        },
+        {
+          "offset": 3765,
+          "opcode": "0x20",
+          "integer": 1526158389
+        },
+        {
+          "offset": 3770,
+          "opcode": "0x28",
+          "token": "06000aab"
+        },
+        {
+          "offset": 3775,
+          "opcode": "0x28",
+          "token": "06000b03"
+        },
+        {
+          "offset": 3780,
+          "opcode": "0x20",
+          "integer": 1526158561
+        },
+        {
+          "offset": 3785,
+          "opcode": "0x28",
+          "token": "06000aab"
+        },
+        {
+          "offset": 3790,
+          "opcode": "0x28",
+          "token": "06000b03"
+        },
+        {
+          "offset": 3795,
+          "opcode": "0x20",
+          "integer": 1526158556
+        },
+        {
+          "offset": 3800,
+          "opcode": "0x28",
+          "token": "06000aab"
+        },
+        {
+          "offset": 3805,
+          "opcode": "0x28",
+          "token": "06000b03"
+        },
+        {
+          "offset": 3810,
+          "opcode": "0x20",
+          "integer": 1526158474
+        },
+        {
+          "offset": 3815,
+          "opcode": "0x28",
+          "token": "06000aab"
+        },
+        {
+          "offset": 3820,
+          "opcode": "0x28",
+          "token": "06000b03"
+        },
+        {
+          "offset": 3825,
+          "opcode": "0x73",
+          "token": "060008fa"
+        },
+        {
+          "offset": 3830,
+          "opcode": "0x7d",
+          "token": "04000411"
+        }
+      ]
+    },
+    "four_texture_wrapper": {
+      "method_token": "060008fa",
+      "method_name": ".#=qnmbYHiSale4gxJssplSEPOt$jL556N_vZVLjl4ypJrY=..ctor",
+      "method_il_sha256": "90619d505ca9ecb843f66b0a3495d7e40b75544c54606ac25f333d251025cf25",
+      "il_bytes": 110,
+      "references": [
+        {
+          "offset": 1,
+          "opcode": "0x28",
+          "token": "0a000037",
+          "name": "System.Object..ctor"
+        },
+        {
+          "offset": 7,
+          "opcode": "0x7b",
+          "token": "04000627",
+          "name": ".#=q4Y$oTAXL9pmRyrIu7_r12Q==.#=qIzZwlKIJpWRdoXWpfoHrtA=="
+        },
+        {
+          "offset": 13,
+          "opcode": "0x7b",
+          "token": "04000627",
+          "name": ".#=q4Y$oTAXL9pmRyrIu7_r12Q==.#=qIzZwlKIJpWRdoXWpfoHrtA=="
+        },
+        {
+          "offset": 18,
+          "opcode": "0x28",
+          "token": "06000cc3",
+          "name": ".Index2.op_Inequality"
+        },
+        {
+          "offset": 26,
+          "opcode": "0x7b",
+          "token": "04000627",
+          "name": ".#=q4Y$oTAXL9pmRyrIu7_r12Q==.#=qIzZwlKIJpWRdoXWpfoHrtA=="
+        },
+        {
+          "offset": 32,
+          "opcode": "0x7b",
+          "token": "04000627",
+          "name": ".#=q4Y$oTAXL9pmRyrIu7_r12Q==.#=qIzZwlKIJpWRdoXWpfoHrtA=="
+        },
+        {
+          "offset": 37,
+          "opcode": "0x28",
+          "token": "06000cc3",
+          "name": ".Index2.op_Inequality"
+        },
+        {
+          "offset": 45,
+          "opcode": "0x7b",
+          "token": "04000627",
+          "name": ".#=q4Y$oTAXL9pmRyrIu7_r12Q==.#=qIzZwlKIJpWRdoXWpfoHrtA=="
+        },
+        {
+          "offset": 52,
+          "opcode": "0x7b",
+          "token": "04000627",
+          "name": ".#=q4Y$oTAXL9pmRyrIu7_r12Q==.#=qIzZwlKIJpWRdoXWpfoHrtA=="
+        },
+        {
+          "offset": 57,
+          "opcode": "0x28",
+          "token": "06000cc3",
+          "name": ".Index2.op_Inequality"
+        },
+        {
+          "offset": 69,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 74,
+          "opcode": "0x73",
+          "token": "060008d0",
+          "name": ".#=qmoNea6IcYK2GgSyCniuGNg==..ctor"
+        },
+        {
+          "offset": 82,
+          "opcode": "0x7d",
+          "token": "04000867",
+          "name": ".#=qnmbYHiSale4gxJssplSEPOt$jL556N_vZVLjl4ypJrY=.#=qM9HjXhUNE2RGa$QNrC5ffQ=="
+        },
+        {
+          "offset": 89,
+          "opcode": "0x7d",
+          "token": "04000868",
+          "name": ".#=qnmbYHiSale4gxJssplSEPOt$jL556N_vZVLjl4ypJrY=.#=qGk$Kb4f3b$9Gg1oMynwqOw=="
+        },
+        {
+          "offset": 96,
+          "opcode": "0x7d",
+          "token": "04000869",
+          "name": ".#=qnmbYHiSale4gxJssplSEPOt$jL556N_vZVLjl4ypJrY=.#=qL1f4DxEvDA9bYcyFuyIeIQ=="
+        },
+        {
+          "offset": 104,
+          "opcode": "0x7d",
+          "token": "0400086a",
+          "name": ".#=qnmbYHiSale4gxJssplSEPOt$jL556N_vZVLjl4ypJrY=.#=qUnZnxcoMtfXsqA5xW8oXlQ=="
+        }
+      ]
+    },
+    "four_texture_size_getter": {
+      "method_token": "060008fc",
+      "method_name": ".#=qnmbYHiSale4gxJssplSEPOt$jL556N_vZVLjl4ypJrY=.#=qC0wu_KOnwBZg9TJiJS0ImA==",
+      "method_il_sha256": "d34b7ed5c932032e16e00b4ff9f1f09e575b2a6410616b21cec2389f20d66faf",
+      "il_bytes": 12,
+      "references": [
+        {
+          "offset": 1,
+          "opcode": "0x7b",
+          "token": "04000867",
+          "name": ".#=qnmbYHiSale4gxJssplSEPOt$jL556N_vZVLjl4ypJrY=.#=qM9HjXhUNE2RGa$QNrC5ffQ=="
+        },
+        {
+          "offset": 6,
+          "opcode": "0x7b",
+          "token": "04000627",
+          "name": ".#=q4Y$oTAXL9pmRyrIu7_r12Q==.#=qIzZwlKIJpWRdoXWpfoHrtA=="
+        }
+      ]
+    },
+    "main_grid_motion_consumer": [
+      {
+        "offset": 219,
+        "opcode": "0x7e",
+        "token": "040006bf"
+      },
+      {
+        "offset": 224,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 226,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 228,
+        "opcode": "0x28",
+        "token": "06000c7c"
+      },
+      {
+        "offset": 233,
+        "opcode": "0x6f",
+        "token": "06000793"
+      },
+      {
+        "offset": 238,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 240,
+        "opcode": "0x12"
+      },
+      {
+        "offset": 242,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 244,
+        "opcode": "0x28",
+        "token": "06001309"
+      }
+    ],
+    "main_grid_area_consumer": [
+      {
+        "offset": 0,
+        "opcode": "0x7e",
+        "token": "040006bf"
+      },
+      {
+        "offset": 5,
+        "opcode": "0x3"
+      },
+      {
+        "offset": 6,
+        "opcode": "0x7e",
+        "token": "040012b0"
+      },
+      {
+        "offset": 11,
+        "opcode": "0x6f",
+        "token": "06000794"
+      },
+      {
+        "offset": 16,
+        "opcode": "0xa"
+      },
+      {
+        "offset": 17,
+        "opcode": "0x7e",
+        "token": "04000b22"
+      },
+      {
+        "offset": 22,
+        "opcode": "0xb"
+      },
+      {
+        "offset": 23,
+        "opcode": "0x16"
+      },
+      {
+        "offset": 24,
+        "opcode": "0xc"
+      },
+      {
+        "offset": 25,
+        "opcode": "0x2b"
+      },
+      {
+        "offset": 27,
+        "opcode": "0x7"
+      },
+      {
+        "offset": 28,
+        "opcode": "0x8"
+      },
+      {
+        "offset": 29,
+        "opcode": "0xa3",
+        "token": "020003b9"
+      },
+      {
+        "offset": 34,
+        "opcode": "0xd"
+      },
+      {
+        "offset": 35,
+        "opcode": "0x6"
+      },
+      {
+        "offset": 36,
+        "opcode": "0x9"
+      },
+      {
+        "offset": 37,
+        "opcode": "0x28",
+        "token": "06000c7b"
+      },
+      {
+        "offset": 42,
+        "opcode": "0x13"
+      },
+      {
+        "offset": 44,
+        "opcode": "0x7e",
+        "token": "040006bf"
+      },
+      {
+        "offset": 49,
+        "opcode": "0x11"
+      },
+      {
+        "offset": 51,
+        "opcode": "0x7e",
+        "token": "040012b0"
+      },
+      {
+        "offset": 56,
+        "opcode": "0x6f",
+        "token": "06000792"
+      }
+    ],
+    "hex_mapper_scale_provenance": "Main singleton 040006bf reads dimensions through asset field 04000411 and method 060008fc. MainGridAssetEvidence.json separately closes the locked installation 82x71 binding via static resource decoding and PNG dimensions; reproduce with --audit-grid-assets. A second singleton 040006c0 is explicitly initialized from 66,57.",
+    "angle_conversion": {
+      "method_token": "06000c9c",
+      "method_name": ".HexRotation.ToRadians",
+      "method_il_sha256": "578c66a2bb81762b20e629d4027bcb2164604ae7f1df500ba1d337b2bfa789a2",
+      "il_bytes": 17,
+      "references": [
+        {
+          "offset": 1,
+          "opcode": "0x7b",
+          "token": "04000b36",
+          "name": ".HexRotation.Turns"
+        }
+      ]
+    },
+    "angle_conversion_constants": [
+      {
+        "offset": 6,
+        "opcode": "0x1f",
+        "integer": 60
+      },
+      {
+        "offset": 10,
+        "opcode": "0x22",
+        "float32": 0.01745329238474369,
+        "operand_bytes": "35fa8e3c"
+      }
+    ],
+    "vector_rotation": {
+      "method_token": "06001309",
+      "method_name": ".Vector2.Rotated",
+      "method_il_sha256": "692975db8ca56d0dd64c934fe1a6c8d0f449aa87932fc20dbd930ab89ef29e27",
+      "il_bytes": 58,
+      "references": [
+        {
+          "offset": 2,
+          "opcode": "0x28",
+          "token": "0a00036f",
+          "name": "System.Math.Sin"
+        },
+        {
+          "offset": 11,
+          "opcode": "0x28",
+          "token": "0a0000ea",
+          "name": "System.Math.Cos"
+        },
+        {
+          "offset": 19,
+          "opcode": "0x7b",
+          "token": "040012ae",
+          "name": ".Vector2.X"
+        },
+        {
+          "offset": 27,
+          "opcode": "0x7b",
+          "token": "040012af",
+          "name": ".Vector2.Y"
+        },
+        {
+          "offset": 36,
+          "opcode": "0x7b",
+          "token": "040012ae",
+          "name": ".Vector2.X"
+        },
+        {
+          "offset": 44,
+          "opcode": "0x7b",
+          "token": "040012af",
+          "name": ".Vector2.Y"
+        },
+        {
+          "offset": 52,
+          "opcode": "0x73",
+          "token": "060012ff",
+          "name": ".Vector2..ctor"
+        }
+      ]
+    },
+    "vector_rotation_rounding": [
+      {
+        "offset": 1,
+        "opcode": "0x6c"
+      },
+      {
+        "offset": 2,
+        "opcode": "0x28",
+        "token": "0a00036f"
+      },
+      {
+        "offset": 7,
+        "opcode": "0x6b"
+      },
+      {
+        "offset": 10,
+        "opcode": "0x6c"
+      },
+      {
+        "offset": 11,
+        "opcode": "0x28",
+        "token": "0a0000ea"
+      },
+      {
+        "offset": 16,
+        "opcode": "0x6b"
+      }
+    ],
+    "collision_step_computation": {
+      "method_token": "060010e4",
+      "method_name": ".Sim.#=qBS5X6C0Ld5GUK9chr2kLNb2n4AH6NaiH0_NEci4JQ_o=",
+      "method_il_sha256": "baf76b151851ff8beb15e2733b7063a3c08a0af37350fa05d380866eddad1810",
+      "il_bytes": 942,
+      "references": [
+        {
+          "offset": 1,
+          "opcode": "0x7b",
+          "token": "04001135",
+          "name": ".Sim.#=qp8lW1i6tiGFvG9fuxKugU23DNezYozzrdeFr$R$AgRE="
+        },
+        {
+          "offset": 6,
+          "opcode": "0x6f",
+          "token": "0a00059d",
+          "name": "member:Clear"
+        },
+        {
+          "offset": 11,
+          "opcode": "0x73",
+          "token": "0a0005a0",
+          "name": "member:.ctor"
+        },
+        {
+          "offset": 18,
+          "opcode": "0x7b",
+          "token": "0400112f",
+          "name": ".Sim.#=qzPxeBfyCzmXBnfk2evbRaQ=="
+        },
+        {
+          "offset": 23,
+          "opcode": "0x6f",
+          "token": "0a0005a1",
+          "name": "member:get_Values"
+        },
+        {
+          "offset": 28,
+          "opcode": "0x6f",
+          "token": "0a0005a2",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 39,
+          "opcode": "0x28",
+          "token": "0a0005a3",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 49,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 54,
+          "opcode": "0x28",
+          "token": "060010f6",
+          "name": ".Sim.#=qLZvZdrE4G8wFR$1do8zmaULdgC6a44_I3EDcuMcqUdc="
+        },
+        {
+          "offset": 73,
+          "opcode": "0x6f",
+          "token": "0a0005a4",
+          "name": "member:TryGetValue"
+        },
+        {
+          "offset": 80,
+          "opcode": "0x73",
+          "token": "0a0005a5",
+          "name": "member:.ctor"
+        },
+        {
+          "offset": 92,
+          "opcode": "0x6f",
+          "token": "0a0005a6",
+          "name": "member:Add"
+        },
+        {
+          "offset": 101,
+          "opcode": "0x6f",
+          "token": "0a0005a7",
+          "name": "member:Add"
+        },
+        {
+          "offset": 108,
+          "opcode": "0x28",
+          "token": "0a0005a8",
+          "name": "member:MoveNext"
+        },
+        {
+          "offset": 125,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 132,
+          "opcode": "0x6f",
+          "token": "0a0005a9",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 146,
+          "opcode": "0x28",
+          "token": "0a0005aa",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 155,
+          "opcode": "0x28",
+          "token": "0a0005ab",
+          "name": "member:get_Key"
+        },
+        {
+          "offset": 163,
+          "opcode": "0x28",
+          "token": "0a0005ac",
+          "name": "member:get_Value"
+        },
+        {
+          "offset": 173,
+          "opcode": "0x6f",
+          "token": "0a0005ad",
+          "name": "member:get_Item"
+        },
+        {
+          "offset": 182,
+          "opcode": "0x7b",
+          "token": "04001148",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qUMVcz5pLcBeNQt44aoYXvA=="
+        },
+        {
+          "offset": 194,
+          "opcode": "0x6f",
+          "token": "0a0005ae",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 208,
+          "opcode": "0x28",
+          "token": "0a0005af",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 217,
+          "opcode": "0x7b",
+          "token": "04001148",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qUMVcz5pLcBeNQt44aoYXvA=="
+        },
+        {
+          "offset": 227,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 234,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 239,
+          "opcode": "0x7e",
+          "token": "0400111d",
+          "name": ".Sim.#=qXBDEQZI3Sg2TDgsTOIIvWCJNxndNg6n64_NpG5fC$Oc="
+        },
+        {
+          "offset": 244,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 249,
+          "opcode": "0x7e",
+          "token": "0400111e",
+          "name": ".Sim.#=qlFDctPp8OUPICzuj56DdqL6pqiCDiU3nivmv8lwuvsI="
+        },
+        {
+          "offset": 254,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 259,
+          "opcode": "0x28",
+          "token": "060010fb",
+          "name": ".Sim.#=qrKelwRXoJoqe6IY8OPheGbifRRSi$B2jY$9m11G2M68="
+        },
+        {
+          "offset": 268,
+          "opcode": "0x7b",
+          "token": "04001148",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qUMVcz5pLcBeNQt44aoYXvA=="
+        },
+        {
+          "offset": 277,
+          "opcode": "0x7b",
+          "token": "04001149",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qBWdL_GfYHP_osRfR0MYpkg=="
+        },
+        {
+          "offset": 284,
+          "opcode": "0x7b",
+          "token": "04001149",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qBWdL_GfYHP_osRfR0MYpkg=="
+        },
+        {
+          "offset": 289,
+          "opcode": "0x28",
+          "token": "06000c7a",
+          "name": ".HexIndex.op_Inequality"
+        },
+        {
+          "offset": 299,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 306,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 311,
+          "opcode": "0x7e",
+          "token": "0400111d",
+          "name": ".Sim.#=qXBDEQZI3Sg2TDgsTOIIvWCJNxndNg6n64_NpG5fC$Oc="
+        },
+        {
+          "offset": 316,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 321,
+          "opcode": "0x7e",
+          "token": "0400111e",
+          "name": ".Sim.#=qlFDctPp8OUPICzuj56DdqL6pqiCDiU3nivmv8lwuvsI="
+        },
+        {
+          "offset": 326,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 331,
+          "opcode": "0x28",
+          "token": "060010fb",
+          "name": ".Sim.#=qrKelwRXoJoqe6IY8OPheGbifRRSi$B2jY$9m11G2M68="
+        },
+        {
+          "offset": 338,
+          "opcode": "0x28",
+          "token": "0a0005b0",
+          "name": "member:MoveNext"
+        },
+        {
+          "offset": 361,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 369,
+          "opcode": "0x7b",
+          "token": "04001148",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qUMVcz5pLcBeNQt44aoYXvA=="
+        },
+        {
+          "offset": 382,
+          "opcode": "0x6f",
+          "token": "0a0005ae",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 396,
+          "opcode": "0x28",
+          "token": "0a0005af",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 405,
+          "opcode": "0x7b",
+          "token": "04001148",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qUMVcz5pLcBeNQt44aoYXvA=="
+        },
+        {
+          "offset": 416,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 423,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 428,
+          "opcode": "0x7e",
+          "token": "0400111d",
+          "name": ".Sim.#=qXBDEQZI3Sg2TDgsTOIIvWCJNxndNg6n64_NpG5fC$Oc="
+        },
+        {
+          "offset": 433,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 438,
+          "opcode": "0x7e",
+          "token": "0400111e",
+          "name": ".Sim.#=qlFDctPp8OUPICzuj56DdqL6pqiCDiU3nivmv8lwuvsI="
+        },
+        {
+          "offset": 443,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 448,
+          "opcode": "0x28",
+          "token": "060010fb",
+          "name": ".Sim.#=qrKelwRXoJoqe6IY8OPheGbifRRSi$B2jY$9m11G2M68="
+        },
+        {
+          "offset": 457,
+          "opcode": "0x7b",
+          "token": "0400114a",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=q0qih$HEIcw$2cGWS2U3yJQ=="
+        },
+        {
+          "offset": 464,
+          "opcode": "0x7b",
+          "token": "0400114a",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=q0qih$HEIcw$2cGWS2U3yJQ=="
+        },
+        {
+          "offset": 469,
+          "opcode": "0x28",
+          "token": "06000c7a",
+          "name": ".HexIndex.op_Inequality"
+        },
+        {
+          "offset": 478,
+          "opcode": "0x7c",
+          "token": "0400114b",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=q$pD3sfy_x_lzX3v8BWo7bg=="
+        },
+        {
+          "offset": 483,
+          "opcode": "0x28",
+          "token": "06000ca4",
+          "name": ".HexRotation.AsShortestAngle"
+        },
+        {
+          "offset": 492,
+          "opcode": "0x28",
+          "token": "06000c9b",
+          "name": ".HexRotation.GetNumberOfTurns"
+        },
+        {
+          "offset": 499,
+          "opcode": "0x7c",
+          "token": "0400114b",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=q$pD3sfy_x_lzX3v8BWo7bg=="
+        },
+        {
+          "offset": 504,
+          "opcode": "0x28",
+          "token": "06000ca4",
+          "name": ".HexRotation.AsShortestAngle"
+        },
+        {
+          "offset": 513,
+          "opcode": "0x28",
+          "token": "06000c9b",
+          "name": ".HexRotation.GetNumberOfTurns"
+        },
+        {
+          "offset": 523,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 530,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 535,
+          "opcode": "0x7e",
+          "token": "0400111d",
+          "name": ".Sim.#=qXBDEQZI3Sg2TDgsTOIIvWCJNxndNg6n64_NpG5fC$Oc="
+        },
+        {
+          "offset": 540,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 545,
+          "opcode": "0x7e",
+          "token": "0400111e",
+          "name": ".Sim.#=qlFDctPp8OUPICzuj56DdqL6pqiCDiU3nivmv8lwuvsI="
+        },
+        {
+          "offset": 550,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 555,
+          "opcode": "0x28",
+          "token": "060010fb",
+          "name": ".Sim.#=qrKelwRXoJoqe6IY8OPheGbifRRSi$B2jY$9m11G2M68="
+        },
+        {
+          "offset": 562,
+          "opcode": "0x28",
+          "token": "0a0005b0",
+          "name": "member:MoveNext"
+        },
+        {
+          "offset": 582,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 590,
+          "opcode": "0x28",
+          "token": "0a0005b1",
+          "name": "member:MoveNext"
+        },
+        {
+          "offset": 610,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 616,
+          "opcode": "0x73",
+          "token": "0a0005b2",
+          "name": "member:.ctor"
+        },
+        {
+          "offset": 625,
+          "opcode": "0x7b",
+          "token": "0400112f",
+          "name": ".Sim.#=qzPxeBfyCzmXBnfk2evbRaQ=="
+        },
+        {
+          "offset": 630,
+          "opcode": "0x6f",
+          "token": "0a0005a1",
+          "name": "member:get_Values"
+        },
+        {
+          "offset": 635,
+          "opcode": "0x6f",
+          "token": "0a0005a2",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 649,
+          "opcode": "0x28",
+          "token": "0a0005a3",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 659,
+          "opcode": "0x7b",
+          "token": "04001147",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qoLLkUpq04f93L4lEA7fB7g=="
+        },
+        {
+          "offset": 664,
+          "opcode": "0x28",
+          "token": "060010f6",
+          "name": ".Sim.#=qLZvZdrE4G8wFR$1do8zmaULdgC6a44_I3EDcuMcqUdc="
+        },
+        {
+          "offset": 684,
+          "opcode": "0x6f",
+          "token": "0a0005b3",
+          "name": "member:Contains"
+        },
+        {
+          "offset": 696,
+          "opcode": "0x7b",
+          "token": "04001148",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qUMVcz5pLcBeNQt44aoYXvA=="
+        },
+        {
+          "offset": 718,
+          "opcode": "0x7b",
+          "token": "04001149",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=qBWdL_GfYHP_osRfR0MYpkg=="
+        },
+        {
+          "offset": 723,
+          "opcode": "0x6f",
+          "token": "06000d5d",
+          "name": ".Molecule.#=qi8YxtIP7hr1nOai9LoOGrg=="
+        },
+        {
+          "offset": 734,
+          "opcode": "0x7b",
+          "token": "0400114a",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=q0qih$HEIcw$2cGWS2U3yJQ=="
+        },
+        {
+          "offset": 741,
+          "opcode": "0x7b",
+          "token": "0400114b",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=q$pD3sfy_x_lzX3v8BWo7bg=="
+        },
+        {
+          "offset": 746,
+          "opcode": "0x6f",
+          "token": "06000d5b",
+          "name": ".Molecule.#=qMrv2Ine6uf6R65F6BHecqQ=="
+        },
+        {
+          "offset": 753,
+          "opcode": "0x6f",
+          "token": "06000d4d",
+          "name": ".Molecule.#=q1vuw1C5RGZGi67diFExKdw=="
+        },
+        {
+          "offset": 758,
+          "opcode": "0x6f",
+          "token": "0a00020a",
+          "name": "member:get_Keys"
+        },
+        {
+          "offset": 763,
+          "opcode": "0x6f",
+          "token": "0a000015",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 774,
+          "opcode": "0x6f",
+          "token": "0a000014",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 783,
+          "opcode": "0x7b",
+          "token": "0400114a",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=q0qih$HEIcw$2cGWS2U3yJQ=="
+        },
+        {
+          "offset": 790,
+          "opcode": "0x28",
+          "token": "06000c80",
+          "name": ".HexIndex.Distance"
+        },
+        {
+          "offset": 800,
+          "opcode": "0x28",
+          "token": "0a000065",
+          "name": "System.Math.Max"
+        },
+        {
+          "offset": 808,
+          "opcode": "0x6f",
+          "token": "0a000008",
+          "name": "System.Collections.IEnumerator.MoveNext"
+        },
+        {
+          "offset": 823,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 832,
+          "opcode": "0x6f",
+          "token": "0a0005b4",
+          "name": "member:Add"
+        },
+        {
+          "offset": 840,
+          "opcode": "0x6f",
+          "token": "0600110b",
+          "name": ".#=qgWLBJTHK7omIi7vyGCDIdQ==.#=q19CJpuoJFxLAukAcuIspow=="
+        },
+        {
+          "offset": 847,
+          "opcode": "0x28",
+          "token": "0a0005a8",
+          "name": "member:MoveNext"
+        },
+        {
+          "offset": 867,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 893,
+          "opcode": "0x28",
+          "token": "0a00026f",
+          "name": "System.Math.Log"
+        },
+        {
+          "offset": 898,
+          "opcode": "0x28",
+          "token": "0a0000a4",
+          "name": "System.Math.Round"
+        },
+        {
+          "offset": 903,
+          "opcode": "0x28",
+          "token": "0a000064",
+          "name": "System.Math.Pow"
+        },
+        {
+          "offset": 930,
+          "opcode": "0x28",
+          "token": "0a0005b5",
+          "name": "System.Math.Min"
+        },
+        {
+          "offset": 936,
+          "opcode": "0x7d",
+          "token": "04001134",
+          "name": ".Sim.#=q8igVqt6hC$trWSgH7hFiqZ6$LCuCe8xPd73Hz2LLW6w="
+        }
+      ]
+    },
+    "collision_step_instructions": [
+      {
+        "offset": 873,
+        "opcode": "0x23",
+        "float64": 2.0,
+        "operand_bytes": "0000000000000040"
+      },
+      {
+        "offset": 882,
+        "opcode": "0x8"
+      },
+      {
+        "offset": 883,
+        "opcode": "0x6c"
+      },
+      {
+        "offset": 884,
+        "opcode": "0x23",
+        "float64": 2.0,
+        "operand_bytes": "0000000000000040"
+      },
+      {
+        "offset": 893,
+        "opcode": "0x28",
+        "token": "0a00026f"
+      },
+      {
+        "offset": 898,
+        "opcode": "0x28",
+        "token": "0a0000a4"
+      },
+      {
+        "offset": 903,
+        "opcode": "0x28",
+        "token": "0a000064"
+      },
+      {
+        "offset": 908,
+        "opcode": "0xd"
+      },
+      {
+        "offset": 909,
+        "opcode": "0x2"
+      },
+      {
+        "offset": 910,
+        "opcode": "0x23",
+        "float64": 0.125,
+        "operand_bytes": "000000000000c03f"
+      },
+      {
+        "offset": 919,
+        "opcode": "0x23",
+        "float64": 0.25,
+        "operand_bytes": "000000000000d03f"
+      },
+      {
+        "offset": 928,
+        "opcode": "0x9"
+      },
+      {
+        "offset": 929,
+        "opcode": "0x5b"
+      },
+      {
+        "offset": 930,
+        "opcode": "0x28",
+        "token": "0a0005b5"
+      },
+      {
+        "offset": 935,
+        "opcode": "0x6b"
+      },
+      {
+        "offset": 936,
+        "opcode": "0x7d",
+        "token": "04001134"
+      },
+      {
+        "offset": 941,
+        "opcode": "0x2a"
+      }
+    ],
+    "collision_step_semantics": "Stores float32(min(0.125,0.25/(2**round(log(maximumHexRadius,2))))). 0.125 is a timestep cap in this method, not evidence for a 0.125-pixel clearance margin.",
+    "collision_motion_consumer": {
+      "method_token": "060010e8",
+      "method_name": ".Sim.#=qmpSb6oiuUyMoLVlO$OztRp3eDVuJi7kEu49AQlFbP4c=",
+      "method_il_sha256": "3c30f79a385c20058be7f347acf04d35f6e00d2fe10af9115b761c8da276f086",
+      "il_bytes": 1532,
+      "references": [
+        {
+          "offset": 0,
+          "opcode": "0x28",
+          "token": "060012df",
+          "name": ".Time.Now"
+        },
+        {
+          "offset": 7,
+          "opcode": "0x7b",
+          "token": "04001134",
+          "name": ".Sim.#=q8igVqt6hC$trWSgH7hFiqZ6$LCuCe8xPd73Hz2LLW6w="
+        },
+        {
+          "offset": 18,
+          "opcode": "0x73",
+          "token": "0a00058d",
+          "name": "member:.ctor"
+        },
+        {
+          "offset": 26,
+          "opcode": "0x7b",
+          "token": "04001133",
+          "name": ".Sim.#=qiEaT5IpBvXMxW7JYw04NI9GzBcg7LU2$75CMucOvaA0="
+        },
+        {
+          "offset": 31,
+          "opcode": "0x6f",
+          "token": "0a0005c6",
+          "name": "member:AddRange"
+        },
+        {
+          "offset": 37,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 42,
+          "opcode": "0x6f",
+          "token": "060011a4",
+          "name": ".SolutionEditorBase.#=q9h2PudZDpzc2vb3ETYaQjQ=="
+        },
+        {
+          "offset": 47,
+          "opcode": "0x6f",
+          "token": "06000b2c",
+          "name": ".#=qYJtsumPxcnUCLFc$laWl1g==.#=qH2Bo1APq6KVTnNjlzZrUzA=="
+        },
+        {
+          "offset": 52,
+          "opcode": "0x6f",
+          "token": "0a0005c7",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 66,
+          "opcode": "0x6f",
+          "token": "0a0005c8",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 74,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 81,
+          "opcode": "0x6f",
+          "token": "060011b4",
+          "name": ".SolutionEditorBase.#=qptpyUPWeeEePX4JcYr1uR8gGIykb2qMbroGa_GEUHrA="
+        },
+        {
+          "offset": 96,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 101,
+          "opcode": "0x6f",
+          "token": "060011a4",
+          "name": ".SolutionEditorBase.#=q9h2PudZDpzc2vb3ETYaQjQ=="
+        },
+        {
+          "offset": 108,
+          "opcode": "0x6f",
+          "token": "06000b2a",
+          "name": ".#=qYJtsumPxcnUCLFc$laWl1g==.#=qhN4ETRCarM7K5rzuHfXcdY803nYOUYDFc0opzk08gco="
+        },
+        {
+          "offset": 116,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 123,
+          "opcode": "0x7e",
+          "token": "040012b0",
+          "name": ".Vector2.Zero"
+        },
+        {
+          "offset": 129,
+          "opcode": "0x6f",
+          "token": "060011b9",
+          "name": ".SolutionEditorBase.#=qQAADSKkozwMkBhsYd6q0qzw_CAEqXIynZ1UubWJM0HI="
+        },
+        {
+          "offset": 135,
+          "opcode": "0x7b",
+          "token": "0400095a",
+          "name": ".#=qtSODMPfu0XxHWk$nqHkajg==.#=q3vcO_HLxK5YX3M74KvnyZQ=="
+        },
+        {
+          "offset": 144,
+          "opcode": "0x7b",
+          "token": "04000c12",
+          "name": ".PartSimState.#=qnlPAfjcgduK6p$kZWT2hnA=="
+        },
+        {
+          "offset": 151,
+          "opcode": "0x7b",
+          "token": "0400095d",
+          "name": ".#=qtSODMPfu0XxHWk$nqHkajg==.#=qxDAT1_LdwWdPD9D8ILAHsl9a1zHiwlzm6Txr7K6bkTY="
+        },
+        {
+          "offset": 160,
+          "opcode": "0x7e",
+          "token": "040012b0",
+          "name": ".Vector2.Zero"
+        },
+        {
+          "offset": 171,
+          "opcode": "0x28",
+          "token": "06000c72",
+          "name": ".HexIndex..ctor"
+        },
+        {
+          "offset": 185,
+          "opcode": "0x6f",
+          "token": "06000d4d",
+          "name": ".Molecule.#=q1vuw1C5RGZGi67diFExKdw=="
+        },
+        {
+          "offset": 190,
+          "opcode": "0x6f",
+          "token": "0a00020b",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 201,
+          "opcode": "0x6f",
+          "token": "0a00020c",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 210,
+          "opcode": "0x28",
+          "token": "0a00020d",
+          "name": "member:get_Key"
+        },
+        {
+          "offset": 219,
+          "opcode": "0x7e",
+          "token": "040006bf",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=q2IzFHdHQPxPAk6BGxoHutg=="
+        },
+        {
+          "offset": 228,
+          "opcode": "0x28",
+          "token": "06000c7c",
+          "name": ".HexIndex.op_Subtraction"
+        },
+        {
+          "offset": 233,
+          "opcode": "0x6f",
+          "token": "06000793",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qmlAugxoGXUyZZDE77VbjYBo6tH0crnU1cfQUSeJU4Lw="
+        },
+        {
+          "offset": 244,
+          "opcode": "0x28",
+          "token": "06001309",
+          "name": ".Vector2.Rotated"
+        },
+        {
+          "offset": 249,
+          "opcode": "0x28",
+          "token": "06001313",
+          "name": ".Vector2.op_Addition"
+        },
+        {
+          "offset": 260,
+          "opcode": "0x73",
+          "token": "0600110f",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==..ctor"
+        },
+        {
+          "offset": 265,
+          "opcode": "0x6f",
+          "token": "0a0005ba",
+          "name": "member:Add"
+        },
+        {
+          "offset": 272,
+          "opcode": "0x6f",
+          "token": "0a000008",
+          "name": "System.Collections.IEnumerator.MoveNext"
+        },
+        {
+          "offset": 287,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 295,
+          "opcode": "0x6f",
+          "token": "0a000008",
+          "name": "System.Collections.IEnumerator.MoveNext"
+        },
+        {
+          "offset": 313,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 320,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 325,
+          "opcode": "0x6f",
+          "token": "060011a3",
+          "name": ".SolutionEditorBase.#=qrDr$oFtdu5AMLuCkkgmVXg=="
+        },
+        {
+          "offset": 330,
+          "opcode": "0x6f",
+          "token": "0600116d",
+          "name": ".Solution.#=qbMHQwh7H46OI5VE8bxaU0CJyvKhPyJ$tZarZ1TmrijQ="
+        },
+        {
+          "offset": 335,
+          "opcode": "0x7e",
+          "token": "0400115d",
+          "name": ".<>c.<>9__57_0"
+        },
+        {
+          "offset": 344,
+          "opcode": "0x7e",
+          "token": "04001154",
+          "name": ".<>c.<>9"
+        },
+        {
+          "offset": 349,
+          "opcode": "0xfe06",
+          "token": "0600111a",
+          "name": ".<>c.#=qLLx8gxp7hg0L6KKQ5_0rdDyJ1itvv4adQTCLu2SaQ_pdugyOIS4YtwoIhevrkjpv"
+        },
+        {
+          "offset": 355,
+          "opcode": "0x73",
+          "token": "0a00014a",
+          "name": "member:.ctor"
+        },
+        {
+          "offset": 361,
+          "opcode": "0x80",
+          "token": "0400115d",
+          "name": ".<>c.<>9__57_0"
+        },
+        {
+          "offset": 394,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 401,
+          "opcode": "0x7e",
+          "token": "040012b0",
+          "name": ".Vector2.Zero"
+        },
+        {
+          "offset": 407,
+          "opcode": "0x6f",
+          "token": "060011b9",
+          "name": ".SolutionEditorBase.#=qQAADSKkozwMkBhsYd6q0qzw_CAEqXIynZ1UubWJM0HI="
+        },
+        {
+          "offset": 416,
+          "opcode": "0x6f",
+          "token": "06000d94",
+          "name": ".Part.#=qvU9qwqyLAowbCoEUJkxLtg=="
+        },
+        {
+          "offset": 421,
+          "opcode": "0x7b",
+          "token": "040007f9",
+          "name": ".#=qJycDTjPVkS$kTuEbVe0WsQ==.#=q42nJRff137LVOyDb7daDcA=="
+        },
+        {
+          "offset": 426,
+          "opcode": "0x6f",
+          "token": "0a000135",
+          "name": "member:get_Keys"
+        },
+        {
+          "offset": 431,
+          "opcode": "0x6f",
+          "token": "0a000136",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 442,
+          "opcode": "0x28",
+          "token": "0a000137",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 449,
+          "opcode": "0x7e",
+          "token": "040006bf",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=q2IzFHdHQPxPAk6BGxoHutg=="
+        },
+        {
+          "offset": 456,
+          "opcode": "0x6f",
+          "token": "06000793",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qmlAugxoGXUyZZDE77VbjYBo6tH0crnU1cfQUSeJU4Lw="
+        },
+        {
+          "offset": 465,
+          "opcode": "0x7b",
+          "token": "0400095a",
+          "name": ".#=qtSODMPfu0XxHWk$nqHkajg==.#=q3vcO_HLxK5YX3M74KvnyZQ=="
+        },
+        {
+          "offset": 474,
+          "opcode": "0x7b",
+          "token": "0400095b",
+          "name": ".#=qtSODMPfu0XxHWk$nqHkajg==.#=qTuvp10SX8Mg5cpMNg0duKw=="
+        },
+        {
+          "offset": 479,
+          "opcode": "0x28",
+          "token": "06001309",
+          "name": ".Vector2.Rotated"
+        },
+        {
+          "offset": 484,
+          "opcode": "0x28",
+          "token": "06001313",
+          "name": ".Vector2.op_Addition"
+        },
+        {
+          "offset": 495,
+          "opcode": "0x73",
+          "token": "0600110f",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==..ctor"
+        },
+        {
+          "offset": 500,
+          "opcode": "0x6f",
+          "token": "0a0005ba",
+          "name": "member:Add"
+        },
+        {
+          "offset": 507,
+          "opcode": "0x28",
+          "token": "0a000138",
+          "name": "member:MoveNext"
+        },
+        {
+          "offset": 524,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 548,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 553,
+          "opcode": "0x6f",
+          "token": "060011a3",
+          "name": ".SolutionEditorBase.#=qrDr$oFtdu5AMLuCkkgmVXg=="
+        },
+        {
+          "offset": 558,
+          "opcode": "0x7b",
+          "token": "0400119f",
+          "name": ".Solution.#=qdNNTDrAjBuTUSUU4KN2aew=="
+        },
+        {
+          "offset": 563,
+          "opcode": "0x7e",
+          "token": "0400115e",
+          "name": ".<>c.<>9__57_1"
+        },
+        {
+          "offset": 572,
+          "opcode": "0x7e",
+          "token": "04001154",
+          "name": ".<>c.<>9"
+        },
+        {
+          "offset": 577,
+          "opcode": "0xfe06",
+          "token": "0600111b",
+          "name": ".<>c.#=qsVEULgSl9NVpg43yQm59jJCAKpNFlaNsV6Yt$jEgMBncRwi067rhLfAP_kpM7rJ4"
+        },
+        {
+          "offset": 583,
+          "opcode": "0x73",
+          "token": "0a00014a",
+          "name": "member:.ctor"
+        },
+        {
+          "offset": 589,
+          "opcode": "0x80",
+          "token": "0400115e",
+          "name": ".<>c.<>9__57_1"
+        },
+        {
+          "offset": 622,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 629,
+          "opcode": "0x7e",
+          "token": "040012b0",
+          "name": ".Vector2.Zero"
+        },
+        {
+          "offset": 635,
+          "opcode": "0x6f",
+          "token": "060011b9",
+          "name": ".SolutionEditorBase.#=qQAADSKkozwMkBhsYd6q0qzw_CAEqXIynZ1UubWJM0HI="
+        },
+        {
+          "offset": 646,
+          "opcode": "0x7b",
+          "token": "0400095a",
+          "name": ".#=qtSODMPfu0XxHWk$nqHkajg==.#=q3vcO_HLxK5YX3M74KvnyZQ=="
+        },
+        {
+          "offset": 651,
+          "opcode": "0x73",
+          "token": "0600110f",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==..ctor"
+        },
+        {
+          "offset": 656,
+          "opcode": "0x6f",
+          "token": "0a0005ba",
+          "name": "member:Add"
+        },
+        {
+          "offset": 663,
+          "opcode": "0x7b",
+          "token": "04000bf3",
+          "name": ".Part.#=qm6VBbGP4rwBGeExkUGoNzQ=="
+        },
+        {
+          "offset": 683,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 690,
+          "opcode": "0x7e",
+          "token": "040012b0",
+          "name": ".Vector2.Zero"
+        },
+        {
+          "offset": 696,
+          "opcode": "0x6f",
+          "token": "060011b9",
+          "name": ".SolutionEditorBase.#=qQAADSKkozwMkBhsYd6q0qzw_CAEqXIynZ1UubWJM0HI="
+        },
+        {
+          "offset": 715,
+          "opcode": "0x7d",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 724,
+          "opcode": "0x7b",
+          "token": "0400095a",
+          "name": ".#=qtSODMPfu0XxHWk$nqHkajg==.#=q3vcO_HLxK5YX3M74KvnyZQ=="
+        },
+        {
+          "offset": 729,
+          "opcode": "0x7d",
+          "token": "04001152",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qiLyt4WQxk9FFg$$$zZOg9g=="
+        },
+        {
+          "offset": 736,
+          "opcode": "0x7e",
+          "token": "0400113c",
+          "name": ".Sim.#=qxxx1XXTu_nhGHJKc4OfObOUVm523ubZ65IYlVG9UfGc="
+        },
+        {
+          "offset": 741,
+          "opcode": "0x7d",
+          "token": "04001153",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=q_JHhK58vE4ic_4UI$pIiqA=="
+        },
+        {
+          "offset": 748,
+          "opcode": "0x6f",
+          "token": "0a0005ba",
+          "name": "member:Add"
+        },
+        {
+          "offset": 785,
+          "opcode": "0x28",
+          "token": "060010d5",
+          "name": ".Sim.#=q$vYJJPB0UKUbxq42QKJNAA=="
+        },
+        {
+          "offset": 790,
+          "opcode": "0x6f",
+          "token": "0600116a",
+          "name": ".Solution.#=qDBKJXsjuIHe3ll7RCB8saA=="
+        },
+        {
+          "offset": 795,
+          "opcode": "0x7b",
+          "token": "04000c4e",
+          "name": ".Puzzle.#=qNZkm5niHLRHQACTp3Tifwg=="
+        },
+        {
+          "offset": 814,
+          "opcode": "0x7b",
+          "token": "04000412",
+          "name": ".#=q4cCIt3TIHIuX2Vun1RMHzw==.#=qu975j2nH78aj3lfAPlpcug=="
+        },
+        {
+          "offset": 838,
+          "opcode": "0x7b",
+          "token": "04000670",
+          "name": ".#=q8YNesXHt4ytVN3i3sqGfRg==.#=qvVNANHg_Rtg9OgpJmdQRuQ=="
+        },
+        {
+          "offset": 843,
+          "opcode": "0x7b",
+          "token": "0400000f",
+          "name": ".#=q_5ovQnLcVSdHTxKVrb1bWfSsBmBchELmt2zo2I_ncWI=.#=qsiVWPrYhe3VaTT3JX$iFCg=="
+        },
+        {
+          "offset": 848,
+          "opcode": "0x6f",
+          "token": "0a000131",
+          "name": "member:GetEnumerator"
+        },
+        {
+          "offset": 859,
+          "opcode": "0x28",
+          "token": "0a000132",
+          "name": "member:get_Current"
+        },
+        {
+          "offset": 868,
+          "opcode": "0x7b",
+          "token": "0400066f",
+          "name": ".#=q8YNesXHt4ytVN3i3sqGfRg==.#=qw4N0sj8MqfMSnOVr8vIYZg=="
+        },
+        {
+          "offset": 875,
+          "opcode": "0x28",
+          "token": "06000c7b",
+          "name": ".HexIndex.op_Addition"
+        },
+        {
+          "offset": 894,
+          "opcode": "0x7d",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 901,
+          "opcode": "0x7e",
+          "token": "040006bf",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=q2IzFHdHQPxPAk6BGxoHutg=="
+        },
+        {
+          "offset": 908,
+          "opcode": "0x6f",
+          "token": "06000793",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qmlAugxoGXUyZZDE77VbjYBo6tH0crnU1cfQUSeJU4Lw="
+        },
+        {
+          "offset": 913,
+          "opcode": "0x7d",
+          "token": "04001152",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qiLyt4WQxk9FFg$$$zZOg9g=="
+        },
+        {
+          "offset": 920,
+          "opcode": "0x7e",
+          "token": "0400113d",
+          "name": ".Sim.#=qzneNHtEYEK4le7jcnrvL74Oyr1qD4eU0lwBMW5_Z4gg="
+        },
+        {
+          "offset": 925,
+          "opcode": "0x7d",
+          "token": "04001153",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=q_JHhK58vE4ic_4UI$pIiqA=="
+        },
+        {
+          "offset": 932,
+          "opcode": "0x6f",
+          "token": "0a0005ba",
+          "name": "member:Add"
+        },
+        {
+          "offset": 939,
+          "opcode": "0x28",
+          "token": "0a000134",
+          "name": "member:MoveNext"
+        },
+        {
+          "offset": 956,
+          "opcode": "0x6f",
+          "token": "0a000005",
+          "name": "System.IDisposable.Dispose"
+        },
+        {
+          "offset": 990,
+          "opcode": "0x6f",
+          "token": "0a0005c9",
+          "name": "member:get_Item"
+        },
+        {
+          "offset": 1011,
+          "opcode": "0x6f",
+          "token": "0a0005c9",
+          "name": "member:get_Item"
+        },
+        {
+          "offset": 1020,
+          "opcode": "0x7b",
+          "token": "04001152",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qiLyt4WQxk9FFg$$$zZOg9g=="
+        },
+        {
+          "offset": 1027,
+          "opcode": "0x7b",
+          "token": "04001152",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qiLyt4WQxk9FFg$$$zZOg9g=="
+        },
+        {
+          "offset": 1032,
+          "opcode": "0x28",
+          "token": "0600130b",
+          "name": ".Vector2.Distance"
+        },
+        {
+          "offset": 1039,
+          "opcode": "0x7b",
+          "token": "04001153",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=q_JHhK58vE4ic_4UI$pIiqA=="
+        },
+        {
+          "offset": 1046,
+          "opcode": "0x7b",
+          "token": "04001153",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=q_JHhK58vE4ic_4UI$pIiqA=="
+        },
+        {
+          "offset": 1059,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1068,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1083,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1093,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1108,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1118,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1133,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1143,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1161,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1170,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1177,
+          "opcode": "0x7e",
+          "token": "0400111f",
+          "name": ".Sim.#=quhbwR$wyg9HJ9nCR27rFSzN$_sWVDhG6TMYlXUCM5TU="
+        },
+        {
+          "offset": 1182,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 1196,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1206,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1214,
+          "opcode": "0x7e",
+          "token": "04001120",
+          "name": ".Sim.#=qpxeaV$LlbBfyoV20akF_ylJJ0$f9Lv$Q4RQuUX40_24="
+        },
+        {
+          "offset": 1219,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 1235,
+          "opcode": "0x7e",
+          "token": "04001121",
+          "name": ".Sim.#=q5q5SiuEwnhVn0IfJPwix9q1$E6xygK8vd95DifCBEcs="
+        },
+        {
+          "offset": 1240,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 1256,
+          "opcode": "0x7e",
+          "token": "04001122",
+          "name": ".Sim.#=qEijAvVx7$AvtoWNC0J8mTYabo25_SUAsN7Mq5$Bvjxc="
+        },
+        {
+          "offset": 1261,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 1277,
+          "opcode": "0x7e",
+          "token": "04001123",
+          "name": ".Sim.#=qWRCPDEeGeZRsNjkxPFEGczY_t0zXYdbb_f7v4B3SZmA="
+        },
+        {
+          "offset": 1282,
+          "opcode": "0x28",
+          "token": "06000d0b",
+          "name": ".LocString.op_Implicit"
+        },
+        {
+          "offset": 1312,
+          "opcode": "0x28",
+          "token": "06000936",
+          "name": ".#=qpd$ST0bQ31$4PjNDhsejyw==.#=q6Gzlh73fGqz2lixQ6GtwUg=="
+        },
+        {
+          "offset": 1319,
+          "opcode": "0x73",
+          "token": "0a0005ca",
+          "name": "member:.ctor"
+        },
+        {
+          "offset": 1328,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1340,
+          "opcode": "0x7b",
+          "token": "04001152",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qiLyt4WQxk9FFg$$$zZOg9g=="
+        },
+        {
+          "offset": 1345,
+          "opcode": "0x6f",
+          "token": "0a0005cb",
+          "name": "member:Add"
+        },
+        {
+          "offset": 1352,
+          "opcode": "0x7b",
+          "token": "04001151",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qQimpqPSYfrZQY81lYHzZJQ=="
+        },
+        {
+          "offset": 1364,
+          "opcode": "0x7b",
+          "token": "04001152",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qiLyt4WQxk9FFg$$$zZOg9g=="
+        },
+        {
+          "offset": 1369,
+          "opcode": "0x6f",
+          "token": "0a0005cb",
+          "name": "member:Add"
+        },
+        {
+          "offset": 1375,
+          "opcode": "0x7b",
+          "token": "0400112b",
+          "name": ".Sim.#=qqJCo48NbQEArxI1VRHxPTg=="
+        },
+        {
+          "offset": 1386,
+          "opcode": "0x6f",
+          "token": "0a0005cc",
+          "name": "member:ToArray"
+        },
+        {
+          "offset": 1391,
+          "opcode": "0x6f",
+          "token": "060011af",
+          "name": ".SolutionEditorBase.#=q3mQ2DRdDQ3Tg3p4PT88uAg=="
+        },
+        {
+          "offset": 1405,
+          "opcode": "0x6f",
+          "token": "0a0005cd",
+          "name": "member:get_Count"
+        },
+        {
+          "offset": 1418,
+          "opcode": "0x7b",
+          "token": "04001152",
+          "name": ".#=qtthMJUXHm0M4PgZEySqlPQ==.#=qiLyt4WQxk9FFg$$$zZOg9g=="
+        },
+        {
+          "offset": 1423,
+          "opcode": "0x28",
+          "token": "060010ed",
+          "name": ".Sim.#=qMqcJC74FdMILShHYA6UsHA=="
+        },
+        {
+          "offset": 1437,
+          "opcode": "0x6f",
+          "token": "0a0005cd",
+          "name": "member:get_Count"
+        },
+        {
+          "offset": 1449,
+          "opcode": "0x7b",
+          "token": "04001134",
+          "name": ".Sim.#=q8igVqt6hC$trWSgH7hFiqZ6$LCuCe8xPd73Hz2LLW6w="
+        },
+        {
+          "offset": 1468,
+          "opcode": "0x7b",
+          "token": "04001133",
+          "name": ".Sim.#=qiEaT5IpBvXMxW7JYw04NI9GzBcg7LU2$75CMucOvaA0="
+        },
+        {
+          "offset": 1473,
+          "opcode": "0x6f",
+          "token": "0a0005ce",
+          "name": "member:Clear"
+        },
+        {
+          "offset": 1478,
+          "opcode": "0x28",
+          "token": "060012df",
+          "name": ".Time.Now"
+        },
+        {
+          "offset": 1484,
+          "opcode": "0x28",
+          "token": "060012e3",
+          "name": ".Time.op_Subtraction"
+        },
+        {
+          "offset": 1495,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 1502,
+          "opcode": "0x28",
+          "token": "06000a32",
+          "name": ".#=qRZAczPl1D82GJVocWrJmJg==.#=qhBgr6DJlcOjm6wAhE$Clzw=="
+        },
+        {
+          "offset": 1516,
+          "opcode": "0x28",
+          "token": "06000aab",
+          "name": ".#=qU2zTxAIHX1BhapKhBbYgJO4Zff7SLofMiQGB4wulwA8=.#=qzWP9qL$beFBZadDaiP2cvw=="
+        },
+        {
+          "offset": 1521,
+          "opcode": "0x28",
+          "token": "0a0005cf",
+          "name": "System.Single.ToString"
+        },
+        {
+          "offset": 1526,
+          "opcode": "0x28",
+          "token": "06000d10",
+          "name": ".Log.#=q$j3KKlNPNd93uXbfhS460w=="
+        }
+      ]
+    },
+    "area_neighbour_consumer": {
+      "method_token": "060010ed",
+      "method_name": ".Sim.#=qMqcJC74FdMILShHYA6UsHA==",
+      "method_il_sha256": "639ddc6ebbfe6a5e2cfd29feb0e21fe86158e3c265bf2d84fdc775c2a9e00186",
+      "il_bytes": 109,
+      "references": [
+        {
+          "offset": 0,
+          "opcode": "0x7e",
+          "token": "040006bf",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=q2IzFHdHQPxPAk6BGxoHutg=="
+        },
+        {
+          "offset": 6,
+          "opcode": "0x7e",
+          "token": "040012b0",
+          "name": ".Vector2.Zero"
+        },
+        {
+          "offset": 11,
+          "opcode": "0x6f",
+          "token": "06000794",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qT_qh4SqnD4A8E4ICk0w0Gkkg$uXXq$EnDPliaZHPqM0="
+        },
+        {
+          "offset": 17,
+          "opcode": "0x7e",
+          "token": "04000b22",
+          "name": ".HexIndex.HereAndAdjacentOffsets"
+        },
+        {
+          "offset": 37,
+          "opcode": "0x28",
+          "token": "06000c7b",
+          "name": ".HexIndex.op_Addition"
+        },
+        {
+          "offset": 44,
+          "opcode": "0x7e",
+          "token": "040006bf",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=q2IzFHdHQPxPAk6BGxoHutg=="
+        },
+        {
+          "offset": 51,
+          "opcode": "0x7e",
+          "token": "040012b0",
+          "name": ".Vector2.Zero"
+        },
+        {
+          "offset": 56,
+          "opcode": "0x6f",
+          "token": "06000792",
+          "name": ".#=qCvxvS41ffy4ncqM9GXDncA==.#=qBEQI4uyruOrZ5P7PO_1YsECAwLIOMCsrJHmLtJTKABg="
+        },
+        {
+          "offset": 66,
+          "opcode": "0x28",
+          "token": "0600130b",
+          "name": ".Vector2.Distance"
+        },
+        {
+          "offset": 76,
+          "opcode": "0x7e",
+          "token": "04001139",
+          "name": ".Sim.#=qe7r$hIFGz3uxptHQRgARDLUWypvLNgegVMcu1qlgiWY="
+        },
+        {
+          "offset": 85,
+          "opcode": "0x7b",
+          "token": "04001131",
+          "name": ".Sim.#=qA52h0nxtB56Pg3uWGjIgug=="
+        },
+        {
+          "offset": 92,
+          "opcode": "0x6f",
+          "token": "0a0001ff",
+          "name": "member:Add"
+        }
+      ]
+    }
+  },
+  "mathematical_ledger": [
+    {
+      "claim": "The interval kernel encloses supplied finite double trajectory parameters using outward long-double operations and a Taylor remainder.",
+      "kind": "Implementation/mathematical obligation",
+      "conditions": [
+        "IEEE arithmetic and no fast-math",
+        "Each floating operation enclosure audited",
+        "The caller-supplied trajectory is the intended model"
+      ],
+      "does_not_prove": "Correct game trajectory construction, semantic radii, raster definition or original-game floating-point behavior"
+    },
+    {
+      "claim": "Pixel mapping and ideal 60-degree hex rotation do not commute when y scale is 71 rather than 82*sqrt(3)/2.",
+      "kind": "Mathematical fact",
+      "example": {
+        "hex_vector": [
+          10,
+          0
+        ],
+        "angle_degrees": 60,
+        "pixel_then_euclidean_rotate_y": 710.1408311032396,
+        "hex_rotate_then_pixel_y": 710.0,
+        "absolute_y_difference_pixels": 0.1408311032396
+      },
+      "does_not_prove": "Locked reference data flow has been traced: integer end-state updates precede interpolation from end-state atom minus end-state grab position. Equivalence to original-game trajectories and a complete floating-point error envelope remain unproved."
+    }
+  ],
+  "kernel_review": {
+    "soundness_scope": "Supplied double trajectory parameters, not caller construction or original-game mapping",
+    "positive_controls": [
+      "Outward nextafter around primitive long-double operations",
+      "Taylor remainder for sin/cos with absolute angle at most 8",
+      "Analytic relative-linear minimum",
+      "Same-center/angle/translation rigid-distance invariance",
+      "Uncertain on invalid input, fast-math or exhausted subdivision"
+    ],
+    "subdivision_enclosure": "Rounded midpoint reach uses upward-rounded max(mid-low,high-mid); degenerate midpoints return Uncertain before interval-wide separation. Runtime certification requires nearest rounding and rejects x86 DAZ/FTZ. This does not close caller/game mapping obligations.",
+    "continuous_enclosure": {
+      "implementation": "src/Verification/ContinuousCollision.cpp",
+      "scope": "Ideal real trajectory defined by supplied double parameters over a closed subinterval of [0,1]; not reference float interpolation, integer snapping or original-game motion",
+      "algorithm": "Enclose the rounded midpoint position with outward interval arithmetic; expand each coordinate by upward-rounded SpeedBound times max of upward-rounded distances from the computed midpoint to both endpoints. The computed midpoint need only lie inside the interval.",
+      "environment": "IEEE nearest-rounded basic operations with gradual underflow and per-operation compiler semantics; reject non-nearest rounding, x86 DAZ/FTZ and __FAST_MATH__. This is not certification of arbitrary compiler flags or non-x86 floating-point controls.",
+      "limitations": "No reference/game error envelope or dynamic certification caller; regression tests do not replace an arithmetic or game-mapping proof.",
+      "historical_validation": {
+        "command": "cmake --build build --target OpusOptimaTests -j2 && build/OpusOptimaTests --gtest_filter='ContinuousCollision.*:ReferenceMotion.*'",
+        "build": "passed",
+        "continuous_collision_passed": 18,
+        "reference_motion_passed": 9,
+        "passed": 27,
+        "failed": 0,
+        "duration_ms": 25,
+        "provenance": "Previously executed after adding adjacent/subnormal time regressions; evidence registration did not rerun the command.",
+        "diagnostics": "Reviewed editor diagnostics contain style/readability notices; no clean-diagnostics claim or unrelated style cleanup."
+      }
+    },
+    "confirmed_false_separated_counterexample": "Not established by this static audit; no runtime native/game equivalence claim follows"
+  },
+  "reference_trajectory_audit": {
+    "revision": "a88d12d8d100784aa525ee90259255b869bcba38",
+    "collision_blob_sha1": "22a4555d82ff3bd38bc52473e1d05ba7310d4571",
+    "collision_sha256": "a2df55f5a12ec8a107c6408e44d7e4373447b6741a8f59259829c2f6f96558b5",
+    "sim_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+    "build_collision_sha256": "f634859a14bf27e9970a418643f2da47031544ba8649714b8ad86c207c18a5db",
+    "build_copy_limit": "Different from locked collision source: first-hit break changed to boolean bitwise OR near line 204; build commit unknown and other build files not verified.",
+    "producer_oracle": {
+      "source_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "test": "tests/functional_test/ReferenceCycleOracle.test.cjs",
+      "fixture": "tests/functional_test/ReferenceProducerOracleFixture.c",
+      "visibility_cases": 192,
+      "queued_atoms": 258,
+      "scope": "hash-locked coordinate, get_atom, producer queue and wheel insertion functions under UBSan; six mechanism types times 32 flag combinations, queue growth and duplicate preservation, half-cycle insertion and two wheel element families",
+      "certification_eligible": false,
+      "limitations": "controlled lookup and insertion stubs; not real-grid producer timing, grab/drop lifecycle, continuous motion, metrics or game equivalence"
+    },
+    "initial_setup_oracle": {
+      "source_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "test": "tests/functional_test/ReferenceCycleOracle.test.cjs",
+      "fixture": "tests/functional_test/ReferenceSetupOracleFixture.c",
+      "table_sizes": 5,
+      "wheel_atoms": 60,
+      "scope": "hash-locked initial_setup, coordinate and wheel insertion functions under UBSan; table-size clamping, transformed wheel positions and elements, grabbing flags, temporary visited clearing and ordered input boundary calls",
+      "certification_eligible": false,
+      "limitations": "event-recording grid, area and input stubs; fixture has no cabinet, IO, glyph, conduit or track entries; not actual input blocking or spawning, grid semantics, full board lifecycle, metrics or game equivalence"
+    },
+    "input_lifecycle_oracle": {
+      "source_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "test": "tests/functional_test/ReferenceCycleOracle.test.cjs",
+      "fixture": "tests/functional_test/ReferenceInputOracleFixture.c",
+      "flag_cases": 1024,
+      "shared_input_cases": 64,
+      "scope": "hash-locked flag_blocked_inputs and spawn_inputs under UBSan; eight IO type combinations, eight occupancy flags at each of two positions, stale BLOCKED clearing, short-circuit lookup, empty IO and atom-before-disjoint-bond ordering; 64 shared-position two-input cases check batch flagging, no spawn-time lookup, per-input atom/bond ordering and next-round blocking after controlled occupancy writes",
+      "certification_eligible": false,
+      "limitations": "controlled lookup, insertion and disjoint-bond stubs; shared-position writes overwrite the stub slots, not real-grid overlap stacks, collision handling, full producer timing, metrics or game equivalence"
+    },
+    "instruction_motion_oracle": {
+      "source_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "test": "tests/functional_test/ReferenceInstructionOracle.test.cjs",
+      "fixture": "tests/functional_test/ReferenceInstructionOracleFixture.c",
+      "cases": 6,
+      "locked_collision_cases": 7,
+      "collision_sha256": "a2df55f5a12ec8a107c6408e44d7e4373447b6741a8f59259829c2f6f96558b5",
+      "scope": "full hash-locked sim.c under UBSan; ARM clockwise/counterclockwise, PISTON single-atom and normal-bonded two-atom extension and VAN_BERLO clockwise/counterclockwise grab/move/drop lifecycles using real grid, deferred movement, wheel creation, flag reset and board destruction; repeated with hash-locked collision.c plus an ARM swing blocked by a cabinet wall",
+      "certification_eligible": false,
+      "limitations": "stub mode uses a controlled collision callback returning false; locked mode uses sampled reference collision detection, not independently certified continuous collision; initial_setup is not used; neither mode proves complete cycle scheduling, general chain/disjoint motion, wheel glyph interactions, metrics or game equivalence"
+    },
+    "cycle_schedule_oracle": {
+      "test": "tests/functional_test/ReferenceCycleOracle.test.cjs",
+      "source_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "cases": 6,
+      "scope": "extracted run; start half-cycle 1 or 2 with absent, existing or motion-created overlap; ordered phase calls, collision reports, raising and completion state under UBSan",
+      "certification_eligible": false,
+      "limitations": "dependency functions are event-recording stubs; does not prove their internal lifecycle, real overlap clearing, motion, metrics or game equivalence"
+    },
+    "temporary_reset_oracle": {
+      "test": "tests/functional_test/ReferenceCycleOracle.test.cjs",
+      "fixture": "tests/functional_test/ReferenceResetOracleFixture.c",
+      "source_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "atoms": 68,
+      "rehash_atoms": 128,
+      "forced_rehash_rounds": 4,
+      "removal_stacks": 2,
+      "removal_stack_depth": 3,
+      "used_area_cells": 128,
+      "moving_atoms": 128,
+      "moving_overlap_layers": 2,
+      "moving_chain_atoms": 3,
+      "bfs_moved_atoms": 4,
+      "bfs_recent_bond_excluded_atoms": 1,
+      "input_grid_cases": 8,
+      "scope": "real input flag/spawn on array/hash grids in eight combinations of storage, input identity order and initially removed slots; distinct atom overlap layers, both directed disjoint bonds, second-round blocking, layer removal and vacancy respawn with area preservation; extracted grid, schedule_flag_reset_if_needed and reset_temporary_flags without stubs under UBSan; 64 ordinary and four overlap atoms, queue growth, duplicate scheduling, permanent-bit preservation and reset idempotence; 64 array and 64 hash atoms across four forced grid growth rounds with live reset-pointer reconstruction; real removal of two interleaved three-layer overlap stacks, overlap-array compaction, reset and removed-slot reinsertion with area preservation; real move_atom buffer growth and snapshots for 128 ordinary atoms, vacancy movement indices, explicitly scheduled deferred reinsertion reset, and two-layer overlap survivor preservation; three chain atoms with colliding buckets and movement-list relinking; real move_atoms BFS over three ordinary-bond atoms and one disjoint-bond target, excluding one recent-bond neighbor, transferring both directed disjoint bonds, deduplicating equal movement and retaining the first conflicting-movement collision; finite translation and rotation-center movement equality checks",
+      "certification_eligible": false,
+      "limitations": "input-grid coverage is limited to two INPUTs with two atoms each and two distinct from-position disjoint-bond keys; duplicate-key behavior, complete input/producer timing and collision semantics are not proved; bounded pointer lifetime checks across grid reallocation only, one representative normal/recent bond bit; finite move_atom buffer snapshots, vacancy indices and explicitly scheduled deferred reinsertion, plus two-layer overlap movement; does not prove general grab/drop, general chain motion or BFS topology, metrics or game equivalence"
+    },
+    "real_grid_raster_oracle": {
+      "test": "tests/functional_test/ReferenceCycleOracle.test.cjs",
+      "fixture": "tests/functional_test/ReferenceRasterOracleFixture.c",
+      "cases": 3042,
+      "scope": "hash-locked collision insertion composed with real sim grid, area marking and reset under UBSan; two array/hash origins, three radii, 13 by 13 integer center offsets and empty/occupied/removed states; independent integer squared-distance area predicate, collision location and insertion counters",
+      "certification_eligible": false,
+      "arithmetic_environment": "qualified binary32/binary64 round-to-nearest with subnormal and SSE FTZ/DAZ checks; upward/downward/toward-zero and supported FTZ/DAZ injections must refuse execution",
+      "limitations": "finite integer-center insertion regression only, qualified floating-point environment; not continuous motion rasterization, full metric equivalence or game certification"
+    },
+    "visibility_oracle": {
+      "test": "tests/functional_test/ReferenceVisibilityOracle.test.cjs",
+      "source_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "cases": 2560,
+      "scope": "extracted get_atom, conversion_input and conversion_output; ten mechanism types times eight independent flag bits under UBSan; removed/moved arm precedence, wheel visibility and bonded/grabbed input exclusion",
+      "certification_eligible": false,
+      "limitations": "single synthetic lookup and fixed coordinate stub; one representative normal/recent bond bit and grabbed count; does not prove lookup geometry, full flag domain, wheel creation or grab/drop lifecycle, metrics or game equivalence"
+    },
+    "integer_snap_oracle": {
+      "test": "tests/functional_test/ReferenceSnapOracle.test.cjs",
+      "fixture": "tests/functional_test/ReferenceSnapOracleFixture.c",
+      "source_sha256": "a7e23da18c225ec24b2337ed691fcc0a468bc27c7b87d4b8dc6644c10a08491f",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "transforms": 59535,
+      "bond_rotation_cases": 6720,
+      "scope": "extracted normalization, direction bases, integer position transform and bond rotation; five bases, identity translation plus all six axial unit translations, rotations -10 through 10, relative coordinates -4 through 4; all 64 masks independently in each of five bond groups; inverse, non-bond preservation and hex-distance assertions under UBSan",
+      "anisotropic_norm_squared": [6724, 6722],
+      "certification_eligible": false,
+      "limitations": "finite integer endpoint regression only; bond masks enumerated one group at a time, not all simultaneous cross-group patterns; does not exercise movement classification, board reinsertion, wheel/grabber lifecycle, continuous interpolation or game equivalence"
+    },
+    "ordinary_outer_loop_oracle": {
+      "scenario_groups": 39,
+      "source": "same hash-locked collision source and real sim.h as ordinary_collider_oracle",
+      "scope": "extracted ordinary collision outer loop and insertion; instrumented collider calls; synthetic one-cell board; chain paths abort; finite regression only",
+      "coverage": ["fixed base prefix", "walls and produced atoms do not advance prefix", "same movement exclusion", "different movement collision", "track reverse interpolation", "moving base interpolation", "track and piston increment-one endpoint exclusion", "swing and pivot midpoint", "piston midpoint", "stationary-board contact location", "REMOVED stationary atom exclusion", "neighboring stationary atom separation", "strict tangency and adjacent-progress boundaries", "non-divisor sampling cadence", "fixed-class pair matrix", "moving versus fixed classes", "moving-base pair matrix", "ordinary wheel/grabbed flag invariance"],
+      "arithmetic_environment": "independently qualified in outer subprocess using shared fixture checks; five rounding/FTZ/DAZ rejection probes (unsupported modes return 78)",
+      "limitations": "no upstream wheel/grabber classification or chain coverage; flag invariance only at ordinary collider call boundary; synthetic single-cell lookup only, not real board implementation; no continuous-coverage, compiler/libm correctness or game-equivalence certification"
+    },
+    "ordinary_collider_oracle": {
+      "source_sha256": "a2df55f5a12ec8a107c6408e44d7e4373447b6741a8f59259829c2f6f96558b5",
+      "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+      "command": "node tests/functional_test/ReferenceColliderOracle.cjs LOCKED_COLLISION_SOURCE LOCKED_SIM_HEADER",
+      "floating_point_qualification": {
+        "checks": "IEC 559 binary32/binary64 parameters; evaluation method 0; nearest rounding; gradual-underflow and ties-to-even probes; SSE MXCSR FTZ/DAZ disabled",
+        "rejection_modes": ["round-upward", "round-downward", "round-toward-zero", "flush-to-zero", "denormals-are-zero"],
+        "rejection_exit_code": 77,
+        "unavailable_injection_exit_code": 78,
+        "limitations": "FTZ/DAZ injection explicitly unavailable without SSE; probes do not prove compiler or libm correctness or correctly rounded sqrt",
+        "validation": "Locked-source Node suite: 5 passed, 0 failed, 0 skipped"
+      },
+      "scenario_groups": 8,
+      "lattice_round_trips": 40401,
+      "signed_ties": 2,
+      "board_query_regression": {
+        "integer_centers": 20000,
+        "integer_coordinate_bound": 262144,
+        "lcg_seed": 7419266,
+        "boundary_centers": 1125,
+        "boundary_axial_anchors": [-1024, -1, 0, 1, 1024],
+        "boundary_offsets_xy": [[41, 0], [20.5, 35.5], [-41, 0], [-20.5, -35.5], [0.25, -0.75]],
+        "boundary_variants": "Cartesian product of previous/current/next float on both axes",
+        "local_cells_per_center": 25,
+        "collider_radii": [15, 20, 29],
+        "omission_counterexample": {"center_xy": [0, 0], "omitted_cell": [0, 2], "collider_radius": 136, "atom_radius": 29},
+        "scope": "finite regression only; not general seven-cell coverage proof"
+      },
+      "board_query_conditional_lemma": {
+        "input_xy_absolute_bound": 262144,
+        "candidate_xy_absolute_bound": 262400,
+        "maximum_collider_radius": 29,
+        "atom_radius": 29,
+        "inverse_axis_error_upper_bound": 0.001,
+        "cube_residual_upper_bound": 0.001,
+        "corrected_exact_axis_error_upper_bound": 1.003,
+        "omitted_cell_distance_lower_bound": 69.79,
+        "contact_true_distance_upper_bound": 59,
+        "arithmetic": "IEEE binary32 round-to-nearest; locked operation order; no contraction, FTZ or DAZ; assumes correctly rounded binary64 libm sqrt (not proved by probes)",
+        "scope": "conditional board-query geometry only; outer-loop premises not qualified; no certification expansion",
+        "derivation": "docs/IndependentVerifier.md"
+      },
+      "exit_code": 0,
+      "certification_eligible": false,
+      "scope": "Extracted ordinary insertion against original fixture expectations with synthetic board and explicit cursor transitions; header hash lock only, not ABI validation; qualified floating-point environment, C11 O0 and disabled contraction",
+      "excludes": "outer-loop collider classification, chain behavior, game equivalence and continuous spatial coverage certification",
+      "provenance": "Direct compile-and-run completed successfully before registration; not an independent-implementation differential or a new full-suite acceptance"
+    },
+    "data_flow": "sim updates integer end-state atoms and grab positions first; collision computes end-state offsets and interpolates backwards using base translation, grabber rotation or piston length, and offset rotation in reference operation order.",
+    "cadence": "Float increment derived from maximum hex rotation distance using log, round and pow; capped at 0.125 time units, then repeatedly accumulated as float. This is not a spatial error bound.",
+    "motion_diagnostic": {
+      "implementation": "src/Verification/ReferenceMotion.cpp",
+      "scope": "Float end-state reverse interpolation with an independent piston attribute; diagnostic only, not whole-state legality or cross-compiler bit equivalence",
+      "fail_closed": "Invalid progress, conflicting fields, coordinate bounds, degenerate piston or exhausted sample budget return no result; default sample-count limit 65536",
+      "historical_validation": {
+        "command": "build/OpusOptimaTests --gtest_filter='ReferenceMotion.*'",
+        "passed": 9,
+        "failed": 0,
+        "provenance": "Previously executed test run; not rerun for this documentation registration"
+      },
+      "dyadic_count_validation": {
+        "classification": "Preserves reference log/pow classification; no integer-threshold replacement or cross-libm equivalence claim",
+        "proof_scope": "For a verified increment 2^-k with 3 <= k <= 22 and IEEE binary float precision >= 23 bits, every accumulated j/2^k through 1 is exact; interior count is 2^k-1, checked against the unchanged budget",
+        "command": "cmake --build build --target OpusOptimaTests -j2 && build/OpusOptimaTests --gtest_filter='ReferenceMotion.*'",
+        "passed": 10,
+        "failed": 0,
+        "duration_ms": 187,
+        "coverage": "Iterative float-count comparison near every cadence transition, coordinate ceiling, exact budget and one-short budget",
+        "limitations": "Count only; no seven-cell coverage, continuous enclosure, area or game certification proof"
+      },
+      "environment_validation": {
+        "gate": "Reject fast-math, unsupported IEEE formats, non-nearest rounding and SSE DAZ/FTZ through all four diagnostic API entry chains; not cross-platform libm certification",
+        "command": "build/OpusOptimaTests --gtest_filter='ReferenceMotion.*:ContinuousCollision.*'",
+        "passed": 30,
+        "failed": 0,
+        "duration_ms": 178,
+        "reference_motion_tests": 12,
+        "continuous_collision_tests": 18,
+        "node_default": { "passed": 3, "skipped": 1, "failed": 0 },
+        "node_locked_header": { "passed": 4, "skipped": 0, "failed": 0 },
+        "build_boundary": "Standalone ReferenceMotionDifferential.cpp excluded from GTest source glob; Node compiles it with the temporary C oracle",
+        "differential_rerun": "48 endpoint invariants, 187349 bitwise comparisons, 211 expected singular endpoint rejections; exit 0"
+      },
+      "extracted_c_differential": {
+        "command": "node tests/functional_test/ReferenceMotionDifferential.cjs <locked-collision.c> <locked-sim.h>",
+        "source_sha256": "a2df55f5a12ec8a107c6408e44d7e4373447b6741a8f59259829c2f6f96558b5",
+        "header_sha256": "198a3c4a74bc94fe1595e0159881797d450f387e92598191b77cbec3e8864a22",
+        "source_policy": "External source and header arguments; missing argument or wrong SHA256 rejected before extraction or compilation",
+        "scope": "Ordinary atom center statement extraction; authoritative movement enum extracted from locked sim.h; reduced layout, not ABI validation; host libm; C11/C++20; O0; FP contraction disabled",
+        "motions": 20840,
+        "time_points_per_motion": 9,
+        "bitwise_point_comparisons_passed": 187349,
+        "expected_singular_endpoints_rejected": 211,
+        "exit_code": 0,
+        "coverage": "20000 deterministic random motions plus 4 mechanisms x 11 base rotations x 3 changes x 6 directions = 792 structured motions, plus 4 mechanisms x 6 directions x 2 changes = 48 kinematically constructed end-state motions",
+        "allowed_rejection": "isPiston && grabberOffset == (1,0) && pistonExtension == 1 && t == 0",
+        "historical_random_only_comparisons_passed": 179789,
+        "kinematic_endpoint_invariants_passed": 48,
+        "coverage_counts_asserted": true,
+        "provenance": "Authoritative-enum driver including 48 kinematically constructed end states freshly compiled and executed successfully with independent direction-index endpoint invariants and exact coverage-count assertions; earlier reduced-layout and random-only results are separate, not additive",
+        "limitations": "Finite samples only; reduced struct layout is not verified full upstream ABI; inputs need not be legal game end states; no full reference program, chain, base collider, cadence, continuous enclosure or cross-platform proof; tested endpoints need not belong to the reference interior loop"
+      },
+      "limitations": "Executed statement-extraction differential only; no full locked-C program differential, continuous enclosure, seven-cell coverage, area equivalence or game certification; not connected to dynamic Passed"
+    },
+    "certification_gate": "CertifiedMotions in src/Verification/StaticProductionVerifier.cpp checks initial integer body overlap and simultaneous base swaps; dynamic atom/base/length/direction changes and wheel turns are Unsupported and map to Unavailable. Static metrics and supplied-trajectory kernel tests do not qualify dynamic certification."
+  },
+  "latest_offline_acceptance": {
+    "motion_certification_gate_regressions": {
+      "scope": "Sticky motion history separates diagnostic raster conclusiveness from certification eligibility; does not establish dynamic game equivalence",
+      "enabled": { "build_exit_code": 0, "passed": 33, "failed": 0 },
+      "disabled": {
+        "command": "cmake --build build/verifier-m1-no-native-20261028 -j 2 && ctest --test-dir build/verifier-m1-no-native-20261028 --output-on-failure -R '^(IndependentMetrics\\.|IndependentFiniteReplay\\.|IndependentVerifierCli)'",
+        "build_exit_code": 0,
+        "build_result": "Ninja checked the latest worktree and reported no work to do; no source recompilation in this run",
+        "passed": 28,
+        "failed": 0,
+        "seconds": 5.53
+      },
+      "provenance": "Previously executed focused runs registered here without rerunning; enabled and disabled test counts differ with native support",
+      "limitations": "Not a full-suite acceptance of the latest worktree or phase 2 closure; historical full-suite results below predate this gate"
+    },
+    "enabled_ctest": { "passed": 709, "total": 709, "seconds": 439.45 },
+    "disabled_stale_build_ctest": { "passed": 420, "total": 421, "exit_code": 8 },
+    "disabled_rebuild_exit_code": 0,
+    "disabled_rebuilt_ctest": { "passed": 440, "total": 440, "seconds": 41.28 },
+    "node_script_regressions": { "passed": 31, "failed": 0, "skipped": 0, "milliseconds": 8910.707079 },
+    "byte_only_evidence_reader": {
+      "passed": 25,
+      "seconds": 0.021,
+      "exit_code": 0,
+      "provenance": "Direct Python synthetic-reader run including missing metadata table-stream rejection, method-body file-backing, reserved-opcode rejection and exhaustive supported single-byte/FE opcode operand-boundary/truncation regressions; no game execution or build required; not IL semantic verification or a fresh full-suite acceptance"
+    },
+    "limitations": "Separate acceptance round, not additive to historical runs; Node script regressions are not a fresh full extracted-C differential; no new 169x5 scan or phase 2-5 acceptance; dynamic certification remains Unavailable",
+    "current_collider_byte_audit": {
+      "evidence": "tests/functional_test/CurrentColliderEvidence.json",
+      "assembly_sha256": "ee4d1740609cbc09b5eb52244acc63da32f9e3cc280309049ceb7b708d20e1c5",
+      "status": "partial-byte-evidence-only",
+      "certification_eligible": false,
+      "scope": "Independent current-version metadata and IL checks: collider constants and insertion templates, local pair reporting, virtual dispatch declarations, report storage/accessors, Maybe storage/conversion and binary32/binary64 numerical call chain",
+      "reader_regressions": { "passed": 52, "seconds": 1.498, "exit_code": 0 },
+      "wrapper_regression_provenance": "Read-only regeneration includes generic wrapper owner 21f, five methods, eight MemberRefs, three TypeSpecs, field ownership and complete mscorlib identity; metadata/body mutation tests passed. Intermediate original 50-test run had one stale-persisted-JSON failure; first 52-test run exposed seven synthetic missing-index errors, corrected by mutating blob/string contents instead of nonexistent heap indices. No game execution. Wrapper library behavior, initialization, dispatch and exception semantics remain unproved.",
+      "previous_reader_regressions": { "passed": 50, "seconds": 0.805, "exit_code": 0 },
+      "earlier_reader_regressions": [{ "passed": 48, "seconds": 0.755, "exit_code": 0 }, { "passed": 46, "seconds": 0.625, "exit_code": 0 }, { "passed": 44, "seconds": 0.686, "exit_code": 0 }],
+      "regression_provenance": "Fresh synthetic-reader run: conditional reset 1293, predicate 128e, abstract slot 11e1 and throwing helper 1295 metadata/body rejection, abstract RVA and every reset header byte; persisted real read-only CLI audit includes these method records and explicitly conditional reset scope. Previous 48-test run added method metadata tampering and StandAloneSig row rebinding to the d66/1283 header/local checks. Persisted evidence compared against generated audit after removing only constructor parameter display names/namespaces. Synthetic tests do not require an installed game. Earlier runs remain separate historical results.",
+      "limitations": "Byte evidence only; not runtime dispatch, complete collider integration, exception/consumer semantics, continuous coverage, metric equivalence or phase 2 closure. Legacy production/numerical/grid hash gates are unchanged; no game execution or save modification."
+    },
+    "area_arc_counterexample": {
+      "status": "analytic-local-trajectory-counterexample-not-game-evidence",
+      "position": [2, 7],
+      "center": [0, 0],
+      "turns": 1,
+      "cell": [-7, 10],
+      "steps": 32,
+      "radius": 58,
+      "sample_uncertainty_approx": 0.32180816650390626,
+      "continuous_arc_distance_approx": 57.568803830480306,
+      "minimum_internal_sample_distance_approx": 58.50352188739227,
+      "regression": "IndependentMetrics.SampleEnvelopesDoNotProveContinuousArcCoverage",
+      "validation": { "configuration": "enabled", "passed": 15, "seconds": 0.39, "exit_code": 0 },
+      "limitations": "Existing cadence and point envelopes miss a grid center inside the local double continuous arc disk. This disproves their use as continuous coverage evidence, not the unproved game raster-phase rule. Nominal metrics and dynamic certification gate unchanged; not phase 2 closure or full-tree acceptance."
+    },
+    "assembly_provenance": {
+      "audited_sha256": "fd804fadedbf1b991ed37f3ec7325b2160317f0585e3e908fb73f246a038368d",
+      "installed_sha256": "ee4d1740609cbc09b5eb52244acc63da32f9e3cc280309049ceb7b708d20e1c5",
+      "status": "Mismatch; all three audit hash gates retained; constructor trace stopped before evidence generation; no original-game execution or save modification"
+    }
+  },
+  "unproved_obligations": [
+    "Meaning and insertion completeness of all collider categories, including explicit 24.0 and 20.0 overrides; pair dispatch is recorded separately but integration coverage remains unproved",
+    "Equivalence of traced locked-reference end-state interpolation/snap to original-game trajectories across half cycles and multiple rotations",
+    "A derived uniform or per-trajectory spatial error envelope, including cadence log/pow/round, float accumulation and seven-cell collider coverage; 0.125 is only a time-step cap",
+    "A proved envelope for .05+.03*radius+16*float_epsilon*coordinate_sum used by area rasterization",
+    "Full game area/cost/instruction rules, including raster-phase membership and platform Math.Sin/Cos behavior",
+    "Actual game outcomes for near-contact, generated atoms, wheel/base/gripper/wall and raster-boundary fixtures"
+  ],
+  "minimal_game_fixture_contract": {
+    "required_record": [
+      "game executable/build and asset hashes",
+      "puzzle and solution hashes",
+      "exact expected condition and evidence source",
+      "observed completion/collision result and cycle",
+      "observation/replay artifact provenance"
+    ],
+    "cases": [
+      "translation versus rotation at equal nominal clearance",
+      "long off-axis bonded fragment through rotation and next-cycle snap",
+      "piston extension in all six directions",
+      "generated versus ordinary atom outlet near a body",
+      "wheel/arm-base/gripper and wall boundary contacts",
+      "area raster inclusion immediately below/at/above a threshold"
+    ],
+    "status": "Not executed; original-game observation artifacts are still required"
+  }
+}

@@ -1,77 +1,174 @@
+#include "../unit_test/UnitTestConstants.hpp"
+#include "SolutionVerifier.hpp"
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "BinaryParser.hpp"
+#include "BinaryWriter.hpp"
 #include "CollisionLUT.hpp"
 #include "HexSimulator.hpp"
 #include "MachineState.hpp"
+#include "SingleAtomSolver.hpp"
+#include "RepoRoot.hpp"
 
+#ifdef HAS_LIBVERIFY
 namespace {
 
 std::filesystem::path GetRepoRoot() {
-    std::filesystem::path cursor = std::filesystem::path(__FILE__).parent_path();
-    while (!cursor.empty()) {
-        if (std::filesystem::exists(cursor / "CMakeLists.txt")) return cursor;
-        cursor = cursor.parent_path();
-    }
-    throw std::runtime_error("Cannot locate repository root");
-}
-
-// std::vector<unsigned char> ReadFileBytes(const std::filesystem::path& path) {
-//     FILE* file = std::fopen(path.string().c_str(), "rb");
-//     if (file == nullptr) throw std::runtime_error("Cannot open " + path.string());
-//     std::fseek(file, 0, SEEK_END);
-//     long file_size = std::ftell(file);
-//     std::rewind(file);
-//     std::vector<unsigned char> buf(static_cast<std::size_t>(file_size));
-//     if (file_size > 0) std::fread(buf.data(), 1, static_cast<std::size_t>(file_size), file);
-//     std::fclose(file);
-//     return buf;
-// }
+    return opusoptima::test::RepoRoot(__FILE__);}
 
 } // namespace
 
-// Simulator-vs-verifier cross-check
-
-TEST(SimulatorMatchesVerifier, EasyConduitCycleCount) {
+TEST(ExternalVerifier, KnownSolutionsComplete) {
     const auto repo = GetRepoRoot();
-    const auto puzzlePath = repo / "asset/puzzle/easy/easy-conduit.puzzle";
-    const auto solPath = repo / "asset/solution/easy/easy-conduit-easy-conduit-1.solution";
-
-    // Our simulator
-    const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzleFile(puzzlePath);
-    const auto solution = opusoptima::io::BinaryParser::ParseSolutionFile(solPath);
-
-    opusoptima::core::MachineState state;
-    std::int32_t simCycles = opusoptima::engine::HexSimulator::Run(puzzle, solution, state);
-    EXPECT_EQ(simCycles, 26) << "Simulator should complete the solution in 26 cycles";
-
-    // All arms should complete
-    for (std::size_t i = 0; i < state.arms.size(); ++i) {
-        EXPECT_FALSE(state.arms[i].active)
-            << "Arm " << i << " at " << state.arms[i].basePosition << " did not finish";
+    for (const auto* stem : {"easy-conduit", "double-conduit"}) {
+        const auto report = opusoptima::io::VerifySolutionFiles(
+            repo / (std::string("asset/puzzle/easy/") + stem + ".puzzle"),
+            repo / (std::string("asset/solution/easy/") + stem + "-" + stem + "-1.solution"));
+        ASSERT_TRUE(report.Passed()) << report.detail;
+        EXPECT_GT(report.metrics.cycles, 0);
     }
-
-    // Output atoms should have been delivered
-    EXPECT_GT(solution.metrics.cycles, 0);
 }
 
-TEST(SimulatorMatchesVerifier, DoubleConduitCycleCount) {
+TEST(ExternalVerifier, UnverifiedVialRulesCannotPublishOrReplaceOutput) {
+    const auto puzzle = GetRepoRoot() / "asset/puzzle/workshop-versions/w2591419339.puzzle";
+    const auto parsed = opusoptima::io::BinaryParser::ParsePuzzleFile(puzzle);
+    ASSERT_TRUE(parsed.productionInfo);
+    ASSERT_FALSE(parsed.productionInfo->vials.empty());
+    const auto output =
+        std::filesystem::temp_directory_path() /
+        ("opusoptima-vial-boundary-" + std::to_string(opusoptima::test::ProcessId()) + ".solution");
+    struct Cleanup {
+        std::filesystem::path path;
+        ~Cleanup() {
+            std::filesystem::remove(path);
+        }
+    } cleanup{output};
+    {
+        std::ofstream stream(output);
+        stream << "preserve existing output";
+    }
+    opusoptima::io::SolutionData candidate;
+    candidate.puzzleName = parsed.name;
+    for (const bool publish : {false, true}) {
+        const auto report = publish
+                                ? opusoptima::io::PublishVerifiedSolution(puzzle, output, candidate)
+                                : opusoptima::io::VerifySolutionFiles(puzzle, output);
+        EXPECT_FALSE(report.Passed());
+        EXPECT_TRUE(report.status == opusoptima::io::VerificationStatus::Unavailable ||
+                    report.status == opusoptima::io::VerificationStatus::Rejected ||
+                    report.status == opusoptima::io::VerificationStatus::CycleLimit);
+        std::ifstream stream(output);
+        std::string contents;
+        std::getline(stream, contents);
+        EXPECT_EQ(contents, "preserve existing output");
+    }
+}
+
+TEST(ExternalVerifier, CycleBudgetIsEnforced) {
     const auto repo = GetRepoRoot();
-    const auto puzzlePath = repo / "asset/puzzle/easy/double-conduit.puzzle";
-    const auto solPath = repo / "asset/solution/easy/double-conduit-double-conduit-1.solution";
-
-    const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzleFile(puzzlePath);
-    const auto solution = opusoptima::io::BinaryParser::ParseSolutionFile(solPath);
-
-    opusoptima::core::MachineState state;
-    std::int32_t simCycles = opusoptima::engine::HexSimulator::Run(puzzle, solution, state);
-    EXPECT_EQ(simCycles, 26);
-    EXPECT_EQ(solution.metrics.area, 35);
+    const auto report = opusoptima::io::VerifySolutionFiles(
+        repo / "asset/puzzle/easy/easy-conduit.puzzle",
+        repo / "asset/solution/easy/easy-conduit-easy-conduit-1.solution", 1);
+    EXPECT_EQ(report.status, opusoptima::io::VerificationStatus::CycleLimit) << report.detail;
 }
+
+TEST(ExternalVerifier, RequiresAllSixProducts) {
+    const auto repo = GetRepoRoot();
+    const auto puzzlePath = repo / "asset/puzzle/easy/just-salt.puzzle";
+    const auto puzzleBytes = opusoptima::io::BinaryParser::ReadAllBytes(puzzlePath);
+    const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzle(puzzleBytes);
+    const auto output =
+        std::filesystem::temp_directory_path() /
+        ("opusoptima-six-products-" + std::to_string(opusoptima::test::ProcessId()) + ".solution");
+    struct Cleanup {
+        std::filesystem::path path;
+        ~Cleanup() {
+            std::filesystem::remove(path);
+        }
+    } cleanup{output};
+    for (const int count : {1, 2, 5, 6}) {
+        SCOPED_TRACE(count);
+        auto solution = opusoptima::solvers::SingleAtomSolver{}.Solve(puzzle);
+        auto& arm = solution.objects.front();
+        const auto period = arm.instructions;
+        arm.instructions.clear();
+        for (int i = 0; i < count; ++i)
+            for (auto instruction : period) {
+                instruction.parameter += 4 * i;
+                arm.instructions.push_back(instruction);
+            }
+        arm.instructions.push_back({'B', 4 * count});
+        opusoptima::io::BinaryWriter::WriteSolutionFile(output, solution);
+        const auto report = opusoptima::io::VerifySolutionFiles(puzzlePath, output, 100);
+        EXPECT_EQ(report.Passed(), count == 6) << report.detail;
+        if (count < 6) {
+            EXPECT_EQ(report.status, opusoptima::io::VerificationStatus::CycleLimit)
+                << report.detail;
+        }
+    }
+}
+
+TEST(ExternalVerifier, RejectsCollisionAfterTwoSuccessfulProducts) {
+    const auto repo = GetRepoRoot();
+    const auto puzzlePath = repo / "asset/puzzle/easy/just-salt.puzzle";
+    const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzleFile(puzzlePath);
+    auto solution = opusoptima::solvers::SingleAtomSolver{}.Solve(puzzle);
+    auto& arm = solution.objects.front();
+    arm.instructions = {{'G', 0}, {'r', 1}, {'g', 2}, {'R', 3}, {'G', 4},  {'r', 5},
+                        {'g', 6}, {'R', 7}, {'G', 8}, {'r', 9}, {'R', 10}, {'B', 11}};
+    const auto output = std::filesystem::temp_directory_path() /
+                        ("opusoptima-late-collision-" +
+                         std::to_string(opusoptima::test::ProcessId()) + ".solution");
+    struct Cleanup {
+        std::filesystem::path path;
+        ~Cleanup() {
+            std::filesystem::remove(path);
+        }
+    } cleanup{output};
+    opusoptima::io::BinaryWriter::WriteSolutionFile(output, solution);
+    const auto report = opusoptima::io::VerifySolutionFiles(puzzlePath, output, 100);
+    EXPECT_EQ(report.status, opusoptima::io::VerificationStatus::Rejected) << report.detail;
+    EXPECT_GE(report.errorCycle, 8);
+}
+
+TEST(ExternalVerifier, EmptyMachineCannotCompleteOrReplaceExistingOutput) {
+    const auto repo = GetRepoRoot();
+    const auto puzzle = repo / "asset/puzzle/easy/just-salt.puzzle";
+    auto solution = opusoptima::io::SolutionData{};
+    solution.puzzleName = opusoptima::io::BinaryParser::ParsePuzzleFile(puzzle).name;
+    const auto output =
+        std::filesystem::temp_directory_path() /
+        ("opusoptima-verifier-" + std::to_string(opusoptima::test::ProcessId()) + ".solution");
+    struct Cleanup {
+        std::filesystem::path path;
+        ~Cleanup() {
+            std::filesystem::remove(path);
+        }
+    } cleanup{output};
+    {
+        std::ofstream stream(output);
+        stream << "preserve existing output";
+    }
+    const auto report = opusoptima::io::PublishVerifiedSolution(puzzle, output, solution);
+    EXPECT_FALSE(report.Passed());
+    std::ifstream stream(output);
+    std::string contents;
+    std::getline(stream, contents);
+    EXPECT_EQ(contents, "preserve existing output");
+    EXPECT_FALSE(opusoptima::io::VerifySolutionFiles(puzzle, output).Passed());
+    EXPECT_FALSE(opusoptima::io::VerifySolutionFiles(puzzle, output, 0).Passed());
+}
+#else
+TEST(ExternalVerifier, MissingLibraryFailsClosed) {
+    EXPECT_EQ(opusoptima::io::VerifySolutionFiles("missing", "missing").status,
+              opusoptima::io::VerificationStatus::Unavailable);
+}
+#endif
 
 // Collision detection tests
 

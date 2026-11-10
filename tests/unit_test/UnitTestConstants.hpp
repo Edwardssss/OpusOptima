@@ -6,7 +6,21 @@
 #include <string_view>
 #include <vector>
 
+#ifdef _WIN32
+#    include <process.h>
+#else
+#    include <unistd.h>
+#endif
+
 namespace opusoptima::test {
+
+[[nodiscard]] inline int ProcessId() {
+#ifdef _WIN32
+    return _getpid();
+#else
+    return getpid();
+#endif
+}
 
 // Constant numbers used in test payload construction
 inline constexpr int kTestSolutionTag = 7;  // .solution format tag

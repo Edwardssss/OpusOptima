@@ -1,4 +1,6 @@
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <span>
 #include <vector>
 
@@ -68,6 +70,105 @@ TEST(PuzzleParseUnitTest, HandlesProductionPuzzle) {
         std::span<const std::byte>(buffer.data(), buffer.size()));
     ASSERT_TRUE(puzzle.productionInfo.has_value());
     EXPECT_FALSE(puzzle.productionInfo->shrinkLeft);
+}
+
+namespace {
+
+BufferBuilder PuzzleListPrefix(const int list) {
+    BufferBuilder buffer;
+    buffer.PushI32(3);
+    buffer.PushVStr("");
+    buffer.PushU64(0);
+    buffer.PushU64(0);
+    if (list == 0) return buffer;
+    buffer.PushI32(list == 1 || list == 2 ? 1 : 0);
+    if (list == 1) return buffer;
+    if (list == 2) {
+        buffer.PushI32(0);
+        return buffer;
+    }
+    if (list == 3) return buffer;
+    buffer.PushI32(0);
+    buffer.PushI32(1);
+    buffer.PushU8(1);
+    buffer.PushU8(0);
+    buffer.PushU8(0);
+    buffer.PushU8(0);
+    if (list == 4) return buffer;
+    buffer.PushI32(0);
+    if (list == 5) return buffer;
+    buffer.PushI32(list == 6 ? 1 : 0);
+    if (list == 6) {
+        for (int i = 0; i < 4; ++i) buffer.PushU8(0);
+    }
+    return buffer;
+}
+
+} // namespace
+
+TEST(PuzzleParseUnitTest, RejectsImpossibleListCountsBeforeAllocation) {
+    for (int list = 0; list < 8; ++list) {
+        for (const auto count : {-1, std::numeric_limits<std::int32_t>::max()}) {
+            SCOPED_TRACE(list);
+            SCOPED_TRACE(count);
+            auto buffer = PuzzleListPrefix(list);
+            buffer.PushI32(count);
+            for (int i = 0; i < 16; ++i) buffer.PushU8(0);
+            EXPECT_THROW(opusoptima::io::BinaryParser::ParsePuzzle(buffer.Span()),
+                         opusoptima::io::ParseError);
+        }
+    }
+}
+
+TEST(PuzzleParseUnitTest, RejectsTruncatedListEntries) {
+    for (int list = 0; list < 8; ++list) {
+        SCOPED_TRACE(list);
+        auto buffer = PuzzleListPrefix(list);
+        // The enclosing molecule needs eight bytes before it can be entered.
+        buffer.PushI32(list == 1 ? 2 : 1);
+        if (list == 1) buffer.PushI32(0);
+        EXPECT_THROW(opusoptima::io::BinaryParser::ParsePuzzle(buffer.Span()),
+                     opusoptima::io::ParseError);
+    }
+}
+
+TEST(PuzzleParseUnitTest, AcceptsMinimumSizedListEntries) {
+    auto buffer = PuzzleListPrefix(0);
+    buffer.PushI32(1);
+    buffer.PushI32(0);
+    buffer.PushI32(0);
+    buffer.PushI32(1);
+    buffer.PushI32(1);
+    buffer.PushU8(1);
+    buffer.PushU8(0);
+    buffer.PushU8(0);
+    buffer.PushI32(1);
+    for (int i = 0; i < 5; ++i) buffer.PushU8(0);
+    buffer.PushI32(1);
+    buffer.PushU8(1);
+    for (int i = 0; i < 3; ++i) buffer.PushU8(0);
+    buffer.PushI32(1);
+    for (int i = 0; i < 3; ++i) buffer.PushU8(0);
+    buffer.PushI32(1);
+    for (int i = 0; i < 4; ++i) buffer.PushU8(0);
+    buffer.PushI32(1);
+    buffer.PushU8(0);
+    buffer.PushU8(0);
+    buffer.PushI32(1);
+    for (int i = 0; i < 3; ++i) buffer.PushU8(0);
+    buffer.PushI32(0);
+
+    const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzle(buffer.Span());
+    ASSERT_EQ(puzzle.inputs.size(), 1U);
+    EXPECT_TRUE(puzzle.inputs.front().atoms.empty());
+    ASSERT_EQ(puzzle.outputs.size(), 1U);
+    EXPECT_EQ(puzzle.outputs.front().atoms.size(), 1U);
+    EXPECT_EQ(puzzle.outputs.front().bonds.size(), 1U);
+    ASSERT_TRUE(puzzle.productionInfo.has_value());
+    EXPECT_EQ(puzzle.productionInfo->chambers.size(), 1U);
+    ASSERT_EQ(puzzle.productionInfo->conduits.size(), 1U);
+    EXPECT_EQ(puzzle.productionInfo->conduits.front().path.size(), 1U);
+    EXPECT_EQ(puzzle.productionInfo->vials.size(), 1U);
 }
 
 TEST(PuzzleParseUnitTest, StringRoundTrip) {

@@ -9,19 +9,12 @@
 #include "BinaryParser.hpp"
 #include "PuzzleSpecs.hpp"
 #include "SvgExporter.hpp"
+#include "RepoRoot.hpp"
 
 namespace {
 
 std::filesystem::path GetRepoRoot() {
-    std::filesystem::path cursor = std::filesystem::path(__FILE__).parent_path();
-    while (!cursor.empty()) {
-        if (std::filesystem::exists(cursor / "CMakeLists.txt")) {
-            return cursor;
-        }
-        cursor = cursor.parent_path();
-    }
-    throw std::runtime_error("Cannot locate repository root from test file path");
-}
+    return opusoptima::test::RepoRoot(__FILE__);}
 
 } // namespace
 

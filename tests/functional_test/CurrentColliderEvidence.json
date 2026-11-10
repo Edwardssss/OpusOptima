@@ -1,0 +1,1250 @@
+{
+  "assembly_sha256": "ee4d1740609cbc09b5eb52244acc63da32f9e3cc280309049ceb7b708d20e1c5",
+  "status": "partial-byte-evidence-only",
+  "step_entry_receivers": {
+    "methods": {
+      "0600110a": {
+        "receiver_offsets": [
+          55
+        ],
+        "window_ends": [
+          66
+        ]
+      },
+      "0600111b": {
+        "receiver_offsets": [
+          909
+        ],
+        "window_ends": [
+          941
+        ]
+      },
+      "0600111f": {
+        "receiver_offsets": [
+          6,
+          1447
+        ],
+        "window_ends": [
+          12,
+          1453
+        ]
+      },
+      "06001122": {
+        "receiver_offsets": [
+          6,
+          295
+        ],
+        "window_ends": [
+          12,
+          301
+        ]
+      }
+    },
+    "scope": "Same-owner managed instance parameterless methods; no argument address-taking or assignment; encoded ldarg.0 windows start and end on instruction boundaries and have no interior branch targets or EH handler/filter entries. Entry this identity only, not stack verification, call effects, cross-invocation object identity, publication, reentrancy or lifecycle proof"
+  },
+  "step_lifecycle": {
+    "identity": {
+      "status": "conditional-reference-identity-proved",
+      "wrapper_type": "020003de",
+      "instantiation": "1b0000cb",
+      "methods": [
+        {
+          "token": "06000d5f",
+          "flags": 6278,
+          "signature": "200201021300",
+          "il": "0203287d04000a02047d7e04000a2a",
+          "header": "3e"
+        },
+        {
+          "token": "06000d60",
+          "flags": 134,
+          "signature": "200002",
+          "il": "027b7f04000a2a",
+          "header": "1e"
+        },
+        {
+          "token": "06000d61",
+          "flags": 129,
+          "signature": "20010102",
+          "il": "02037d7f04000a2a",
+          "header": "22"
+        },
+        {
+          "token": "06000d62",
+          "flags": 134,
+          "signature": "20001300",
+          "il": "02287000000a2d10204ef0d3d2287c07000673e000000a7a027b7e04000a2a",
+          "header": "7e"
+        },
+        {
+          "token": "06000d64",
+          "flags": 150,
+          "signature": "000115118f780113001300",
+          "il": "028c3900001b2d102024f0d3d2287c07000673d002000a7a1702738004000a2a",
+          "header": "82"
+        },
+        {
+          "token": "06000d65",
+          "flags": 2198,
+          "signature": "000115118f780113001300",
+          "il": "02288104000a2a",
+          "header": "1e"
+        }
+      ],
+      "member_bindings": [
+        {
+          "member": "0a0005ac",
+          "target": "06000d65"
+        },
+        {
+          "member": "0a000286",
+          "target": "06000d62"
+        },
+        {
+          "member": "0a000285",
+          "target": "06000d60"
+        },
+        {
+          "member": "0a000070",
+          "target": "06000d60"
+        },
+        {
+          "member": "0a00047d",
+          "target": "06000d61"
+        },
+        {
+          "member": "0a00047e",
+          "target": "04000bb3"
+        },
+        {
+          "member": "0a00047f",
+          "target": "04000bb2"
+        },
+        {
+          "member": "0a000480",
+          "target": "06000d5f"
+        },
+        {
+          "member": "0a000481",
+          "target": "06000d64"
+        }
+      ],
+      "factory_il": "027bbc1100042c1802026fdc11000628db0b00067dbb11000402167dbc110004027cbb11000428a305000a2d0b7e0709000428a405000a2a730a1100060a06027d2f11000406166f0e11000606027cbb11000428a505000a6f10110006026fdc1100066fa41100066f7c00000a0b2b391201287d00000a0c067b3211000408086fdb0d00066fa605000a086fc80d00067bea0900042c12067b33110004080873401100066fa705000a1201287f00000a2dbede0e1201fe163e00001b6f0600000adc067b321100046fa805000a6fa905000a0d2b23120328aa05000a1304110411047c180c000428cf0c00061c5d73cc0c00067d180c0004120328ab05000a2dd4de0e1203fe16a901001b6f0600000adc066f27110006026fdc1100067e07090004288900000a166fae1100066f3e01000a13052b171205283f01000a1306067b3511000411066f3301000a261205284401000a2de0de0e1205fe167600001b6f0600000adc0628ac05000a2a",
+      "factory_exception_sections": [
+        {
+          "bytes": "0128000002006e0046b4000e000000000200d3003003010e00000000020034012458010e00000000",
+          "clauses": [
+            {
+              "flags": 2,
+              "try_offset": 110,
+              "try_length": 70,
+              "handler_offset": 180,
+              "handler_length": 14,
+              "extra": 0
+            },
+            {
+              "flags": 2,
+              "try_offset": 211,
+              "try_length": 48,
+              "handler_offset": 259,
+              "handler_length": 14,
+              "extra": 0
+            },
+            {
+              "flags": 2,
+              "try_offset": 308,
+              "try_length": 36,
+              "handler_offset": 344,
+              "handler_length": 14,
+              "extra": 0
+            }
+          ]
+        }
+      ],
+      "premises": [
+        "Standard managed CLI value/reference and call semantics; no unsafe/external stack mutation",
+        "Normal path through factory newobj@56 and return@364, then 08b4 extraction@59"
+      ],
+      "local_reasoning": [
+        "Factory local0 has exactly one store at61, no address-taking; every path reaching358 after56 retains that reference, including all three finally regions. Calls may mutate/escape the object but cannot replace this unaddressed caller local",
+        "d65 calls d64; its normal path passes true and unchanged arg0 to d5f. d5f stores true via d61 and unchanged arg2 in bb3. Null-rejecting throw path gives no result",
+        "08b4 stores returned value-type wrapper at33; its sole earlier address use calls d60 at36, which only reads bb2. Calls46/51 receive bool/string only; extraction d62 tests d60 and returns bb3 on its normal branch"
+      ],
+      "scope": "Identity of factory local0 and extraction result only; no termination, non-escape, callee purity, cross-getter stability or complete lifecycle claim"
+    },
+    "methods": {
+      "06001116": {
+        "owner": "02000495",
+        "flags": 134,
+        "signature": "200001",
+        "il": "0228111100062c10209a15d2d2287c07000673dc0900067a022818110006021728191100060217281c1100060216281911000602281b11000602281f110006022820110006021728121100062a"
+      },
+      "06001117": {
+        "owner": "02000495",
+        "flags": 134,
+        "signature": "200001",
+        "il": "0228111100062d1020c615d2d2287c07000673dc0900067a0216281c1100060228221100060228231100060202280d1100061758280e110006021628121100062a"
+      },
+      "060008b4": {
+        "owner": "020002b2",
+        "flags": 6278,
+        "signature": "2003011292c4080c",
+        "il": "0228da11000602037dd604000402047dda04000402057ddb0400040228141100060a1200288502000a206e6dd2d2287c07000628b40a0006021200288602000a28b60800060228b50800066f161100062a"
+      },
+      "060008b5": {
+        "owner": "020002b2",
+        "flags": 134,
+        "signature": "2000129254",
+        "il": "027bd80400042a"
+      },
+      "060008b6": {
+        "owner": "020002b2",
+        "flags": 129,
+        "signature": "200101129254",
+        "il": "02037dd80400042a"
+      },
+      "060008bd": {
+        "owner": "020002b2",
+        "flags": 134,
+        "signature": "20010102",
+        "il": "026fe91100062c012a032c2602027bd9040004027bda0400046c2300000000000000405b28d901000a69587dd90400042b0e02027bd904000417587dd9040004027bd9040004027bda040004321d0228b50800066f1711000602167dd90400040228b50800066f161100062a"
+      }
+    },
+    "factory": {
+      "method_token": "06001114",
+      "signature": "000115118f78011292541292d8",
+      "windows": [
+        {
+          "start": 56,
+          "end": 69,
+          "il": "730a1100060a06027d2f110004"
+        },
+        {
+          "start": 358,
+          "end": 365,
+          "il": "0628ac05000a2a"
+        }
+      ],
+      "scope": "On fallthrough through 56..69, newobj 110a result becomes local0 and receives factory arg0 in field 0400112f (not publication of local0). At 358 the unchanged local0 is passed to MemberRef 0a0005ac; conditional identity through extraction is proved by identity, not non-escape or purity"
+    },
+    "primary_order": {
+      "caller": "06001116",
+      "update_call": 52,
+      "sample_call": 58,
+      "scope": "On normal arrival at offset 51, unchanged entry this is passed to 111b, then after its normal return to 111f. No intervening caller instruction can change the receiver; callee effects and reentrancy are not proved"
+    },
+    "secondary_entry": {
+      "caller": "06001117",
+      "sample_call": 32,
+      "scope": "Entry this is passed to 1122; this method contains no direct 111b call. A prior update on that object is not proved"
+    },
+    "publication_candidate": {
+      "field_token": "040004d8",
+      "setter": "060008b6",
+      "getter": "060008b5",
+      "constructor_calls": [
+        28,
+        59,
+        64,
+        70,
+        75
+      ],
+      "loop_calls": [
+        79,
+        84,
+        97,
+        102
+      ],
+      "scope": "Setter stores arg1; getter returns the field. 08b4 passes wrapper extraction result (0a000286) to setter then getter result to 1116. 08bd independently reloads getter before 1117 and 1116; equality across those calls is not proved"
+    },
+    "unproved_edges": [
+      {
+        "edge": "08bd@79 getter result -> 1117@84 effects -> 08bd@97 getter result",
+        "classification": "offline-alias-and-effects",
+        "missing": "Field 040004d8 stability through callees, reentrancy and aliases; no closed call/effect domain"
+      },
+      {
+        "edge": "1117@32 receiver -> prior 111b update / 110a initialization",
+        "classification": "offline-cross-entry-lifecycle",
+        "missing": "All entry paths and object provenance, including callers outside 08b4/08bd"
+      },
+      {
+        "edge": "111b store -> all 111f/1122 reads during execution",
+        "classification": "external-execution-assumptions",
+        "missing": "Concurrency, reflection/external mutation and runtime resolution assumptions; observations of fixtures cannot prove all inputs"
+      }
+    ],
+    "scope": "Bounded byte-bound local call ordering and publication candidate only; not a closed call graph, CLI verifier, stable-field, fresh-value, non-escape or complete lifecycle proof"
+  },
+  "step_constructor_normal_flow": {
+    "store_offset": 61,
+    "reachable_return_count": 1,
+    "scope": "EH-free explicit normal control flow only; calls may throw or have side effects. No stack/type, receiver identity, publication, reentrancy, termination or lifecycle proof"
+  },
+  "step_field_initialization": {
+    "field_token": "04001138",
+    "flags": 1,
+    "signature": "060c",
+    "constructor_token": "0600110a",
+    "receiver_offset": 55,
+    "constant_offset": 56,
+    "store_offset": 61,
+    "value": 1.0,
+    "scope": "Private instance R4 field, same-owner managed instance .ctor metadata and exact this/ldc.r4 1/stfld window; normal-return dominance is checked separately. No publication, call ordering, alias, reflection, external-write or lifecycle proof"
+  },
+  "step_field_references": {
+    "methods_with_rva": 2897,
+    "decoded_methods": 2897,
+    "complete": true,
+    "decode_failures": [],
+    "field_tokens": [
+      "04001138"
+    ],
+    "references": [
+      {
+        "method_token": "0600110a",
+        "offset": 61,
+        "opcode": "007d",
+        "field_token": "04001138"
+      },
+      {
+        "method_token": "0600111b",
+        "offset": 936,
+        "opcode": "007d",
+        "field_token": "04001138"
+      },
+      {
+        "method_token": "0600111f",
+        "offset": 7,
+        "opcode": "007b",
+        "field_token": "04001138"
+      },
+      {
+        "method_token": "0600111f",
+        "offset": 1448,
+        "opcode": "007b",
+        "field_token": "04001138"
+      },
+      {
+        "method_token": "06001122",
+        "offset": 7,
+        "opcode": "007b",
+        "field_token": "04001138"
+      },
+      {
+        "method_token": "06001122",
+        "offset": 296,
+        "opcode": "007b",
+        "field_token": "04001138"
+      }
+    ],
+    "scope": "Direct encoded token operands in decodable MethodDef bodies only; not alias, array mutation, reflection, external code or reachability proof"
+  },
+  "category12_local_generation": {
+    "window": [
+      547,
+      784
+    ],
+    "loops": [
+      {
+        "array_local": 16,
+        "index_local": 17,
+        "initial": 0,
+        "increment": 1,
+        "condition_offset": 773,
+        "backedge_offset": 779,
+        "body_offset": 614,
+        "comparison": "signed index < conv.i4(array.Length)"
+      },
+      {
+        "array_local": 26,
+        "index_local": 27,
+        "initial": 0,
+        "increment": 1,
+        "condition_offset": 759,
+        "backedge_offset": 765,
+        "body_offset": 675,
+        "comparison": "signed index < conv.i4(array.Length)"
+      }
+    ],
+    "category1": {
+      "category": 1,
+      "add_offset": 656,
+      "position": "return event 060011f2@635(candidate occurrence i).04000382",
+      "radius": 20,
+      "radius_source": "0600113d category==1 branch literal 20"
+    },
+    "category2": {
+      "category": 2,
+      "add_offset": 748,
+      "position": "return event 060011f2@696(captured 04000bf7[i][j]).04000382",
+      "radius": 24,
+      "radius_source": "04001140"
+    },
+    "count_rule": "category1=N; category2=sum(length(captured bf7 for occurrence i))",
+    "preconditions": [
+      "Normal entry at 547, exit at 784; every call/allocation/Add returns normally; no reentry",
+      "Where/ToArray return the finite ordered qualifying occurrence array; cached delegate is 1152",
+      "1152 uses separate getter events: first e7 length != 0 OR second f1 count > 0, short circuit",
+      "Non-null captured arrays, lengths <= Int32.MaxValue; no mutation of not-yet-read members",
+      "No callee changes loop locals, captured references or output list except the two explicit Adds",
+      "Each Add appends exactly one value to the captured local2 list; radius fields retain audited values"
+    ],
+    "scope": "Conditional local numbered generation only; no game execution, entity identity, callee effects or global totals proof"
+  },
+  "generation_filters": {
+    "methods": {
+      "06000dc8": {
+        "signature": "2000128de4",
+        "il": "027bf20b00042a"
+      },
+      "06000df2": {
+        "signature": "200002",
+        "il": "0228c80d00067be70900048e16fe032a"
+      },
+      "06000df3": {
+        "signature": "200002",
+        "il": "0228c80d00067bf10900046f4202000a16fe022a"
+      },
+      "06001151": {
+        "signature": "200102128fbc",
+        "il": "036ff30d00062a"
+      },
+      "06001152": {
+        "signature": "200102128fbc",
+        "il": "036ff20d00062d07036ff30d00062a172a"
+      }
+    },
+    "normal_expressions": {
+      "06001151": "Count(field 040009f1 of getter 06000dc8(arg1)) > 0",
+      "06001152": "Length(field 040009e7 of getter 06000dc8(arg1)) != 0 OR Count(field 040009f1 of getter 06000dc8(arg1)) > 0 (short circuit)"
+    },
+    "getter_field_token": "04000bf2",
+    "scope": "Exact method bodies and metadata only; non-null normal inputs, no exception or full generation proof"
+  },
+  "initialization_accessors": {
+    "methods": {
+      "06000dc9": {
+        "signature": "200101128de4",
+        "il": "02037df20b00042a"
+      },
+      "06000dd4": {
+        "signature": "200002",
+        "il": "027bfc0b00042a"
+      },
+      "06000dd5": {
+        "signature": "20010102",
+        "il": "02037dfc0b00042a"
+      },
+      "06000dcb": {
+        "signature": "200101118ef8",
+        "il": "02037df30b00042a"
+      },
+      "06000dcd": {
+        "signature": "200101118f04",
+        "il": "02037df40b00042a"
+      }
+    },
+    "field_signatures": {
+      "04000bf2": "06128de4",
+      "04000bf3": "06118ef8",
+      "04000bf4": "06118f04",
+      "04000bfc": "0602"
+    },
+    "method_layouts": {
+      "06000dc9": {
+        "impl_flags": 0,
+        "flags": 129,
+        "tiny_header": "22"
+      },
+      "06000dd4": {
+        "impl_flags": 0,
+        "flags": 134,
+        "tiny_header": "1e"
+      },
+      "06000dd5": {
+        "impl_flags": 0,
+        "flags": 129,
+        "tiny_header": "22"
+      },
+      "06000dcb": {
+        "impl_flags": 0,
+        "flags": 129,
+        "tiny_header": "22"
+      },
+      "06000dcd": {
+        "impl_flags": 0,
+        "flags": 129,
+        "tiny_header": "22"
+      }
+    },
+    "scope": "Direct nonvirtual accessor bodies, tiny headers and instance field signatures only; constructor recursion, initialization and aliases remain unproved"
+  },
+  "initialization_constructors": {
+    "methods": {
+      "06000b51": {
+        "signature": "200001",
+        "impl_flags": 0,
+        "flags": 6278,
+        "fat_header": "033002005300000000000000",
+        "il_sha256": "0ac268ddfcf7de1344355b886bd1cdc0f24baa33128245911080954c00722e13"
+      },
+      "06000dc6": {
+        "signature": "200201128de402",
+        "impl_flags": 0,
+        "flags": 6278,
+        "fat_header": "133004000501000077010011",
+        "il_sha256": "64788d6df2c2d2e916641009e32c240abbe9723f612c00b8e994502362af6c65"
+      }
+    },
+    "locals": {
+      "11000177": "07030808128fbc"
+    },
+    "scope": "Exact constructor bodies, headers without extra EH sections and locals only; recursive termination, initialization order and aliases remain unproved"
+  },
+  "static_initialization": {
+    "method_token": "06000a48",
+    "impl_flags": 0,
+    "flags": 150,
+    "signature": "000001",
+    "fat_header": "13300800901a0000dc000011",
+    "il_sha256": "2977b87c820b4c753cb90c5ffbb3de7d88b7bdaa29be75e5c3e46dc4c0ca41a5",
+    "locals": {
+      "110000dc": "0701128de4"
+    },
+    "publication": {
+      "offset": 1518,
+      "field_token": "04000962",
+      "construction_offset": 1448,
+      "window_il": "73510b0006252073c6d3d2287c0700067de109000425206cc6d3d2287c07000628590700067de209000425177de509000425177dea09000425177df209000425167df80900048062090004"
+    },
+    "scope": "Exact ordinary static method and publication window only; not a type initializer, no call-order, alias or recursive termination proof"
+  },
+  "direct_add_inventory": {
+    "sites": {
+      "0600111c": [
+        2236,
+        2768,
+        3391,
+        3900,
+        4765,
+        5299,
+        6293
+      ],
+      "0600111f": [
+        265,
+        500,
+        656,
+        748,
+        931
+      ]
+    },
+    "member_token": "0a0005cf",
+    "scope": "Direct call sites only; not alias, reachability or initialization proof"
+  },
+  "sampling_loop": {
+    "entry_branch_offset": 13,
+    "body_entry_offset": 18,
+    "update_offset": 1446,
+    "condition_offset": 1455,
+    "backedge_offset": 1461,
+    "step_field_token": "04001138",
+    "entry_il": "281a1300060a027b381100040b389d050000",
+    "update_and_condition_il": "07027b38110004580b07220000803f3e58faffff",
+    "normal_expression": "t = field; while (t <= 1.0f) { body; t = t + field; }",
+    "scope": "Exact entry, increment and ordered ble condition only; positive finite step, progress, body effects, exceptions and update timing remain unproved"
+  },
+  "distance_calculation": {
+    "method_token": "06000cb4",
+    "implied_s_method_token": "06000ca8",
+    "coordinate_field_tokens": [
+      "04000b23",
+      "04000b24"
+    ],
+    "expression": "(Abs(a.Q-b.Q) + Abs(a.R-b.R) + Abs((-a.Q-a.R)-(-b.Q-b.R))) / 2",
+    "arithmetic": "Int32 unchecked neg/sub/add and signed div; Abs(Int32.MinValue) throws under the standard mscorlib contract",
+    "range_warning": "Unchecked differences and sums can wrap; this method alone does not establish a nonnegative mathematical hex distance",
+    "conditional_coordinate_bound": {
+      "maximum_absolute_q_or_r": 268435455,
+      "proof": "For |Q|,|R|<=B, implied S is bounded by 2B, Q/R differences by 2B, S difference by 4B, and the sum of absolute differences by 8B<=Int32.MaxValue. All intermediates are representable and the even numerator gives the mathematical distance.",
+      "caller_domain_established": false
+    },
+    "overflow_counterexample": {
+      "a": [
+        1073741824,
+        0
+      ],
+      "b": [
+        0,
+        0
+      ],
+      "unchecked_result": -1073741824,
+      "mathematical_distance": 1073741824,
+      "reachable_in_game_established": false
+    },
+    "scope": "Exact method bodies, signatures, field/method ownership and Abs member checked; enclosing Math identity, input bounds, runtime binding and callers remain separate obligations"
+  },
+  "step_calculation": {
+    "method_token": "0600111b",
+    "expression_offset": 873,
+    "store_offset": 936,
+    "step_field_token": "04001138",
+    "tail_il": "230000000000000040086c230000000000000040285d02000a285b01000a282802000a0d0223000000000000c03f23000000000000d03f095b28ca05000a6b7d381100042a",
+    "normal_expression": "field = (float)Min(0.125, 0.25 / Pow(2, Round(Log((double)local2, 2))))",
+    "conditional_binary32_progress": {
+      "assumptions": "local2 is a positive Int32; Log/Round/Pow return the expected nearest-power exponent k in [0,31]; binary32 nearest-even addition; unchanged field",
+      "step": "2^-max(3,k+2)",
+      "progress_through_one_if": "k <= 21",
+      "stagnation_if": "k >= 22: at t = 2^(22-k), t + step rounds back to t",
+      "counterexample": {
+        "local2": 1073741824,
+        "k": 30,
+        "step": 2.3283064365386963e-10,
+        "t": 0.00390625,
+        "rounded_next_t": 0.00390625
+      }
+    },
+    "scope": "This helper checks exact tail bytes only; the enclosing audit separately checks Math metadata identity. Local2 range/EH control flow, runtime Math accuracy, field lifecycle and bounded termination remain unproved; positive finite step alone does not imply progress"
+  },
+  "step_local_normal_control_flow": {
+    "local": 2,
+    "initializer_offset": 623,
+    "accesses": [
+      {
+        "offset": 623,
+        "kind": "write"
+      },
+      {
+        "offset": 797,
+        "kind": "read"
+      },
+      {
+        "offset": 805,
+        "kind": "write"
+      },
+      {
+        "offset": 882,
+        "kind": "read"
+      }
+    ],
+    "initializer_reachable": true,
+    "reads_or_addresses_not_dominated": [],
+    "unreachable_accesses": [],
+    "scope": "Explicit normal-control-flow graph only; leave edges bypass finally handlers. No EH, stack/type validation, value range, call effects, field lifecycle or termination proof"
+  },
+  "step_local_finally_control_flow": {
+    "local": 2,
+    "initializer_offset": 623,
+    "state_count": 309,
+    "initializer_reachable": true,
+    "reads_or_addresses_not_dominated": [],
+    "unreachable_accesses": [],
+    "scope": "Finally-only diagnostic overapproximation: every instruction except the initializing local store may throw; leave and exceptional unwind carry separate continuations. Nested handlers and tries inside handlers are rejected; bounded to 100000 states. No catch/filter/fault, IL validity, stack/type, callee effects, value, lifecycle or termination proof"
+  },
+  "secondary_sampling_loop": {
+    "entry_branch_offset": 13,
+    "body_entry_offset": 18,
+    "update_offset": 294,
+    "condition_offset": 303,
+    "backedge_offset": 309,
+    "step_field_token": "04001138",
+    "entry_il": "281a1300060a027b381100040b381d010000",
+    "update_and_condition_il": "07027b38110004580b07220000803f3ed8feffff",
+    "normal_expression": "t = field; while (t <= 1.0f) { body; t = t + field; }",
+    "scope": "Exact entry, increment and ordered ble condition only; positive finite step, progress, body effects, exceptions and update timing remain unproved"
+  },
+  "report_dispatch": {
+    "signature": "2003010c0e1d119388",
+    "methods": [
+      {
+        "method_token": "060011e8",
+        "owner_token": "020004b6",
+        "flags": "05c6",
+        "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "il": ""
+      },
+      {
+        "method_token": "060008c7",
+        "owner_token": "020002b2",
+        "flags": "00c6",
+        "body_sha256": "e533a517ac2d4f71952023c017fdb42f73a49b898f2f893e9e72a949274afe3e",
+        "il": "02177dd70400042a"
+      },
+      {
+        "method_token": "060012a9",
+        "owner_token": "020004c8",
+        "flags": "00c6",
+        "body_sha256": "fe08711f252b93c34ce08f8a709110e3e16255afe32c4e4b39c807d486700565",
+        "il": "032200000000320803220000803f3710203b66d2d2287c070006735404000a7a02287c1200060a120028b106000a2d2c02731f06000625037d0a02000425057d0b02000425047d0c02000428bf06000a287d12000602177d291200042a"
+      }
+    ],
+    "slot": "Base abstract virtual newslot; derived virtual reuseslot; no explicit target override",
+    "scope": "Closed metadata hierarchy only; reflection, runtime dispatch and report state effects remain unproved"
+  },
+  "report_optional": {
+    "type_token": "020003de",
+    "method_tokens": [
+      "06000d5f",
+      "06000d60",
+      "06000d61",
+      "06000d64",
+      "06000d65",
+      "06000d66"
+    ],
+    "consumer_method_token": "06000b54",
+    "consumer_conversion_member_token": "0a000377",
+    "field_tokens": [
+      "04000bb2",
+      "04000bb3"
+    ],
+    "scope": "Optional storage and conversion reference bytes only; conversion exception dependencies, consumers and collision failure semantics remain unproved"
+  },
+  "area_candidates": {
+    "methods": [
+      {
+        "method_token": "06001124",
+        "owner_token": "02000495",
+        "signature": "200101119388",
+        "il_sha256": "d73ba063621c36c3be245d05297ab37fe59622571528db3eea88b0b2fdc517cf"
+      },
+      {
+        "method_token": "06000810",
+        "owner_token": "02000285",
+        "signature": "2001119388118ef8",
+        "il_sha256": "1e96ba9802445202adbd442d0d9d6afcda8e53559f84ef7f9e3458e40d9a5bce"
+      },
+      {
+        "method_token": "0600080f",
+        "owner_token": "02000285",
+        "signature": "2002119388118ef8119388",
+        "il_sha256": "9360eb019d79a65f616ae9e42a85d517e689ac5d6468a3eb28c4db0c87af4281"
+      },
+      {
+        "method_token": "06000811",
+        "owner_token": "02000285",
+        "signature": "2002118ef8119388119388",
+        "il_sha256": "c602d73224f53539723fe2affe54ccc3d109960c5f4af4f456aa1e86772f41a2"
+      },
+      {
+        "method_token": "06000ca6",
+        "owner_token": "020003be",
+        "signature": "2002010808",
+        "il_sha256": "5a2d143fff288e8d86dc477c9b3336926cf54e103a4daeb620fd63da68666181"
+      },
+      {
+        "method_token": "06000caf",
+        "owner_token": "020003be",
+        "signature": "0002118ef8118ef8118ef8",
+        "il_sha256": "752b6cababcaf0f93d6132a72c84ae370ca14eece5c342e077bae6481c28a67c"
+      },
+      {
+        "method_token": "06000ca7",
+        "owner_token": "020003be",
+        "signature": "000001",
+        "il_sha256": "8f9c770c3768da86b895144f8c8eb5e7ddeef74e507db6c47d79612166f7a4bb"
+      },
+      {
+        "method_token": "0600080c",
+        "owner_token": "02000285",
+        "signature": "200101118f24",
+        "il_sha256": "88369f793fd6881e3016cd68c233e416d2af817d75d798a0ff912ecad73d274c"
+      },
+      {
+        "method_token": "06000cf1",
+        "owner_token": "020003c9",
+        "signature": "2000119388",
+        "il_sha256": "aacfe16228c07ba62829de8848132b88bc9619f9c2a89af68364ccf69a57b2db"
+      }
+    ],
+    "candidate_offsets": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        -1,
+        1
+      ],
+      [
+        -1,
+        0
+      ],
+      [
+        0,
+        -1
+      ],
+      [
+        1,
+        -1
+      ]
+    ],
+    "selection": "Distance(input, mapped candidate) < 2 * field 0400113d; bge.un.s skips greater, equal and unordered",
+    "mapping_storage": "0600080c stores 06000cf1 integer-to-binary32 vector conversion in instance field 0400044b",
+    "scope": "Local static bytes only; mapping asset values, runtime rounding, seven-cell completeness, continuous coverage and metric equivalence remain unproved"
+  },
+  "report_state": {
+    "methods": [
+      {
+        "method_token": "0600127c",
+        "owner_token": "020004c8",
+        "signature": "200015118f78011287f8",
+        "il": "027b281200042a"
+      },
+      {
+        "method_token": "0600127d",
+        "owner_token": "020004c8",
+        "signature": "20010115118f78011287f8",
+        "il": "02037d281200042a"
+      },
+      {
+        "method_token": "0600061f",
+        "owner_token": "020001fe",
+        "signature": "200001",
+        "il": "02283800000a2a"
+      },
+      {
+        "method_token": "060008ba",
+        "owner_token": "020002b2",
+        "signature": "200002",
+        "il": "027bd70400042a"
+      },
+      {
+        "method_token": "06001283",
+        "owner_token": "020004c8",
+        "signature": "200002",
+        "il": "02287c1200060a120028b106000a2a"
+      }
+    ],
+    "fields": [
+      {
+        "field_token": "04001228",
+        "owner_token": "020004c8",
+        "signature": "0615118f78011287f8"
+      },
+      {
+        "field_token": "04001229",
+        "owner_token": "020004c8",
+        "signature": "0602"
+      },
+      {
+        "field_token": "040004d7",
+        "owner_token": "020002b2",
+        "signature": "0602"
+      },
+      {
+        "field_token": "0400020a",
+        "owner_token": "020001fe",
+        "signature": "060c"
+      },
+      {
+        "field_token": "0400020b",
+        "owner_token": "020001fe",
+        "signature": "061d119388"
+      },
+      {
+        "field_token": "0400020c",
+        "owner_token": "020001fe",
+        "signature": "060e"
+      }
+    ],
+    "scope": "Direct accessor and storage bytes only; optional conversion, consumers and collision failure semantics remain unproved"
+  },
+  "report_wrapper": {
+    "owner_token": "0200021f",
+    "screen_field_token": "04000afc",
+    "storage_field_token": "0400026f",
+    "members": [
+      {
+        "member_token": "0a0000dc",
+        "parent_coded_index": 748,
+        "signature": "200001"
+      },
+      {
+        "member_token": "0a0000dd",
+        "parent_coded_index": 756,
+        "signature": "061512813d011300"
+      },
+      {
+        "member_token": "0a0000de",
+        "parent_coded_index": 748,
+        "signature": "200008"
+      },
+      {
+        "member_token": "0a0000df",
+        "parent_coded_index": 748,
+        "signature": "2001011300"
+      },
+      {
+        "member_token": "0a0000e0",
+        "parent_coded_index": 1001,
+        "signature": "2001010e"
+      },
+      {
+        "member_token": "0a0000e1",
+        "parent_coded_index": 748,
+        "signature": "2001130008"
+      },
+      {
+        "member_token": "0a0000e2",
+        "parent_coded_index": 748,
+        "signature": "20010108"
+      },
+      {
+        "member_token": "0a00040f",
+        "parent_coded_index": 2468,
+        "signature": "20001300"
+      }
+    ],
+    "methods": [
+      {
+        "method_token": "0600068c",
+        "signature": "200001",
+        "il": "0273dc00000a7ddd00000a02283800000a2a"
+      },
+      {
+        "method_token": "0600068d",
+        "signature": "200008",
+        "il": "027bdd00000a6fde00000a2a"
+      },
+      {
+        "method_token": "0600068e",
+        "signature": "2001011300",
+        "il": "027bdd00000a036fdf00000a2a"
+      },
+      {
+        "method_token": "0600068f",
+        "signature": "20001300",
+        "il": "027bdd00000a6fde00000a2d1020d178d2d2287c07000673e000000a7a027bdd00000a6fde00000a17590a027bdd00000a066fe100000a027bdd00000a066fe200000a2a"
+      },
+      {
+        "method_token": "06000690",
+        "signature": "20001300",
+        "il": "027bdd00000a6fde00000a2d1020d178d2d2287c07000673e000000a7a027bdd00000a027bdd00000a6fde00000a17596fe100000a2a"
+      }
+    ],
+    "scope": "Generic wrapper binding and method bytes only; external library behavior, initialization, runtime dispatch and exception semantics remain unproved"
+  },
+  "report_reset": {
+    "methods": [
+      {
+        "method_token": "06001293",
+        "owner_token": "020004c8",
+        "signature": "200001",
+        "il_size": 197,
+        "il_sha256": "006d0d97993b6c8bd9899f93418059fea3123dcd085efb1b944afaae2d49d607"
+      },
+      {
+        "method_token": "0600128e",
+        "owner_token": "020004c8",
+        "signature": "200002",
+        "il_size": 17,
+        "il_sha256": "285943e445b9cdeba41b24e10466201e7069a0290f3fb50e527785ba2fe3b2cd"
+      },
+      {
+        "method_token": "060011e1",
+        "owner_token": "020004b6",
+        "signature": "20001189c4",
+        "il_size": 0,
+        "il_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "method_token": "06001295",
+        "owner_token": "020004c8",
+        "signature": "2001011189c4",
+        "il_size": 50,
+        "il_sha256": "6af9d46117c516593d3844aca1799972c275301c6c3842710d119eca744c4eb6"
+      }
+    ],
+    "helpers": [
+      {
+        "method_token": "06000c6b",
+        "owner_token": "020003b7",
+        "signature": "2000128f30",
+        "il": "027bfc0a00046f0f04000a2a"
+      },
+      {
+        "method_token": "06000ae7",
+        "owner_token": "02000369",
+        "signature": "00020e0e1d1c",
+        "il": "282d03000a0203282e03000a2a"
+      },
+      {
+        "method_token": "060009dc",
+        "owner_token": "02000337",
+        "signature": "2001010e",
+        "il": "0203282b02000a2a"
+      }
+    ],
+    "early_return": {
+      "predicate_call_offset": 1,
+      "branch_offset": 6,
+      "return_offset": 8
+    },
+    "abstract_precondition": {
+      "call_offset": 10,
+      "method_token": "060011e1",
+      "nonzero_branch_target": 24,
+      "failure_call_offset": 19
+    },
+    "empty_report_assignment": {
+      "load_offset": 75,
+      "conversion_offset": 80,
+      "setter_offset": 85,
+      "setter_token": "0600127d"
+    },
+    "failure_helper": {
+      "method_token": "06001295",
+      "newobj_offset": 44,
+      "throw_offset": 49
+    },
+    "scope": "Conditional reset bytes only, not unconditional clearing. Runtime dispatch, preceding calls, exception construction and downstream consumers remain unproved"
+  },
+  "numerical_chain": {
+    "06001347": {
+      "signature": "00020c119388119388",
+      "il": "020328501300060a120028401300062a"
+    },
+    "06001350": {
+      "signature": "0002119388119388119388",
+      "il": "027bb3120004037bb312000459027bb4120004037bb412000459733b1300062a"
+    },
+    "06001340": {
+      "signature": "20000c",
+      "il": "027bb3120004027bb31200045a027bb4120004027bb41200045a586c280607000a6b2a"
+    },
+    "0600133b": {
+      "signature": "2002010c0c",
+      "il": "02037db312000402047db41200042a"
+    },
+    "06000ab6": {
+      "signature": "00030c0c0c0c",
+      "il": "020328e901000a04284a00000a2a"
+    }
+  },
+  "numerical_scope": "Static binary32 arithmetic and binary64 Sqrt call chain only; runtime equivalence unproved",
+  "certification_eligible": false,
+  "constants": [
+    {
+      "field_token": "0400113d",
+      "signature": "060c",
+      "load_offset": 304,
+      "value": 29.0
+    },
+    {
+      "field_token": "0400113e",
+      "signature": "060c",
+      "load_offset": 314,
+      "value": 15.0
+    },
+    {
+      "field_token": "0400113f",
+      "signature": "060c",
+      "load_offset": 324,
+      "value": 20.0
+    },
+    {
+      "field_token": "04001140",
+      "signature": "060c",
+      "load_offset": 334,
+      "value": 24.0
+    },
+    {
+      "field_token": "04001141",
+      "signature": "060c",
+      "load_offset": 344,
+      "value": 20.0
+    }
+  ],
+  "method_il_sha256": {
+    "0600110b": "0b745a6f3fd2e3e2d45f06ddf8eb39c43e108f21215b2390aa6c7eabeab85055",
+    "0600113d": "1417de379d0d23770268213b12b75b0cd4240e873ac36070732805aa280c9bfd",
+    "0600111c": "730e6a613e97e21a78bdf453c1f7b10a687e4fad1b4c225de666a85d8c004b57",
+    "0600111f": "cdf648043cb42967de598182228416c68e6138223a70128137ef0f7b4b64416e",
+    "0600111b": "f40ab827db2d48409d70f645d7be36721179c118503afa517d99528d14b13406",
+    "06001122": "fbb45a6b06347b39c01e81953cc306acb4ced20f8bbd6bf4afe6de4acff2b0a8"
+  },
+  "constructor": {
+    "token": "0600113d",
+    "signature": "200201119274119388",
+    "parameter_types": [
+      {
+        "token": "0200049d",
+        "namespace": "",
+        "name": "#=qTXKCGuaa9IY80PH6AH7UT0sAh2swx8Oh5Mw5r5VUIvs="
+      },
+      {
+        "token": "020004e2",
+        "namespace": "",
+        "name": "Vector2"
+      }
+    ],
+    "zero_branch_target": 21,
+    "one_branch_target": 33,
+    "radius_rule": "category == 1 ? 20 : 29"
+  },
+  "category_backing_field": {
+    "token": "04001155",
+    "name": "value__",
+    "signature": "0608"
+  },
+  "explicit_insertion": {
+    "method_token": "0600111f",
+    "offset": 703,
+    "category": 2,
+    "radius_field_token": "04001140",
+    "radius": 24,
+    "position_source_field_token": "04000382",
+    "add_token": "0a0005cf"
+  },
+  "second_explicit_insertion": {
+    "method_token": "0600111f",
+    "offset": 881,
+    "category": 3,
+    "radius_field_token": "04001141",
+    "radius": 20,
+    "position_call_token": "06000810",
+    "add_token": "0a0005cf"
+  },
+  "constructor_calls": {
+    "method_token": "0600111f",
+    "sites": [
+      {
+        "offset": 256,
+        "category": 0
+      },
+      {
+        "offset": 491,
+        "category": 0
+      },
+      {
+        "offset": 642,
+        "category": 1
+      }
+    ]
+  },
+  "radius15_insertions": {
+    "method_token": "0600111c",
+    "sites": [
+      {
+        "offset": 2197,
+        "category": 0,
+        "position_local": 31,
+        "radius_field_token": "0400113e",
+        "radius": 15
+      },
+      {
+        "offset": 2729,
+        "category": 0,
+        "position_local": 43,
+        "radius_field_token": "0400113e",
+        "radius": 15
+      },
+      {
+        "offset": 3352,
+        "category": 0,
+        "position_local": 53,
+        "radius_field_token": "0400113e",
+        "radius": 15
+      },
+      {
+        "offset": 3861,
+        "category": 0,
+        "position_local": 63,
+        "radius_field_token": "0400113e",
+        "radius": 15
+      },
+      {
+        "offset": 4726,
+        "category": 0,
+        "position_local": 68,
+        "radius_field_token": "0400113e",
+        "radius": 15
+      },
+      {
+        "offset": 5260,
+        "category": 0,
+        "position_local": 74,
+        "radius_field_token": "0400113e",
+        "radius": 15
+      },
+      {
+        "offset": 6254,
+        "category": 0,
+        "position_local": 86,
+        "radius_field_token": "0400113e",
+        "radius": 15
+      }
+    ]
+  },
+  "insertion_target": {
+    "token": "0a0005cf",
+    "name": "Add",
+    "signature": "2001011300",
+    "parent_typespec_signature": "1512813d01119264",
+    "generic_type": "System.Collections.Generic.List`1",
+    "resolution_scope": "AssemblyRef 23000001: mscorlib"
+  },
+  "pair_report": {
+    "method_token": "0600111f",
+    "offset": 1015,
+    "end_offset_exclusive": 1395,
+    "distance_call_token": "06001347",
+    "skip_opcode": "bge.un",
+    "skip_target": 1395,
+    "category_presence_locals": [
+      39,
+      40,
+      41,
+      42
+    ],
+    "report_category_pairs": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "pairs_are_symmetric": true,
+    "omitted_report_position_category": 3,
+    "report_argument_r4_hex": [
+      "00000000",
+      "77be7f3f"
+    ],
+    "call_signatures": {
+      "06001347": "00020c119388119388",
+      "06000d3f": "00010e128f68",
+      "06000ab6": "00030c0c0c0c",
+      "0a0005e1": "20001d1300",
+      "060011e8": "2003010c0e1d119388"
+    },
+    "scope": "Local report selection only; not complete collision semantics"
+  },
+  "unproved_obligations": [
+    "Category meanings and all insertion paths",
+    "Pair filtering and explicit radius overrides",
+    "Trajectory, continuous coverage and metric equivalence"
+  ]
+}

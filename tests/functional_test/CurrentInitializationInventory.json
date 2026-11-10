@@ -1,0 +1,516 @@
+{
+  "assembly_sha256": "ee4d1740609cbc09b5eb52244acc63da32f9e3cc280309049ceb7b708d20e1c5",
+  "status": "partial-byte-evidence-only",
+  "certification_eligible": false,
+  "field_reference_inventory": {
+    "methods_with_rva": 2897,
+    "decoded_methods": 2897,
+    "complete": true,
+    "decode_failures": [],
+    "field_tokens": [
+      "04000962",
+      "04000976",
+      "040009e7"
+    ],
+    "references": [
+      {
+        "method_token": "06000a48",
+        "offset": 592,
+        "opcode": "007d",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000a48",
+        "offset": 786,
+        "opcode": "007d",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000a48",
+        "offset": 992,
+        "opcode": "007d",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000a48",
+        "offset": 1234,
+        "opcode": "007d",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000a48",
+        "offset": 1423,
+        "opcode": "007d",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000a48",
+        "offset": 1518,
+        "opcode": "0080",
+        "field_token": "04000962"
+      },
+      {
+        "method_token": "06000a48",
+        "offset": 6612,
+        "opcode": "007e",
+        "field_token": "04000962"
+      },
+      {
+        "method_token": "06000a48",
+        "offset": 6789,
+        "opcode": "0080",
+        "field_token": "04000976"
+      },
+      {
+        "method_token": "06000a49",
+        "offset": 6,
+        "opcode": "007e",
+        "field_token": "04000976"
+      },
+      {
+        "method_token": "06000a4a",
+        "offset": 13,
+        "opcode": "007e",
+        "field_token": "04000976"
+      },
+      {
+        "method_token": "06000b51",
+        "offset": 29,
+        "opcode": "007d",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000b54",
+        "offset": 1,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000dc6",
+        "offset": 70,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000dc6",
+        "offset": 94,
+        "opcode": "007e",
+        "field_token": "04000962"
+      },
+      {
+        "method_token": "06000dc6",
+        "offset": 136,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000dc6",
+        "offset": 189,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06000df2",
+        "offset": 6,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011a3",
+        "offset": 237,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011b2",
+        "offset": 31,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011b2",
+        "offset": 50,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011ec",
+        "offset": 1398,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011ec",
+        "offset": 1433,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011f8",
+        "offset": 78,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011f8",
+        "offset": 455,
+        "opcode": "007e",
+        "field_token": "04000962"
+      },
+      {
+        "method_token": "060011f8",
+        "offset": 3180,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011f9",
+        "offset": 108,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "060011f9",
+        "offset": 304,
+        "opcode": "007e",
+        "field_token": "04000962"
+      },
+      {
+        "method_token": "060011f9",
+        "offset": 663,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06001205",
+        "offset": 79,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "06001205",
+        "offset": 124,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "0600121b",
+        "offset": 91,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "0600121b",
+        "offset": 167,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      },
+      {
+        "method_token": "0600121b",
+        "offset": 200,
+        "opcode": "007b",
+        "field_token": "040009e7"
+      }
+    ],
+    "scope": "Direct encoded token operands in decodable MethodDef bodies only; not alias, array mutation, reflection, external code or reachability proof"
+  },
+  "array_publication": {
+    "start_offset": 6530,
+    "element_type_token": "02000379",
+    "field_tokens": [
+      "04000959",
+      "0400095a",
+      "0400095b",
+      "0400095c",
+      "0400095d",
+      "0400095e",
+      "0400095f",
+      "04000960",
+      "04000961",
+      "04000962",
+      "04000963",
+      "04000964",
+      "04000965",
+      "04000966",
+      "04000967",
+      "04000968",
+      "04000969",
+      "0400096a",
+      "0400096b",
+      "0400096c",
+      "04000973",
+      "0400096d",
+      "04000974",
+      "04000975",
+      "0400096e",
+      "0400096f",
+      "04000970",
+      "04000971",
+      "04000972"
+    ],
+    "template_index": 9,
+    "published_field_token": "04000976",
+    "publication_offset": 6789,
+    "following_call_token": "06000a49",
+    "scope": "Exact encoded array construction and publication only; aliases, mutation, callees and initialization order remain unproved"
+  },
+  "array_consumers": {
+    "methods": [
+      {
+        "method_token": "06000a49",
+        "owner_token": "0200035b",
+        "implementation_flags": 0,
+        "flags": 145,
+        "signature": "000001",
+        "header": "13300300aa000000dd000011",
+        "body_size": 170,
+        "il_sha256": "7079f145a163ddb9d710127e0c4d82d39b976250eac0a6be030d15a583e77025"
+      },
+      {
+        "method_token": "06000a4a",
+        "owner_token": "0200035b",
+        "implementation_flags": 0,
+        "flags": 150,
+        "signature": "000115118f7801128de40e",
+        "header": "1330030024000000de000011",
+        "body_size": 36,
+        "il_sha256": "222bcbeb8d4f4fe6ff974be79890d64020e2c8bb9bd4b5df058ee4451c660136"
+      },
+      {
+        "method_token": "06000a4b",
+        "owner_token": "0200035c",
+        "implementation_flags": 0,
+        "flags": 6278,
+        "signature": "200001",
+        "header": "1e",
+        "body_size": 7,
+        "il_sha256": "481d98670477ab01d39394e1b9e6b4a1fb1f943717205d63f16c9b206a4bdc1c"
+      },
+      {
+        "method_token": "06000a4c",
+        "owner_token": "0200035c",
+        "implementation_flags": 0,
+        "flags": 131,
+        "signature": "200102128de4",
+        "header": "4a",
+        "body_size": 18,
+        "il_sha256": "d9c7ace0b2778a05be142781a0f55aaba0f3fee8022110c0bc8a4b2363daf2bc"
+      }
+    ],
+    "scope": "Exact method declarations, headers and bodies only; referenced metadata, library behavior, query exception handling, aliases and initialization order remain unproved"
+  },
+  "query_method": {
+    "method_token": "06000ad1",
+    "owner_token": "02000369",
+    "implementation_flags": 0,
+    "flags": 150,
+    "signature": "10010215118f78011e0015128121011e0015128295011e00",
+    "header": "1b30020043000000f4000011",
+    "body_size": 67,
+    "il_sha256": "fdfa3c495c7bff73dd4b0df4463bc1d81c8b64d9cb42a8b51806e7a8790ba046",
+    "local_signature_token": "110000f4",
+    "local_signature": "070315128125011e001e0015118f78011e00",
+    "generic_parameter": {
+      "token": "2a000025",
+      "number": 0,
+      "flags": 0,
+      "name": "T",
+      "constraints": []
+    },
+    "exception_sections": [
+      {
+        "bytes": "0110000002000700252c000a00000000",
+        "clauses": [
+          {
+            "flags": 2,
+            "try_offset": 7,
+            "try_length": 37,
+            "handler_offset": 44,
+            "handler_length": 10,
+            "extra": 0
+          }
+        ]
+      }
+    ],
+    "scope": "Exact declaration, locals, generic parameter, body and small finally section only; referenced metadata, library semantics, control-flow validity and termination remain unproved"
+  },
+  "query_bindings": {
+    "member_references": [
+      {
+        "token": "0a0002e9",
+        "parent": 1804,
+        "name": ".ctor",
+        "signature": "200001"
+      },
+      {
+        "token": "0a0002ea",
+        "parent": 1804,
+        "name": "Contains",
+        "signature": "2001021300"
+      },
+      {
+        "token": "0a0002eb",
+        "parent": 1804,
+        "name": "Add",
+        "signature": "2001021300"
+      },
+      {
+        "token": "0a0002ec",
+        "parent": 1812,
+        "name": ".ctor",
+        "signature": "2002011c18"
+      },
+      {
+        "token": "0a000038",
+        "parent": 1281,
+        "name": ".ctor",
+        "signature": "200001"
+      },
+      {
+        "token": "0a000006",
+        "parent": 945,
+        "name": "Dispose",
+        "signature": "200001"
+      },
+      {
+        "token": "0a000007",
+        "parent": 721,
+        "name": "MoveNext",
+        "signature": "200002"
+      },
+      {
+        "token": "0a000302",
+        "parent": 1876,
+        "name": "GetEnumerator",
+        "signature": "200015128125011300"
+      },
+      {
+        "token": "0a000303",
+        "parent": 1884,
+        "name": "get_Current",
+        "signature": "20001300"
+      },
+      {
+        "token": "0a000317",
+        "parent": 1948,
+        "name": "Invoke",
+        "signature": "2001021300"
+      },
+      {
+        "token": "0a000318",
+        "parent": 388,
+        "name": "op_Implicit",
+        "signature": "000115118f780113001300"
+      },
+      {
+        "token": "0a000316",
+        "parent": 388,
+        "name": "op_Implicit",
+        "signature": "000115118f78011300118cf0"
+      },
+      {
+        "token": "0a0000d5",
+        "parent": 1633,
+        "name": "op_Equality",
+        "signature": "0002020e0e"
+      }
+    ],
+    "type_specifications": [
+      {
+        "token": "1b0000e1",
+        "signature": "15128111010e"
+      },
+      {
+        "token": "1b0000e2",
+        "signature": "1512829501128de4"
+      },
+      {
+        "token": "1b0000ea",
+        "signature": "15128121011e00"
+      },
+      {
+        "token": "1b0000eb",
+        "signature": "15128125011e00"
+      },
+      {
+        "token": "1b0000f3",
+        "signature": "15128295011e00"
+      },
+      {
+        "token": "1b000030",
+        "signature": "15118f78011e00"
+      }
+    ],
+    "type_references": [
+      {
+        "token": "01000044",
+        "resolution_scope": 14,
+        "name": "HashSet`1",
+        "namespace": "System.Collections.Generic"
+      },
+      {
+        "token": "010000a5",
+        "resolution_scope": 6,
+        "name": "Predicate`1",
+        "namespace": "System"
+      },
+      {
+        "token": "010000a0",
+        "resolution_scope": 6,
+        "name": "Object",
+        "namespace": "System"
+      },
+      {
+        "token": "01000076",
+        "resolution_scope": 6,
+        "name": "IDisposable",
+        "namespace": "System"
+      },
+      {
+        "token": "0100005a",
+        "resolution_scope": 6,
+        "name": "IEnumerator",
+        "namespace": "System.Collections"
+      },
+      {
+        "token": "01000048",
+        "resolution_scope": 6,
+        "name": "IEnumerable`1",
+        "namespace": "System.Collections.Generic"
+      },
+      {
+        "token": "01000049",
+        "resolution_scope": 6,
+        "name": "IEnumerator`1",
+        "namespace": "System.Collections.Generic"
+      },
+      {
+        "token": "010000cc",
+        "resolution_scope": 6,
+        "name": "String",
+        "namespace": "System"
+      }
+    ],
+    "assembly_references": [
+      "mscorlib, Version=4.0.0.0, PublicKeyToken=b77a5c561934e089",
+      "System.Core, Version=4.0.0.0, PublicKeyToken=b77a5c561934e089"
+    ],
+    "method_specification": {
+      "token": "2b0001af",
+      "method_token": "06000ad1",
+      "instantiation": "0a01128de4"
+    },
+    "scope": "Selected encoded reference identities only; local Maybe/field identities, other consumer references, library behavior, aliases and timing remain unproved"
+  },
+  "ordinary_static_method": {
+    "method_token": "06000a48",
+    "body_size": 6800,
+    "instruction_count": 2062,
+    "il_sha256": "2977b87c820b4c753cb90c5ffbb3de7d88b7bdaa29be75e5c3e46dc4c0ca41a5",
+    "return_offsets": [
+      6799
+    ],
+    "explicit_control_transfers": [],
+    "scope": "Encoded control transfers only; calls, exceptions, initialization order and termination remain unproved"
+  }
+}
