@@ -105,7 +105,10 @@ class Placement {
     bool Visit(std::size_t index) {
         if (index == targets_.size()) return true;
         const Cell target = targets_[index];
-        for (int grab = 0; grab < 6; ++grab) {
+        // Facing 3 (west) first: it keeps the machine in the same minimal shape as the
+        // hand-verified single-atom template, then the neighbours, then the rest.
+        static constexpr std::array<int, 6> kFacingOrder = {3, 2, 4, 1, 5, 0};
+        for (const int grab : kFacingOrder) {
             const int drop = ((grab + kRotateStep) % 6 + 6) % 6;
             const Cell base = Subtract(target, Scale(Step(drop), kArmReach));
             const Cell reagent = Add(base, Scale(Step(grab), kArmReach));

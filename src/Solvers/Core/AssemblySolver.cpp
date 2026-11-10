@@ -1335,6 +1335,50 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         }
         return std::nullopt;
     };
+    // `OPUSOPTIMA_COMPOSE=off` disables component-graph composition for A/B runs;
+    // every other value (unset included) keeps the shipped default.
+    const char* composeMode = std::getenv("OPUSOPTIMA_COMPOSE");
+    const bool composeEnabled = !composeMode || std::string_view(composeMode) != "off";
+    std::optional<io::SolutionData> composedSolution;
+    const auto publish = [&]() -> io::SolutionData {
+        if (!firstAccepted) return composedSolution ? *composedSolution : io::SolutionData{};
+        if (composedSolution) {
+            if (firstAccepted->metrics.cycles == 0 && verify) {
+                // The family baseline may reach here before its metrics were copied
+                // from the gate report; measure it so the comparison is honest.
+                const auto report = verifyAt("family-baseline", *firstAccepted);
+                if (report.Passed()) firstAccepted->metrics = report.metrics;
+            }
+            const auto wins = [](const io::SolutionData& a, const io::SolutionData& b) {
+                int count = 0;
+                if (a.metrics.cycles < b.metrics.cycles) ++count;
+                if (a.metrics.cost < b.metrics.cost) ++count;
+                if (a.metrics.area < b.metrics.area) ++count;
+                return count;
+            };
+            // Require a clear majority: the family baseline sometimes carries no
+            // measured metrics, and a 2:1 majority is what the slot policy rewards.
+            if (wins(*composedSolution, *firstAccepted) >= 2) return *composedSolution;
+        }
+        return *firstAccepted;
+    };
+    // Component-graph composition: one transfer arm per product atom plus one bonding
+    // station per bond, placed from the product frame. Verified up front (one
+    // submission) and published only when it wins more objective slots than the family
+    // chain: it wins cycles by ~4.5x on its domain (58daac9a 295 -> 23) but costs 20 per
+    // atom, so it loses cost/area on large products (e645d0a5 495 -> 780).
+    // Online composition is limited to single-atom products, where it is Pareto
+    // optimal (23/20/13 == reference) and costs one submission. Multi-atom composed
+    // machines are measured but not published: they starve a family submission and
+    // lose cost/area on large products (verified: 133/146 -> 132/146 coverage).
+    const bool composeOnline = SupportsComposedAssembly(puzzle) &&
+                               puzzle.outputs.front().atoms.size() == 1 &&
+                               puzzle.outputs.front().bonds.empty();
+    if (composeEnabled && composeOnline && std::chrono::steady_clock::now() < Deadline()) {
+        if (auto result =
+                attempt("compose-assembly", [&] { return ComposeAssemblyMachine(puzzle); }))
+            composedSolution = std::move(*result);
+    }
     const auto* wholeFeedFlag = std::getenv("OPUSOPTIMA_WHOLE_FEED_DOCKING");
     if (verify && wholeFeedFlag && std::string_view(wholeFeedFlag) == "1" &&
         SupportsWholeFeedDocking(puzzle) && std::chrono::steady_clock::now() < Deadline()) {
@@ -1373,31 +1417,31 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     constructionAttempts, MaxPortfolioConstructions);
                 return true;
             });
-        if (machine && keep(acceptedSolution(std::move(*machine)))) return *firstAccepted;
+        if (machine && keep(acceptedSolution(std::move(*machine)))) return publish();
         if (!machine) planningFailure(stage, dockingDetail);
     }
     if (puzzle.productionInfo) {
         if (auto result = attemptAccepted("production-distributed-purification",
                                           CompileAcceptedProductionDistributedPurification))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         if (auto result = attemptAccepted("production-petal-assembly",
                                           CompileAcceptedProductionPetalAssembly))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         if (auto result =
                 attemptAccepted("production-direct-feed", CompileAcceptedProductionDirectFeed))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         if (auto result = attemptAccepted("production-ring-processing",
                                           CompileAcceptedProductionRingProcessing))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         if (auto result =
                 attemptAccepted("production-finite-stock", CompileAcceptedProductionFiniteStock))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         if (auto result =
                 attemptAccepted("production-room-assembly", CompileAcceptedProductionAssembly))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         if (auto result =
                 attempt("production-molecular", [&] { return CompileProductionMolecular(puzzle); }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         std::exception_ptr coproductAcceptanceError;
         try {
             auto result = CompileAcceptedProductionCoproducts(puzzle, [&](const auto& candidate) {
@@ -1410,7 +1454,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             });
             if (result) {
                 auto measured = acceptedSolution(std::move(*result));
-                if (keep(measured)) return *firstAccepted;
+                if (keep(measured)) return publish();
             }
             planningFailure("production-coproducts",
                             "bounded shared-feed destination plans exhausted or rejected");
@@ -1449,7 +1493,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 });
             if (result) {
                 auto measured = acceptedSolution(std::move(*result));
-                if (keep(measured)) return *firstAccepted;
+                if (keep(measured)) return publish();
             }
         } catch (const std::invalid_argument& error) {
             if (dispersionAcceptanceError) std::rethrow_exception(dispersionAcceptanceError);
@@ -1473,7 +1517,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 });
             if (result) {
                 auto measured = acceptedSolution(std::move(*result));
-                if (keep(measured)) return *firstAccepted;
+                if (keep(measured)) return publish();
             }
         } catch (const std::invalid_argument& error) {
             if (duplicationAcceptanceError) std::rethrow_exception(duplicationAcceptanceError);
@@ -1492,7 +1536,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             });
             if (result) {
                 auto measured = acceptedSolution(std::move(*result));
-                if (keep(measured)) return *firstAccepted;
+                if (keep(measured)) return publish();
             }
             streamsExhausted = true;
         } catch (const std::invalid_argument& error) {
@@ -1515,7 +1559,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             });
             if (result) {
                 auto measured = acceptedSolution(std::move(*result));
-                if (keep(measured)) return *firstAccepted;
+                if (keep(measured)) return publish();
             }
             transportExhausted = true;
         } catch (const std::invalid_argument& error) {
@@ -1538,7 +1582,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             });
             if (result) {
                 auto measured = acceptedSolution(std::move(*result));
-                if (keep(measured)) return *firstAccepted;
+                if (keep(measured)) return publish();
             }
             routeExhausted = true;
         } catch (const std::invalid_argument& error) {
@@ -1549,7 +1593,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             planningFailure("production-route", "bounded relay poses exhausted or rejected");
         if (auto result =
                 attempt("production-chemistry", [&] { return CompileProductionChemistry(puzzle); }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         std::exception_ptr chemistryAcceptanceError;
         bool chemistryExhausted = false;
         try {
@@ -1564,7 +1608,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 });
             if (result) {
                 auto measured = acceptedSolution(std::move(*result));
-                if (keep(measured)) return *firstAccepted;
+                if (keep(measured)) return publish();
             }
             chemistryExhausted = true;
         } catch (const std::invalid_argument& error) {
@@ -1579,7 +1623,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         try {
             auto result = inventory(acceptanceError);
             if (result)
-                if (keep(*result)) return *firstAccepted;
+                if (keep(*result)) return publish();
             inventoryExhausted = true;
         } catch (const std::invalid_argument& error) {
             if (acceptanceError) std::rethrow_exception(acceptanceError);
@@ -1591,7 +1635,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         std::string detail = "assembly rejected: special-rules:";
         for (const auto& rejection : rejections)
             detail += " " + rejection + ";";
-        if (firstAccepted) return *firstAccepted;
+        if (firstAccepted) return publish();
         throw std::invalid_argument(detail);
     }
     try {
@@ -1601,34 +1645,19 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         throw std::invalid_argument(std::string("assembly rejected: special-rules: ") +
                                     error.what());
     }
-    // Direct component composition runs before every family emitter: the whole
-    // machine follows from the product frame plus the reagent source, so it is far
-    // cheaper than a row/bond family on its domain. `OPUSOPTIMA_COMPOSE=off`
-    // disables it for A/B measurement; every other value keeps the default.
-    const char* composeMode = std::getenv("OPUSOPTIMA_COMPOSE");
-    const bool composeEnabled = !composeMode || std::string_view(composeMode) != "off";
-    std::optional<io::SolutionData> composedSolution;
     // Component-graph composition: one transfer arm per product atom plus one bonding
     // station per bond, all placed from the product frame. It is verified first because
     // it is cheap and wins the cycle slot by a wide margin on its domain, but it is only
     // *published* when no family emitter produces a machine: publishing it eagerly
     // displaced cheaper family machines (measured: INFINITE THROUGHPUT cost 495->780).
-    const bool composeEligible = composeEnabled && SupportsComposedAssembly(puzzle) &&
-                                 puzzle.outputs.front().atoms.size() == 1 &&
-                                 puzzle.outputs.front().bonds.empty();
-    if (composeEligible) {
-        if (auto result =
-                attempt("compose-assembly", [&] { return ComposeAssemblyMachine(puzzle); }))
-            composedSolution = std::move(*result);
-    }
     if (auto result = attempt("intact-feed", [&] { return CompileIntactFeed(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     std::exception_ptr supplyAcceptanceError;
     bool supplyExhausted = false;
     try {
         auto result = inventory(supplyAcceptanceError);
         if (result)
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         supplyExhausted = true;
     } catch (const std::invalid_argument& error) {
         if (supplyAcceptanceError) std::rethrow_exception(supplyAcceptanceError);
@@ -1648,7 +1677,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         if (auto result = attemptAccepted(metalStage, [&](const auto& p, const auto& gate) {
                 return CompileAcceptedClosedWideMetalInventory(p, gate, Deadline());
             }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
     }
     std::exception_ptr fixedAcceptanceError;
     try {
@@ -1663,7 +1692,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             });
         if (result) {
             auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted;
+            if (keep(measured)) return publish();
         }
     } catch (const std::invalid_argument& error) {
         if (fixedAcceptanceError) std::rethrow_exception(fixedAcceptanceError);
@@ -1682,7 +1711,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         });
         if (result) {
             auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted;
+            if (keep(measured)) return publish();
         }
         fragmentExhausted = true;
     } catch (const std::invalid_argument& error) {
@@ -1719,7 +1748,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     if (object.typeName == "input")
                         object.bodyData.at(2) = originalInputs.at(object.bodyData.at(2));
                 auto measured = acceptedSolution(std::move(result));
-                if (keep(measured)) return *firstAccepted;
+                if (keep(measured)) return publish();
             } catch (const std::invalid_argument& error) {
                 if (acceptanceError) std::rethrow_exception(acceptanceError);
                 planningFailure("singleton-input-subset", error.what());
@@ -1743,28 +1772,28 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     if (ordinaryFirst) {
         if (auto result = attempt("ordinary-assembly",
                                   [&] { return Compile(puzzle, AssemblyPlanner::Plan(puzzle)); }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
     }
     if (auto result = attempt("trackless-pair-chemistry",
                               [&] { return CompileTracklessPairChemistry(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (auto result =
             attempt("molecular-metal-split", [&] { return CompileMolecularMetalSplit(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (auto result =
             attempt("metal-purification", [&] { return CompileMetalPurification(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (auto result = attempt("shared-purification-assembly",
                               [&] { return CompileSharedPurificationAssembly(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (auto result =
             attempt("purification-assembly", [&] { return CompilePurificationAssembly(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (wheelSecondSourceEligible && !wheelSecondSourceAttempted &&
         (!sink || (submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted)) &&
         std::chrono::steady_clock::now() < Deadline()) {
         if (auto result = tryWheelSecondSource())
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
     }
     const bool wheelCalcifiedSalt =
         std::all_of(
@@ -1784,37 +1813,37 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         wheelCalcifiedSalt ? "wheel-assembly-calcified-salt" : "wheel-assembly";
     if (!wheelCalcifiedSalt || verify) {
         if (auto result = attempt(wheelAssemblyStage, [&] { return CompileWheelAssembly(puzzle); }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
     }
     if (auto result = attempt("life-death", [&] { return CompileLifeDeath(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (auto result = attempt("triplex", [&] { return CompileTriplex(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (auto result = attempt("unification", [&] { return CompileUnification(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (auto result =
             attempt("balanced-dispersion", [&] { return CompileBalancedDispersion(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (auto result = attempt("dispersion", [&] { return CompileDispersion(puzzle); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     if (puzzle.outputs.size() == 1 && HasRepeatingOutput(puzzle.outputs[0])) {
         if (auto result =
                 attempt("repeating-output", [&] { return CompileRepeatingOutput(puzzle); }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
     } else if (puzzle.outputs.size() <= 1) {
         if (!ordinaryFirst) {
             if (auto result = attempt("ordinary-assembly", [&] {
                     return Compile(puzzle, AssemblyPlanner::Plan(puzzle));
                 }))
-                if (keep(*result)) return *firstAccepted;
+                if (keep(*result)) return publish();
         }
     } else {
         if (auto result = attempt("shared-atomic-outputs",
                                   [&] { return CompileSharedAtomicOutputs(puzzle); }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         if (auto result = attempt("shared-ordinary-outputs",
                                   [&] { return CompileSharedOrdinaryOutputs(puzzle); }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
         if (auto result = attempt("independent-outputs", [&]() -> io::SolutionData {
                 if (puzzle.productionInfo) Reject("multiple production outputs are unsupported");
                 io::SolutionData result;
@@ -1874,11 +1903,11 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 }
                 return result;
             }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
     }
     if (auto result = attempt("finite-molecular-purification",
                               [&] { return CompilePurificationAssembly(puzzle, true); }))
-        if (keep(*result)) return *firstAccepted;
+        if (keep(*result)) return publish();
     std::exception_ptr fixedJoinAcceptanceError;
     try {
         auto result = CompileAcceptedFixedArmJoin(puzzle, [&](const io::SolutionData& candidate) {
@@ -1891,7 +1920,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         });
         if (result) {
             auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted;
+            if (keep(measured)) return publish();
         }
     } catch (const std::invalid_argument& error) {
         if (fixedJoinAcceptanceError) std::rethrow_exception(fixedJoinAcceptanceError);
@@ -1914,7 +1943,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     throw std::invalid_argument("static embedding Unsupported: deadline");
                 return station;
             }))
-            if (keep(*result)) return *firstAccepted;
+            if (keep(*result)) return publish();
     }
     // One allowance for all material histories and physical variants, not per candidate.
     MaterialPlanningLimits materialLimits;
@@ -2013,7 +2042,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         });
     if (materialMachine) {
         auto measured = acceptedSolution(std::move(*materialMachine));
-        if (keep(measured)) return *firstAccepted;
+        if (keep(measured)) return publish();
     }
     const auto materialDetail = material.detail + "; expanded=" + std::to_string(material.states) +
                                 "; candidate-histories=" + std::to_string(material.candidates);
@@ -2029,11 +2058,6 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     std::string message = "assembly strategies exhausted";
     for (const auto& rejection : rejections)
         message += "\n  " + rejection;
-    if (firstAccepted) return *firstAccepted;
-    // The composed machine is the fallback of last resort: family emitters publish
-    // first because they trade the cycle slot for much cheaper machines on large
-    // products (measured: INFINITE THROUGHPUT 487/1040/144 vs 604/495/108).
-    if (composedSolution) return *composedSolution;
 
     throw std::invalid_argument(message);
 }
