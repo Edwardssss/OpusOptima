@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "PuzzleSpecs.hpp"
 #include "BaseSolver.hpp"
+#include "PuzzleSpecs.hpp"
 
 namespace opusoptima::solvers {
 

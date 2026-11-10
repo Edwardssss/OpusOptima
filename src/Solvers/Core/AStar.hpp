@@ -29,14 +29,7 @@ struct AStarNode {
     }
 };
 
-/// Hex-coordinate hasher for A* internals.
-struct CoordHash {
-    std::size_t operator()(const core::HexCoord& coord) const noexcept {
-        return static_cast<std::size_t>(
-            static_cast<std::uint64_t>(static_cast<std::uint32_t>(coord.q)) << core::kIntBitWidth ^
-            static_cast<std::uint32_t>(coord.r));
-    }
-};
+using CoordHash = core::HexCoordHash;
 
 /// A* pathfinder on a hex grid with optional obstacle set.
 class AStar {
@@ -44,19 +37,9 @@ class AStar {
     explicit AStar(std::unordered_set<core::HexCoord, CoordHash> obstacles = {})
         : obstacles_(std::move(obstacles)) {}
 
-    /// Set (or replace) the set of blocked cells.
-    void SetObstacles(std::unordered_set<core::HexCoord, CoordHash> obstacles) {
-        obstacles_ = std::move(obstacles);
-    }
-
     /// Add a single obstacle.
     void AddObstacle(core::HexCoord cell) {
         obstacles_.insert(cell);
-    }
-
-    /// Clear all obstacles.
-    void ClearObstacles() {
-        obstacles_.clear();
     }
 
     /// Find the shortest path from start to goal.

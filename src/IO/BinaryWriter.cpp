@@ -87,39 +87,33 @@ std::vector<std::byte> BinaryWriter::WriteSolution(const SolutionData& solution)
         WriteI32(buf, obj.position.q);
         WriteI32(buf, obj.position.r);
 
-        if (obj.typeName.starts_with("arm") || obj.typeName == "piston" ||
-            obj.typeName == "baron" || obj.typeName == "track") {
-            // ── Instruction-based object ──
-            // Body header: 5 int32s
-            // h0 = marker (usually 1)
-            // h1 = 0
-            // h2 = 0
-            // h3 = instruction count
-            // h4 = 0
-            WriteI32(buf, 1);                                                  // h0: marker
-            WriteI32(buf, 0);                                                  // h1
-            WriteI32(buf, 0);                                                  // h2
-            WriteI32(buf, static_cast<std::int32_t>(obj.instructions.size())); // h3
-            WriteI32(buf, 0);                                                  // h4
-
-            // Instructions: each is 1-byte action + 4-byte parameter
-            for (const auto& instr : obj.instructions) {
-                WriteU8(buf, static_cast<std::uint8_t>(instr.action));
-                WriteI32(buf, instr.parameter);
+        // bodyData stores size, rotation, input/output index, instruction count,
+        // and arm number. The arm number is a footer, not a fifth header word.
+        const auto word = [&](std::size_t index, std::int32_t fallback = 0) {
+            return index < obj.bodyData.size() ? obj.bodyData[index] : fallback;
+        };
+        WriteI32(buf, word(0, 1));
+        WriteI32(buf, word(1));
+        WriteI32(buf, word(2));
+        WriteI32(buf, static_cast<std::int32_t>(obj.instructions.size()));
+        for (const auto& instr : obj.instructions) {
+            WriteI32(buf, instr.parameter); // zero-based tape index
+            WriteU8(buf, static_cast<std::uint8_t>(instr.action));
+        }
+        if (obj.typeName == "track") {
+            // For tracks bodyData[4] is the segment count, followed by offsets
+            // and the arm-number footer, matching the parser's representation.
+            for (std::size_t i = 4; i < obj.bodyData.size(); ++i) {
+                WriteI32(buf, obj.bodyData[i]);
+            }
+            if (obj.bodyData.size() < 5) {
+                WriteI32(buf, 0);
+                WriteI32(buf, 0);
             }
         } else {
-            // ── Other objects (bonder, glyph, input, output, pipe, etc.) ──
-            // Write the 5-int32 body header followed by any additional body data
-            std::size_t totalWords = obj.bodyData.size();
-            if (totalWords < core::kSolutionObjectHeaderWords) {
-                // Pad with zeros
-                for (std::size_t i = 0; i < core::kSolutionObjectHeaderWords; ++i) {
-                    WriteI32(buf, i < totalWords ? obj.bodyData[i] : 0);
-                }
-            } else {
-                for (std::size_t i = 0; i < totalWords; ++i) {
-                    WriteI32(buf, obj.bodyData[i]);
-                }
+            WriteI32(buf, word(4));
+            for (std::size_t i = 5; i < obj.bodyData.size(); ++i) {
+                WriteI32(buf, obj.bodyData[i]);
             }
         }
     }

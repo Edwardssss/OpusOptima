@@ -228,9 +228,6 @@ std::size_t HexSimulator::AdvanceIp(core::ArmState& arm) {
     return ++arm.instructionPtr;
 }
 
-// TODO: implement full simulation loop with cycle management, arm synchronization, etc.
-void HexSimulator::Step(core::MachineState& /*state*/) {}
-
 [[nodiscard]] std::int32_t HexSimulator::Run(const io::PuzzleData& puzzle,
                                              const io::SolutionData& solution,
                                              core::MachineState& outState) {

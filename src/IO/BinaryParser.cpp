@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <utility>
 
 #include "Core/LogManager.hpp"
 #include <spdlog/spdlog.h>
@@ -97,10 +98,14 @@ class ByteReader {
         };
     }
 
-    template <typename T, typename Func> std::vector<T> ReadList(Func&& parseEntry) {
+    template <typename T, typename Func>
+    std::vector<T> ReadList(const std::size_t minimumEntryBytes, Func&& parseEntry) {
         const std::int32_t count = ReadI32();
         if (count < 0) {
             throw ParseError("Negative list length");
+        }
+        if (static_cast<std::size_t>(count) > Remaining() / minimumEntryBytes) {
+            throw ParseError("Invalid list length");
         }
 
         std::vector<T> items;
@@ -126,7 +131,7 @@ Molecule ParseMolecule(ByteReader& reader) {
     Molecule molecule;
 
     // Molecule block: atoms first, then bond list.
-    molecule.atoms = reader.ReadList<MoleculeAtom>([](ByteReader& localReader) {
+    molecule.atoms = reader.ReadList<MoleculeAtom>(3, [](ByteReader& localReader) {
         const auto atomId = localReader.ReadU8();
         const auto atom = core::AtomTypeFromId(atomId);
         if (!atom.has_value()) {
@@ -139,7 +144,7 @@ Molecule ParseMolecule(ByteReader& reader) {
         };
     });
 
-    molecule.bonds = reader.ReadList<MoleculeBond>([](ByteReader& localReader) {
+    molecule.bonds = reader.ReadList<MoleculeBond>(5, [](ByteReader& localReader) {
         return MoleculeBond{
             .bits = localReader.ReadU8(),
             .from = localReader.ReadHexCoordI8(),
@@ -168,9 +173,9 @@ PuzzleData BinaryParser::ParsePuzzle(const std::span<const std::byte> bytes) {
     puzzle.creatorSteamId = reader.ReadU64();
     puzzle.permissionBits = reader.ReadU64();
     puzzle.inputs = reader.ReadList<Molecule>(
-        [](ByteReader& localReader) { return ParseMolecule(localReader); });
+        8, [](ByteReader& localReader) { return ParseMolecule(localReader); });
     puzzle.outputs = reader.ReadList<Molecule>(
-        [](ByteReader& localReader) { return ParseMolecule(localReader); });
+        8, [](ByteReader& localReader) { return ParseMolecule(localReader); });
     puzzle.outputMultiplier = reader.ReadI32();
 
     // Production puzzles append an extra section after the base puzzle payload.
@@ -181,23 +186,23 @@ PuzzleData BinaryParser::ParsePuzzle(const std::span<const std::byte> bytes) {
         info.shrinkRight = reader.ReadBool();
         info.isolation = reader.ReadBool();
 
-        info.chambers = reader.ReadList<ProductionChamber>([](ByteReader& localReader) {
+        info.chambers = reader.ReadList<ProductionChamber>(3, [](ByteReader& localReader) {
             return ProductionChamber{
                 .position = localReader.ReadHexCoordI8(),
                 .chamberType = localReader.ReadString(),
             };
         });
 
-        info.conduits = reader.ReadList<ProductionConduit>([](ByteReader& localReader) {
+        info.conduits = reader.ReadList<ProductionConduit>(8, [](ByteReader& localReader) {
             ProductionConduit conduit;
             conduit.positionA = localReader.ReadHexCoordI8();
             conduit.positionB = localReader.ReadHexCoordI8();
             conduit.path = localReader.ReadList<core::HexCoord>(
-                [](ByteReader& nestedReader) { return nestedReader.ReadHexCoordI8(); });
+                2, [](ByteReader& nestedReader) { return nestedReader.ReadHexCoordI8(); });
             return conduit;
         });
 
-        info.vials = reader.ReadList<ProductionVial>([](ByteReader& localReader) {
+        info.vials = reader.ReadList<ProductionVial>(7, [](ByteReader& localReader) {
             return ProductionVial{
                 .position = localReader.ReadHexCoordI8(),
                 .top = localReader.ReadBool(),
@@ -237,11 +242,18 @@ std::vector<std::byte> BinaryParser::ReadAllBytes(const std::filesystem::path& p
         throw ParseError("Cannot determine file size: " + path.string());
     }
 
+    const auto byteCount = static_cast<std::streamoff>(fileSize);
+    if (!std::in_range<std::size_t>(byteCount) ||
+        !std::in_range<std::streamsize>(byteCount) ||
+        static_cast<std::size_t>(byteCount) > std::vector<std::byte>().max_size()) {
+        throw ParseError("File size exceeds representable buffer range: " + path.string());
+    }
+
     input.seekg(0, std::ios::beg);
 
-    std::vector<std::byte> bytes(static_cast<std::size_t>(fileSize));
+    std::vector<std::byte> bytes(static_cast<std::size_t>(byteCount));
     if (!bytes.empty()) {
-        input.read(reinterpret_cast<char*>(bytes.data()), fileSize);
+        input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(byteCount));
     }
 
     if (!input) {
@@ -284,59 +296,9 @@ std::string SummarizePuzzle(const PuzzleData& puzzle) {
 
 namespace {
 
-/// Try to locate the byte offset of the next object in a raw byte span,
-/// starting from @a cursor.  Returns the offset relative to @a cursor, or
-/// string::npos if no known object name is found.
-/// NOTE: This function is kept as a reference / debugging utility but is no
-/// longer used by the main parsing path (which relies on self-describing binary
-/// headers now).
-// std::size_t FindNextObjectOffset(const std::span<const std::byte>& bytes,
-//                                                   std::size_t cursor) {
-//     // Known object type names that appear in .solution files.
-//     static constexpr std::string_view kKnownObjects[] = {
-//         "pipe",   "arm1",    "arm2",    "arm3",   "arm4",   "input",
-//         "output", "out-std", "out-rep", "bonder", "piston", "grabber",
-//         "track",  "conduit", "chamber", "vial",   "glyph",
-//     };
-
-//     constexpr std::uint8_t kMaxSingleByteVarint = 128U;
-
-//     for (std::size_t pos = cursor; pos + 2 < bytes.size(); ++pos) {
-//         const auto first = static_cast<std::uint8_t>(bytes[pos]);
-//         // A varint < 128 means this is a single-byte length prefix.
-//         if (first == 0U || first >= kMaxSingleByteVarint) {
-//             continue;
-//         }
-//         const auto nameLen = static_cast<std::size_t>(first);
-//         if (pos + 1U + nameLen > bytes.size()) {
-//             continue;
-//         }
-
-//         // Check that the claimed length matches a known object name.
-//         const auto* const nameStart = reinterpret_cast<const char*>(&bytes[pos + 1U]);
-//         const std::string_view candidate(nameStart, nameLen);
-//         for (const auto& known : kKnownObjects) {
-//             if (candidate == known) {
-//                 return pos - cursor;
-//             }
-//         }
-//     }
-//     return std::string::npos;
-// }
-
-// // Read an i32 vector from a ByteReader.
-// std::vector<std::int32_t> ReadBodyI32s(ByteReader& reader, int count) {
-//     std::vector<std::int32_t> data;
-//     data.reserve(static_cast<std::size_t>(count));
-//     for (int i = 0; i < count; ++i) {
-//         data.push_back(reader.ReadI32());
-//     }
-//     return data;
-// }
-
-/// Read a 5-int32 object body header.  Every solution object begins with this.
+/// Four header words precede instructions; the arm number follows them.
 struct ObjectHeader {
-    std::int32_t h0, h1, h2, h3, h4;
+    std::int32_t h0, h1, h2, h3;
 };
 ObjectHeader ReadObjectHeader(ByteReader& reader) {
     return {
@@ -344,15 +306,16 @@ ObjectHeader ReadObjectHeader(ByteReader& reader) {
         .h1 = reader.ReadI32(),
         .h2 = reader.ReadI32(),
         .h3 = reader.ReadI32(),
-        .h4 = reader.ReadI32(),
     };
 }
 
 void ParseInstructions(ByteReader& reader, int count, std::vector<ArmInstruction>& instructions) {
+    if (count < 0 || static_cast<std::size_t>(count) > reader.Remaining() / 5)
+        throw ParseError("Invalid instruction count");
     instructions.reserve(static_cast<std::size_t>(count));
     for (int i = 0; i < count; ++i) {
-        const auto action = static_cast<char>(reader.ReadU8());
         const auto param = reader.ReadI32();
+        const auto action = static_cast<char>(reader.ReadU8());
         instructions.push_back({action, param});
     }
 }
@@ -365,44 +328,34 @@ SolutionObject ParseSolutionObject(ByteReader& reader) {
     obj.position.q = reader.ReadI32();
     obj.position.r = reader.ReadI32();
 
-    // Read the 5-int32 body header
     const auto header = ReadObjectHeader(reader);
-    obj.bodyData = {header.h0, header.h1, header.h2, header.h3, header.h4};
+    obj.bodyData = {header.h0, header.h1, header.h2, header.h3};
+    if (header.h3 < 0) throw ParseError("Negative instruction count");
+    ParseInstructions(reader, header.h3, obj.instructions);
 
-    const bool isArm = obj.typeName.starts_with("arm");
-    const bool isPiston = obj.typeName == "piston";
-    const bool isBaron = obj.typeName == "baron";
-    const bool isTrack = obj.typeName == "track";
-    const bool isPipe = obj.typeName == "pipe";
-
-    if (isArm || isPiston || isBaron) {
-        // Instruction-based objects
-        const int h3_value = header.h3;
-        ParseInstructions(reader, h3_value, obj.instructions);
-
-    } else if (isTrack) {
-        // Track: header[4] = segment count
-        const int segCount = header.h4;
-        const int i32Count = (segCount * 2) + 1; // footer of 1 int32 after segments
-        for (int i = 0; i < i32Count; ++i) {
-            obj.bodyData.push_back(reader.ReadI32());
-        }
-
-    } else if (isPipe) {
-        // Pipe: [marker{100|101|102}, segCount, segCount × 2 int32s]
-        const int marker = reader.ReadI32();
-        obj.bodyData.push_back(marker);
+    if (obj.typeName == "track") {
         const int segCount = reader.ReadI32();
         obj.bodyData.push_back(segCount);
-        for (int i = 0; i < segCount * 2; ++i) {
+        if (segCount < 0 || static_cast<std::size_t>(segCount) > reader.Remaining() / 8)
+            throw ParseError("Invalid track segment count");
+        for (int i = 0; i < segCount; ++i) {
+            obj.bodyData.push_back(reader.ReadI32());
             obj.bodyData.push_back(reader.ReadI32());
         }
-
+        obj.bodyData.push_back(reader.ReadI32());
     } else {
-        /// NOTE: Fixed-size objects (bonder, glyph-*, input, out-*, unbonder, etc.)
-        //  Body is exactly the 5-int32 header already stored in obj.bodyData.
-        //  No further bytes to read — the reader is already positioned at the
-        //  next object (or end of stream).
+        obj.bodyData.push_back(reader.ReadI32());
+        if (obj.typeName == "pipe") {
+            obj.bodyData.push_back(reader.ReadI32());
+            const int segCount = reader.ReadI32();
+            obj.bodyData.push_back(segCount);
+            if (segCount < 0 || static_cast<std::size_t>(segCount) > reader.Remaining() / 8)
+                throw ParseError("Invalid pipe segment count");
+            for (int i = 0; i < segCount; ++i) {
+                obj.bodyData.push_back(reader.ReadI32());
+                obj.bodyData.push_back(reader.ReadI32());
+            }
+        }
     }
 
     return obj;
@@ -426,6 +379,8 @@ SolutionData BinaryParser::ParseSolution(const std::span<const std::byte> bytes)
     solution.solutionName = reader.ReadString();
 
     const int metricsCount = reader.ReadI32();
+    if (metricsCount < 0 || static_cast<std::size_t>(metricsCount) > reader.Remaining() / 8)
+        throw ParseError("Invalid metrics count");
     for (int i = 0; i < metricsCount; ++i) {
         const int type = reader.ReadI32();
         const int value = reader.ReadI32();
@@ -448,12 +403,14 @@ SolutionData BinaryParser::ParseSolution(const std::span<const std::byte> bytes)
     }
 
     const int objectCount = reader.ReadI32();
+    // Empty type prefix, marker, position, header and ordinary tail occupy at least 30 bytes.
+    constexpr std::size_t kMinimumObjectBytes = 1 + 1 + 8 + 16 + 4;
+    if (objectCount < 0 ||
+        static_cast<std::size_t>(objectCount) > reader.Remaining() / kMinimumObjectBytes)
+        throw ParseError("Invalid object count");
     solution.objects.reserve(static_cast<std::size_t>(objectCount));
 
     for (int i = 0; i < objectCount; ++i) {
-        if (reader.Remaining() == 0) {
-            break;
-        }
         solution.objects.push_back(ParseSolutionObject(reader));
     }
 

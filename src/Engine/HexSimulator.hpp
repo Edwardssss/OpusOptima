@@ -28,9 +28,6 @@ class HexSimulator {
     /// Initialise arms from solution objects.
     static void PlaceSolutionObjects(core::MachineState& state, const io::SolutionData& solution);
 
-    /// Run one cycle of all active arms.
-    static void Step(core::MachineState& state);
-
     private:
     /// Execute the next instruction for an arm.
     static void ExecuteInstruction(core::MachineState& state, core::ArmState& arm,
