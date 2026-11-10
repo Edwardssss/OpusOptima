@@ -5,6 +5,7 @@
 #include "CandidateArchive.hpp"
 #include "ChemicalPlanner.hpp"
 #include "ClosedMetalInventory.hpp"
+#include "ComposeAssembly.hpp"
 #include "ComposeTransfer.hpp"
 #include "DemandDrivenChain.hpp"
 #include "Disassembly.hpp"
@@ -1608,7 +1609,19 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     const char* composeMode = std::getenv("OPUSOPTIMA_COMPOSE");
     const bool composeEnabled = !composeMode || std::string_view(composeMode) != "off";
     if (composeEnabled && SupportsComposedTransfer(puzzle)) {
-        if (auto result = attempt("compose-transfer", [&] { return ComposeTransferMachine(puzzle); }))
+        if (auto result =
+                attempt("compose-transfer", [&] { return ComposeTransferMachine(puzzle); }))
+            if (keep(*result)) return *firstAccepted;
+    } else if (composeEnabled && SupportsComposedAssembly(puzzle) &&
+               [] {
+                   const char* mode = std::getenv("OPUSOPTIMA_COMPOSE_ASSEMBLY");
+                   return mode && std::string_view(mode) == "on";
+               }()) {
+        // Same component graph generalised to multi-atom products: one transfer
+        // component per product atom plus one bonding station per bond. Opt-in until
+        // the arm sweep geometry stops colliding with parked atoms.
+        if (auto result =
+                attempt("compose-assembly", [&] { return ComposeAssemblyMachine(puzzle); }))
             if (keep(*result)) return *firstAccepted;
     }
     if (auto result = attempt("intact-feed", [&] { return CompileIntactFeed(puzzle); }))
