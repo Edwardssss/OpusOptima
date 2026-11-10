@@ -1,6 +1,6 @@
 #pragma once
-#include <chrono>
 #include "BinaryParser.hpp"
+#include <chrono>
 
 namespace opusoptima::solvers {
 /// Finite products from demand-planned renewable singleton feeds.
@@ -38,8 +38,8 @@ namespace opusoptima::solvers {
 /// Invocation-local bounded caches reuse successful identical real-source plans
 /// and finite row batches, including cleanup boundaries. Each consumer owns a
 /// value copy before placement and retains the same absolute deadline.
-[[nodiscard]] io::SolutionData CompileSharedLifeDeath(const io::PuzzleData& puzzle,
-    std::chrono::steady_clock::time_point deadline);
+[[nodiscard]] io::SolutionData CompileSharedLifeDeath(
+    const io::PuzzleData& puzzle, std::chrono::steady_clock::time_point deadline);
 /// Assemble one finite product for an already expanded repeating target.
 [[nodiscard]] io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle, bool singleProduct);
 /// Experimental single-output, single direct/calcified molecular channel.
@@ -48,5 +48,6 @@ namespace opusoptima::solvers {
 /// claimed. Unsupported coproduct/multiple-channel plans throw.
 /// compact=false exposes unchanged long-bus geometry for controlled comparison.
 /// Verification is mandatory. Not registered as a default solver candidate.
-[[nodiscard]] io::SolutionData CompileCompactChemistryRelay(const io::PuzzleData& puzzle, bool compact = true);
+[[nodiscard]] io::SolutionData CompileCompactChemistryRelay(const io::PuzzleData& puzzle,
+                                                            bool compact = true);
 } // namespace opusoptima::solvers

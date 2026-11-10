@@ -6,7 +6,7 @@
 namespace opusoptima::solvers {
 namespace {
 const std::vector<PlacedInstruction> kEmptyArm{};
-}  // namespace
+} // namespace
 
 std::int64_t ProgramBuilder::Add(ProgramFragment fragment) {
     if (fragment.arm.empty()) throw std::invalid_argument("program fragment needs an arm");
@@ -36,7 +36,8 @@ std::int64_t ProgramBuilder::Add(ProgramFragment fragment) {
     };
 
     std::int64_t start = std::max<std::int64_t>(0, fragment.anchor);
-    while (!fits(start)) ++start;
+    while (!fits(start))
+        ++start;
 
     for (const auto& instruction : fragment.instructions) {
         const auto tick = start + (instruction.tick - first);
@@ -44,8 +45,9 @@ std::int64_t ProgramBuilder::Add(ProgramFragment fragment) {
         if (std::find(occupied_.begin(), occupied_.end(), tick) == occupied_.end())
             occupied_.push_back(tick);
     }
-    std::sort(tape.begin(), tape.end(),
-              [](const PlacedInstruction& a, const PlacedInstruction& b) { return a.tick < b.tick; });
+    std::sort(tape.begin(), tape.end(), [](const PlacedInstruction& a, const PlacedInstruction& b) {
+        return a.tick < b.tick;
+    });
     std::sort(occupied_.begin(), occupied_.end());
     makespan_ = std::max<std::int64_t>(makespan_, tape.back().tick + 1);
     return start;
@@ -56,7 +58,9 @@ const std::vector<PlacedInstruction>& ProgramBuilder::Arm(const std::string& arm
     return found == arms_.end() ? kEmptyArm : found->second;
 }
 
-std::int64_t ProgramBuilder::Makespan() const { return makespan_; }
+std::int64_t ProgramBuilder::Makespan() const {
+    return makespan_;
+}
 
 bool ProgramBuilder::OccupiedBy(const std::string& arm, std::int64_t tick) const {
     for (const auto& placed : Arm(arm))
@@ -64,4 +68,4 @@ bool ProgramBuilder::OccupiedBy(const std::string& arm, std::int64_t tick) const
     return false;
 }
 
-}  // namespace opusoptima::solvers
+} // namespace opusoptima::solvers

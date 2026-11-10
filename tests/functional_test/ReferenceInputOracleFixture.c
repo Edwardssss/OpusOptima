@@ -1,5 +1,4 @@
-int main(void)
-{
+int main(void) {
     struct board board = {0};
     expected_board = &board;
     struct atom_at_position atoms[] = {
@@ -7,13 +6,19 @@ int main(void)
         {.position = {1, 7}, .atom = FIRE},
     };
     struct disjoint_bond bond = {.from_position = {0, 7}, .to_position = {1, 7}};
-    const atom flags[] = {0, VALID, REMOVED, VALID | REMOVED,
-        VALID | WHEEL_ATOM, VALID | REMOVED | MOVED, GRABBED, VALID | GRABBED};
+    const atom flags[] = {0,
+                          VALID,
+                          REMOVED,
+                          VALID | REMOVED,
+                          VALID | WHEEL_ATOM,
+                          VALID | REMOVED | MOVED,
+                          GRABBED,
+                          VALID | GRABBED};
     unsigned cases = 0;
     for (unsigned type = 0; type < 8; ++type) {
-        enum input_output_type io_type = (enum input_output_type)(
-            (type & 1 ? INPUT : 0) | (type & 2 ? SINGLE_OUTPUT : 0) |
-            (type & 4 ? REPEATING_OUTPUT : 0));
+        enum input_output_type io_type =
+            (enum input_output_type)((type & 1 ? INPUT : 0) | (type & 2 ? SINGLE_OUTPUT : 0) |
+                                     (type & 4 ? REPEATING_OUTPUT : 0));
         for (unsigned a = 0; a < 8; ++a) {
             for (unsigned b = 0; b < 8; ++b) {
                 for (unsigned stale = 0; stale < 2; ++stale) {
@@ -21,10 +26,13 @@ int main(void)
                     occupancy[1] = flags[b];
                     struct input_output io = {
                         .type = (enum input_output_type)(io_type | (stale ? BLOCKED : 0)),
-                        .atoms = atoms, .number_of_atoms = 2,
-                        .disjoint_bonds = &bond, .number_of_disjoint_bonds = 1,
+                        .atoms = atoms,
+                        .number_of_atoms = 2,
+                        .disjoint_bonds = &bond,
+                        .number_of_disjoint_bonds = 1,
                     };
-                    struct solution solution = {.inputs_and_outputs = &io, .number_of_inputs_and_outputs = 1};
+                    struct solution solution = {.inputs_and_outputs = &io,
+                                                .number_of_inputs_and_outputs = 1};
                     int first_blocks = (flags[a] & VALID) && !(flags[a] & REMOVED);
                     int second_blocks = (flags[b] & VALID) && !(flags[b] & REMOVED);
                     int blocked = (io_type & INPUT) && (first_blocks || second_blocks);
@@ -56,10 +64,16 @@ int main(void)
             occupancy[0] = flags[a];
             occupancy[1] = flags[b];
             struct input_output shared[2] = {
-                {.type = INPUT | BLOCKED, .atoms = atoms, .number_of_atoms = 2,
-                    .disjoint_bonds = &bond, .number_of_disjoint_bonds = 1},
-                {.type = INPUT, .atoms = atoms, .number_of_atoms = 2,
-                    .disjoint_bonds = &bond, .number_of_disjoint_bonds = 1},
+                {.type = INPUT | BLOCKED,
+                 .atoms = atoms,
+                 .number_of_atoms = 2,
+                 .disjoint_bonds = &bond,
+                 .number_of_disjoint_bonds = 1},
+                {.type = INPUT,
+                 .atoms = atoms,
+                 .number_of_atoms = 2,
+                 .disjoint_bonds = &bond,
+                 .number_of_disjoint_bonds = 1},
             };
             solution.inputs_and_outputs = shared;
             solution.number_of_inputs_and_outputs = 2;
@@ -87,6 +101,7 @@ int main(void)
         }
     }
     assert(cases == 1024 && shared_cases == 64);
-    puts("input lifecycle: 1024 flag cases, 64 shared-input cases, empty inputs and atom-before-bond ordering passed");
+    puts("input lifecycle: 1024 flag cases, 64 shared-input cases, empty inputs and "
+         "atom-before-bond ordering passed");
     return 0;
 }

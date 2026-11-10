@@ -1,11 +1,11 @@
 #include "LifeDeath.hpp"
 #include "BinaryWriter.hpp"
+#include "RepoRoot.hpp"
 #include "SolutionVerifier.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <stdexcept>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;
@@ -15,10 +15,10 @@ TEST(LifeDeathTest, CompactRelayExperimentalAdmission) {
     puzzle.name = "compact-relay-admission";
     puzzle.permissionBits = (1ULL << 32) - 1;
     puzzle.outputMultiplier = 1;
-    puzzle.inputs = {{{{core::AtomType::Air, {0, 0}}, {core::AtomType::Air, {1, 0}}},
-                       {{1, {0, 0}, {1, 0}}}}};
-    puzzle.outputs = {{{{core::AtomType::Salt, {0, 0}}, {core::AtomType::Salt, {1, 0}}},
-                        {{1, {0, 0}, {1, 0}}}}};
+    puzzle.inputs = {
+        {{{core::AtomType::Air, {0, 0}}, {core::AtomType::Air, {1, 0}}}, {{1, {0, 0}, {1, 0}}}}};
+    puzzle.outputs = {
+        {{{core::AtomType::Salt, {0, 0}}, {core::AtomType::Salt, {1, 0}}}, {{1, {0, 0}, {1, 0}}}}};
     EXPECT_THROW(solvers::CompileLifeDeath(puzzle), std::invalid_argument);
     EXPECT_NO_THROW(solvers::CompileCompactChemistryRelay(puzzle, false));
     EXPECT_NO_THROW(solvers::CompileCompactChemistryRelay(puzzle));

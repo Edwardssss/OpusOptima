@@ -49,8 +49,8 @@ TEST(InventorySearchTest, ProjectionRequiresAnAllowedQuicksilverFeed) {
 
     p.inputs.push_back({{{AtomType::Quicksilver, {0, 0}}}, {}});
     std::size_t accepted{};
-    const auto found = solvers::SearchSupplyInventory(p, 1, limits, nullptr,
-        [&](const SupplyPlan& plan) {
+    const auto found =
+        solvers::SearchSupplyInventory(p, 1, limits, nullptr, [&](const SupplyPlan& plan) {
             ++accepted;
             return std::any_of(plan.steps.begin(), plan.steps.end(), [](const auto& step) {
                 return step.kind == SupplyPlan::Kind::Reagent;
@@ -611,10 +611,10 @@ TEST(InventorySearchTest, MetalReachabilityPreservesMultiStagePurification) {
     unsigned delivered = 0;
     for (const auto& step : found.plan.steps) {
         ASSERT_EQ(step.kind, SupplyPlan::Kind::Purify);
-        const auto type = step.input == p.inputs.size()
-                              ? step.sourceAtom
-                              : static_cast<std::size_t>(p.inputs.at(step.input)
-                                                             .atoms.at(step.sourceAtom).type);
+        const auto type =
+            step.input == p.inputs.size()
+                ? step.sourceAtom
+                : static_cast<std::size_t>(p.inputs.at(step.input).atoms.at(step.sourceAtom).type);
         ASSERT_GT(type, static_cast<std::size_t>(AtomType::Gold));
         ASSERT_LT(type, metals.size());
         ASSERT_GT(metals[type], 0U);

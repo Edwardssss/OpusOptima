@@ -1,8 +1,8 @@
 #include "TracklessPairChemistry.hpp"
 #include "IO/SolutionVerifier.hpp"
+#include "RepoRoot.hpp"
 #include <filesystem>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 
 namespace opusoptima::solvers {
 #ifdef HAS_LIBVERIFY

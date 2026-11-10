@@ -19,7 +19,8 @@ int PushTrack(io::SolutionData& machine, core::HexCoord position, int steps) {
     const int id = PushObject(machine, "track", position, 1, 0);
     auto& data = machine.objects[id].bodyData;
     data = {1, 0, 0, 0, steps + 1};
-    for (int x = 0; x <= steps; ++x) data.insert(data.end(), {x, 0});
+    for (int x = 0; x <= steps; ++x)
+        data.insert(data.end(), {x, 0});
     data.push_back(0);
     return id;
 }
@@ -63,15 +64,16 @@ LinearInputArea BuildLinearInputArea(const io::Molecule& molecule, core::HexCoor
     PushObject(area.machine, "input", reagentPosition, 1, 0, inputIndex);
     area.unbonder = PushObject(area.machine, "unbonder", core::Add(origin, {-4, 0}), 1, 0);
     area.grabArm = PushObject(area.machine, "piston", core::Add(reagentPosition, {0, 1}), 1, 4);
-    area.grabTrack = PushTrack(area.machine, core::Add(reagentPosition, {0, 1}),
-                               std::max(0, area.width - 1));
+    area.grabTrack =
+        PushTrack(area.machine, core::Add(reagentPosition, {0, 1}), std::max(0, area.width - 1));
     area.outputArm = PushObject(area.machine, "arm1", core::Add(origin, {-3, 3}), 3, 4);
     area.outputPosition = core::Add(origin, {-3, 0});
     return area;
 }
 
 void EmitLinearInputAtom(LinearInputArea& area, int atom) {
-    if (atom < 0 || atom >= area.width) throw std::invalid_argument("linear input atom out of range");
+    if (atom < 0 || atom >= area.width)
+        throw std::invalid_argument("linear input atom out of range");
     if (atom == 0) {
         // The grab arm picks the first atom at the reagent and extends into the
         // output arm; the output arm rotates it and resets.

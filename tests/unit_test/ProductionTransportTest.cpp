@@ -6,13 +6,13 @@
 #include "ProductionLayout.hpp"
 #include "SolutionVerifier.hpp"
 
+#include "RepoRoot.hpp"
 #include "UnitTestConstants.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <limits>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;

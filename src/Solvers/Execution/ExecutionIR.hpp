@@ -152,8 +152,8 @@ class ExecutionIR {
     void Append(const io::PuzzleData& puzzle, State& state, const Operation& operation);
     // Incremental construction checks the initial/tail snapshot and recomputes
     // the transition atomically. The noninitial tail is compared in place before
-    // appending, so no borrowed tail survives vector growth. The finished program MUST still Replay before
-    // consumption; this does not certify earlier caller-editable steps.
+    // appending, so no borrowed tail survives vector growth. The finished program MUST still Replay
+    // before consumption; this does not certify earlier caller-editable steps.
     void AppendFromTail(const io::PuzzleData& puzzle, State& state, const Operation& operation);
     [[nodiscard]] State Replay(const io::PuzzleData& puzzle) const;
     // Synchronous read-only projection: replay every historical op/pre/effect,
@@ -162,7 +162,11 @@ class ExecutionIR {
     [[nodiscard]] State ProjectOutput(const io::PuzzleData& puzzle, const State& tail,
                                       const Operation& output) const;
     struct FiniteRetention {
-        struct Slot { std::size_t slot; AtomId atom; core::AtomType type; };
+        struct Slot {
+            std::size_t slot;
+            AtomId atom;
+            core::AtomType type;
+        };
         std::vector<std::size_t> outputs;
         std::vector<Slot> slots;
         std::size_t capacity{};

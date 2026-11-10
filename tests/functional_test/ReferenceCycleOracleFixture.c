@@ -1,5 +1,4 @@
-int main(void)
-{
+int main(void) {
     unsigned cases = 0;
     for (unsigned start = 1; start <= 2; ++start) {
         for (overlap_mode = 0; overlap_mode <= 2; ++overlap_mode) {
@@ -18,11 +17,19 @@ int main(void)
             for (unsigned phase = start; phase <= 2; ++phase) {
                 bool before = overlap_mode == 1;
                 bool after = before || (phase == 2 && overlap_mode == 2);
-                if (phase == 2 && before) { EXPECT(10); }
+                if (phase == 2 && before) {
+                    EXPECT(10);
+                }
                 EXPECT(1);
-                if (phase == 2 && after) { EXPECT(11); }
-                for (unsigned id = 2; id <= 7; ++id) { EXPECT(id); }
-                if (after) { EXPECT(8); }
+                if (phase == 2 && after) {
+                    EXPECT(11);
+                }
+                for (unsigned id = 2; id <= 7; ++id) {
+                    EXPECT(id);
+                }
+                if (after) {
+                    EXPECT(8);
+                }
                 EXPECT(9);
             }
 #undef EXPECT

@@ -23,11 +23,13 @@ std::optional<std::size_t> ClosedMaterialPeriodDivisor(const io::PuzzleData& p) 
         for (const auto& atom : molecule.atoms) {
             using T = core::AtomType;
             std::size_t weight;
-            if (atom.type == T::Quintessence) weight = 4;
-            else if ((atom.type >= T::Salt && atom.type <= T::Water) ||
-                     atom.type == T::Vitae || atom.type == T::Mors)
+            if (atom.type == T::Quintessence)
+                weight = 4;
+            else if ((atom.type >= T::Salt && atom.type <= T::Water) || atom.type == T::Vitae ||
+                     atom.type == T::Mors)
                 weight = 1;
-            else return std::nullopt;
+            else
+                return std::nullopt;
             if (total > std::numeric_limits<std::size_t>::max() - weight) return std::nullopt;
             total += weight;
         }
@@ -117,24 +119,25 @@ InventorySearchResult SearchSupplyInventoryCore(
         return result;
     }
     // No supported reaction creates quicksilver; parked inventory also originates in feeds.
-    const bool hasQuicksilver = std::any_of(sources.begin(), sources.end(), [&](const auto& source) {
-        return (!recipe || recipe->inputBatches[source.input]) &&
-               p.inputs[source.input].atoms[source.atom].type == core::AtomType::Quicksilver;
-    });
+    const bool hasQuicksilver =
+        std::any_of(sources.begin(), sources.end(), [&](const auto& source) {
+            return (!recipe || recipe->inputBatches[source.input]) &&
+                   p.inputs[source.input].atoms[source.atom].type == core::AtomType::Quicksilver;
+        });
     const auto& target = p.outputs[0].atoms;
     // Metal reactions only promote metals. Ignore quantities and extraction order here:
     // this is a necessary reachability check, not a proof of a feasible recipe.
     std::array<bool, 13> reachable{};
     for (const auto& source : sources) {
         const auto type = p.inputs[source.input].atoms[source.atom].type;
-        if ((!recipe || recipe->inputBatches[source.input]) &&
-            type >= core::AtomType::Gold && type <= core::AtomType::Lead)
+        if ((!recipe || recipe->inputBatches[source.input]) && type >= core::AtomType::Gold &&
+            type <= core::AtomType::Lead)
             reachable[static_cast<std::size_t>(type)] = true;
     }
     for (int metal = static_cast<int>(core::AtomType::Lead);
          metal > static_cast<int>(core::AtomType::Gold); --metal) {
-        const bool projection = hasQuicksilver && (p.permissionBits & (1ULL << 14)) &&
-                                (!recipe || recipe->projections);
+        const bool projection =
+            hasQuicksilver && (p.permissionBits & (1ULL << 14)) && (!recipe || recipe->projections);
         const bool purification =
             (limits.singleStagePurification || limits.multiStagePurification) &&
             (p.permissionBits & (1ULL << 15)) && (!recipe || recipe->purifications);
@@ -236,8 +239,8 @@ InventorySearchResult SearchSupplyInventoryCore(
             closedMetalMass = false;
             return;
         }
-        const auto weight = std::size_t{1} << (static_cast<int>(core::AtomType::Lead) -
-                                              static_cast<int>(type));
+        const auto weight = std::size_t{1}
+                            << (static_cast<int>(core::AtomType::Lead) - static_cast<int>(type));
         if (total > std::numeric_limits<std::size_t>::max() - weight) {
             closedMetalMass = false;
             return;
@@ -245,12 +248,15 @@ InventorySearchResult SearchSupplyInventoryCore(
         total += weight;
     };
     for (std::size_t i = 0; i < p.inputs.size(); ++i)
-        for (const auto& atom : p.inputs[i].atoms) addMetalMass(batchMetalMass[i],atom.type);
-    for (const auto& atom : target) addMetalMass(targetMetalMass,atom.type);
+        for (const auto& atom : p.inputs[i].atoms)
+            addMetalMass(batchMetalMass[i], atom.type);
+    for (const auto& atom : target)
+        addMetalMass(targetMetalMass, atom.type);
     if (closedMetalMass) {
         if (targetMetalMass > std::numeric_limits<std::size_t>::max() / products)
             closedMetalMass = false;
-        else targetMetalMass *= products;
+        else
+            targetMetalMass *= products;
     }
     std::unordered_map<std::string, std::size_t> seen;
     std::size_t expanded = 0;
@@ -606,7 +612,8 @@ InventorySearchResult SearchSupplyInventoryCore(
                  pickup.id >= sources.size() ||
                  !fitsInherited(state, state.next, pickup.id, pickup.buffer, pickup.start)))
                 return false;
-            if (expanded >= limits.maxStates || std::chrono::steady_clock::now() >= limits.deadline) {
+            if (expanded >= limits.maxStates ||
+                std::chrono::steady_clock::now() >= limits.deadline) {
                 exhausted = true;
                 return false;
             }
@@ -802,8 +809,8 @@ InventorySearchResult SearchSupplyInventoryCore(
                     return true;
                 const auto* precursor = std::getenv("OPUSOPTIMA_CALCIFY_ANIMISMUS");
                 if ((closedCardinalLife || (precursor && std::string(precursor) == "1")) &&
-                    (p.permissionBits & (1ULL << 12)) &&
-                    source >= core::AtomType::Air && source <= core::AtomType::Water &&
+                    (p.permissionBits & (1ULL << 12)) && source >= core::AtomType::Air &&
+                    source <= core::AtomType::Water &&
                     transition(pickup, SupplyPlan::Kind::Animismus,
                                ElementConversion::Calcification))
                     return true;
@@ -938,8 +945,8 @@ InventorySearchResult SearchSupplyInventory(const io::PuzzleData& p, std::size_t
 JointInventorySearchResult SearchJointSupplyInventory(
     const io::PuzzleData& p, std::size_t products, InventorySearchLimits limits,
     const ChemicalRecipe* recipe, const std::function<bool(const JointSupplyPlan&)>& accept) {
-    return SearchJointSupplyInventoryWithPolicy(p, products,
-        SupplyMaterialLoweringPolicy::PreserveCompatible, limits, recipe, accept);
+    return SearchJointSupplyInventoryWithPolicy(
+        p, products, SupplyMaterialLoweringPolicy::PreserveCompatible, limits, recipe, accept);
 }
 JointInventorySearchResult SearchJointSupplyInventoryWithPolicy(
     const io::PuzzleData& p, std::size_t products, SupplyMaterialLoweringPolicy policy,
@@ -980,7 +987,8 @@ JointInventorySearchResult SearchJointSupplyInventoryWithPolicy(
         needsFragmentSearch ? std::vector<bool>{true, false} : std::vector<bool>{false};
     for (auto firstPort : startingPorts)
         for (bool fragmentFirst : orderings) {
-            if (result.states >= limits.maxStates || std::chrono::steady_clock::now() >= limits.deadline) {
+            if (result.states >= limits.maxStates ||
+                std::chrono::steady_clock::now() >= limits.deadline) {
                 exhausted = true;
                 break;
             }

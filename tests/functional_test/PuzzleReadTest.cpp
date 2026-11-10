@@ -8,13 +8,14 @@
 #include "AsciiRenderer.hpp"
 #include "BinaryParser.hpp"
 #include "PuzzleSpecs.hpp"
-#include "SvgExporter.hpp"
 #include "RepoRoot.hpp"
+#include "SvgExporter.hpp"
 
 namespace {
 
 std::filesystem::path GetRepoRoot() {
-    return opusoptima::test::RepoRoot(__FILE__);}
+    return opusoptima::test::RepoRoot(__FILE__);
+}
 
 } // namespace
 

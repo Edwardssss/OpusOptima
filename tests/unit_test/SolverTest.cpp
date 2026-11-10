@@ -23,14 +23,19 @@ TEST(SolverRegistryTest, RecommendedDefaultAndExplicitBackendsKeepTheirIdentity)
     const auto recommended = BaseSolver::Create();
     ASSERT_NE(recommended, nullptr);
     EXPECT_EQ(recommended->Name(), "AssemblySolver");
-    for (const auto& [alias, expected] :
-         std::vector<std::pair<std::string, std::string>>{
-             {"assembly", "AssemblySolver"}, {"default", "GreedyPlannerSolver"},
-             {"single-atom", "SingleAtomSolver"}, {"diatomic", "DiatomicSolver"},
-             {"greedy", "GreedyPlannerSolver"}, {"milp", "RecipeMilp"},
-             {"mip", "RecipeMilp"}, {"AssemblySolver", "AssemblySolver"},
-             {"SingleAtomSolver", "SingleAtomSolver"}, {"DiatomicSolver", "DiatomicSolver"},
-             {"GreedyPlannerSolver", "GreedyPlannerSolver"}, {"RecipeMilp", "RecipeMilp"}}) {
+    for (const auto& [alias, expected] : std::vector<std::pair<std::string, std::string>>{
+             {"assembly", "AssemblySolver"},
+             {"default", "GreedyPlannerSolver"},
+             {"single-atom", "SingleAtomSolver"},
+             {"diatomic", "DiatomicSolver"},
+             {"greedy", "GreedyPlannerSolver"},
+             {"milp", "RecipeMilp"},
+             {"mip", "RecipeMilp"},
+             {"AssemblySolver", "AssemblySolver"},
+             {"SingleAtomSolver", "SingleAtomSolver"},
+             {"DiatomicSolver", "DiatomicSolver"},
+             {"GreedyPlannerSolver", "GreedyPlannerSolver"},
+             {"RecipeMilp", "RecipeMilp"}}) {
         const auto solver = BaseSolver::Create(alias);
         ASSERT_NE(solver, nullptr) << alias;
         EXPECT_EQ(solver->Name(), expected) << alias;

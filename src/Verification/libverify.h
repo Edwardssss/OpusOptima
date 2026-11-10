@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 #ifndef OM_VERIFIER_H
-#define OM_VERIFIER_H
+#    define OM_VERIFIER_H
 
 // this "verifier" API is designed to be called from an FFI.
 
@@ -16,77 +16,79 @@ extern "C" {
 // the first byte of the puzzle name within the solution_bytes, or a null
 // pointer if the solution failed to parse.  if successful, also sets the value
 // pointed to by name_length to the length of the puzzle name.
-const char *verifier_find_puzzle_name_in_solution_bytes(const char *solution_bytes,
- int solution_length, int *name_length);
+const char* verifier_find_puzzle_name_in_solution_bytes(const char* solution_bytes,
+                                                        int solution_length, int* name_length);
 
 // takes the path of a .puzzle and a .solution file.  returns a pointer to a
 // newly-allocated verifier object.  if the files couldn't be parsed, the
 // verifier_error() function will return a non-null string value describing the
 // error.
-void *verifier_create(const char *puzzle_filename, const char *solution_filename);
+void* verifier_create(const char* puzzle_filename, const char* solution_filename);
 
 // like verifier_create(), but takes two byte arrays instead of reading from the
 // filesystem.
-void *verifier_create_from_bytes(const char *puzzle_bytes, int puzzle_length,
- const char *solution_bytes, int solution_length);
+void* verifier_create_from_bytes(const char* puzzle_bytes, int puzzle_length,
+                                 const char* solution_bytes, int solution_length);
 
 // like verifier_create_from_bytes(), but doesn't make a copy of the bytes.  the
 // caller is responsible for keeping these allocations around until the verifier
 // is destroyed.
-void *verifier_create_from_bytes_without_copying(const char *puzzle_bytes, int puzzle_length,
- const char *solution_bytes, int solution_length);
+void* verifier_create_from_bytes_without_copying(const char* puzzle_bytes, int puzzle_length,
+                                                 const char* solution_bytes, int solution_length);
 
 // destroys a verifier object created by verifier_create(), freeing its memory.
-void verifier_destroy(void *verifier);
+void verifier_destroy(void* verifier);
 
 // set how many cycles to wait for a solution to complete.
-void verifier_set_cycle_limit(void *verifier, int cycle_limit);
+void verifier_set_cycle_limit(void* verifier, int cycle_limit);
 
 // disable limits and let the solution run as long as possible.
-void verifier_disable_limits(void *verifier);
+void verifier_disable_limits(void* verifier);
 
 // set whether the verifier fails if an output of the correct shape but with the
 // wrong atoms is dropped on the output with puzzle file index output_index.
-void verifier_set_fails_on_wrong_output(void *verifier, int output_index, int fails_on_wrong_output);
+void verifier_set_fails_on_wrong_output(void* verifier, int output_index,
+                                        int fails_on_wrong_output);
 // set whether the verifier fails if an output of the correct footprint but with
 // the wrong bonds is dropped on the output with puzzle file index output_index.
-void verifier_set_fails_on_wrong_output_bonds(void *verifier, int output_index, int fails_on_wrong_output_bonds);
+void verifier_set_fails_on_wrong_output_bonds(void* verifier, int output_index,
+                                              int fails_on_wrong_output_bonds);
 // get the puzzle file index of the current wrong output or -1 if no wrong
 // outputs were detected.
-int verifier_wrong_output_index(void *verifier);
+int verifier_wrong_output_index(void* verifier);
 // get the atom type at the given offset in the current wrong output.  the u and
 // v offsets are as they appear in the puzzle file.  if there's no wrong output
 // or no atom at this position, the value -1 is returned.
-int verifier_wrong_output_atom(void *verifier, int u, int v);
+int verifier_wrong_output_atom(void* verifier, int u, int v);
 // clears the current wrong output so that verifier_wrong_output_index will
 // return -1 until another wrong output is detected.
-void verifier_wrong_output_clear(void *verifier);
+void verifier_wrong_output_clear(void* verifier);
 
 // returns a string describing any error that occurred during solution parsing,
 // decoding, or verification.  if there haven't been any errors, returns a null
 // pointer.  returned strings are valid for the lifetime of the program and
 // don't need to be freed.  calling this function doesn't clear the error;
 // to clear the error, create a new verifier or call verifier_error_clear().
-const char *verifier_error(void *verifier);
+const char* verifier_error(void* verifier);
 
 // these functions return more information about errors occurring during the
 // simulation.
-int verifier_error_cycle(void *verifier);
-int verifier_error_location_u(void *verifier);
-int verifier_error_location_v(void *verifier);
+int verifier_error_cycle(void* verifier);
+int verifier_error_location_u(void* verifier);
+int verifier_error_location_v(void* verifier);
 
 // the error source distinguishes between errors parsing the puzzle file, errors
 // parsing the solution file, errors parsing the metric, and errors encountered
 // during simulation.  verifier_error_source() will return either NULL (if there
 // is no error set) or one of the strings named below.
-const char *verifier_error_source(void *verifier);
-extern const char *verifier_error_source_puzzle_file;
-extern const char *verifier_error_source_solution_file;
-extern const char *verifier_error_source_metric;
-extern const char *verifier_error_source_simulation;
+const char* verifier_error_source(void* verifier);
+extern const char* verifier_error_source_puzzle_file;
+extern const char* verifier_error_source_solution_file;
+extern const char* verifier_error_source_metric;
+extern const char* verifier_error_source_simulation;
 
 // after calling this function, verifier_error() will return null again.
-void verifier_error_clear(void *verifier);
+void verifier_error_clear(void* verifier);
 
 // verifier_evaluate_metric() evaluates a metric for the given solution.  if
 // there is an error, verifier_evaluate_metric() returns -1 and sets an error
@@ -94,12 +96,12 @@ void verifier_error_clear(void *verifier);
 //
 // for an up-to date list of metrics, see the "simulator metrics" section of
 // <http://events.critelli.technology/static/metrics.html>.
-int verifier_evaluate_metric(void *verifier, const char *metric);
+int verifier_evaluate_metric(void* verifier, const char* metric);
 
 // verifier_evaluate_approximate_metric() works identically to
 // verifier_evaluate_metric(), except it returns a double-precision floating
 // point number and supports more metrics.
-double verifier_evaluate_approximate_metric(void *verifier, const char *metric);
+double verifier_evaluate_approximate_metric(void* verifier, const char* metric);
 
 // used to compute the lexicographic cycles metric.  the first interval is
 // the cycle on which the first product set is dropped; the second interval is
@@ -108,18 +110,18 @@ double verifier_evaluate_approximate_metric(void *verifier, const char *metric);
 // the second; and so on through verifier_number_of_output_intervals().
 // if the index returned by verifier_output_intervals_repeat_after() is
 // non-negative, the output intervals from that index onward repeat cyclically.
-int verifier_number_of_output_intervals(void *verifier);
-int verifier_output_interval(void *verifier, int which_interval);
-int verifier_output_intervals_repeat_after(void *verifier);
+int verifier_number_of_output_intervals(void* verifier);
+int verifier_output_interval(void* verifier, int which_interval);
+int verifier_output_intervals_repeat_after(void* verifier);
 
 // intervals for individual outputs rather than product sets.  the outputs are
 // specified using their index in the puzzle file.
-int verifier_number_of_output_intervals_for_output(void *verifier, int output);
-int verifier_output_interval_for_output(void *verifier, int output, int which_interval);
-int verifier_output_intervals_for_output_repeat_after(void *verifier, int output);
+int verifier_number_of_output_intervals_for_output(void* verifier, int output);
+int verifier_output_interval_for_output(void* verifier, int output, int which_interval);
+int verifier_output_intervals_for_output_repeat_after(void* verifier, int output);
 
 // returns the number of outputs in the puzzle file.
-int verifier_number_of_outputs(void *verifier);
+int verifier_number_of_outputs(void* verifier);
 
 #endif
 

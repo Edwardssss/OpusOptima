@@ -32,8 +32,7 @@ int Turns(int rotation) {
     return (rotation % 6 + 6) % 6;
 }
 Coord Checked(int64_t q, int64_t r) {
-    if (q < -coordinateLimit || q > coordinateLimit || r < -coordinateLimit ||
-        r > coordinateLimit)
+    if (q < -coordinateLimit || q > coordinateLimit || r < -coordinateLimit || r > coordinateLimit)
         throw std::invalid_argument("independent metric coordinate bound exceeded");
     return {static_cast<int>(q), static_cast<int>(r)};
 }
@@ -243,8 +242,8 @@ void IndependentMetrics::ObserveArm(Coord base, int length, int direction, int g
 }
 
 void IndependentMetrics::AddSweep(Sweep sweep) {
-    constexpr std::size_t limit = finiteOrdinaryProfile.maxInventory +
-                                  finiteOrdinaryProfile.maxArms;
+    constexpr std::size_t limit =
+        finiteOrdinaryProfile.maxInventory + finiteOrdinaryProfile.maxArms;
     if (sweeps_.size() >= limit)
         throw std::invalid_argument("independent metric pending-sweep bound exceeded");
     sweeps_.push_back(sweep);
@@ -323,8 +322,8 @@ void IndependentMetrics::RasterPoint(double x, double y, double radius, double u
     // A pixel disk projects to |dr| <= R/71 and
     // |dq| <= R*(1/82 + 1/(2*71)). Keep the ordinary 6x6 stencil,
     // but expand it when the uncertainty envelope extends beyond it.
-    const int extentQ = std::max(2, static_cast<int>(std::ceil(
-                                        outerRadius * (1. / gridX + .5 / gridY))));
+    const int extentQ =
+        std::max(2, static_cast<int>(std::ceil(outerRadius * (1. / gridX + .5 / gridY))));
     const int extentR = std::max(2, static_cast<int>(std::ceil(outerRadius / gridY)));
     const double baseQ = std::floor(axialQ), baseR = std::floor(axialR);
     if (baseQ < -coordinateLimit + extentQ || baseQ > coordinateLimit - extentQ - 1 ||

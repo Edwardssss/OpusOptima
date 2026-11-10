@@ -3,12 +3,12 @@
 #include "UnitTestConstants.hpp"
 #include "Verification/IndependentVerifier.hpp"
 
+#include "RepoRoot.hpp"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
-#include <limits>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
+#include <limits>
 
 namespace {
 using namespace opusoptima;
@@ -60,8 +60,7 @@ TEST(IndependentFiniteReplay, ExplicitExpansionExecutesRawWithoutAuthorizingIt) 
         EXPECT_EQ(report.expandedTape->rawStart, 0);
         EXPECT_EQ(report.expandedTape->origins[3].rawOrdinal, 3U);
         EXPECT_EQ(report.expandedTape->origins[3].rawIndex, 3);
-        EXPECT_EQ(report.expandedTape->origins[3].kind,
-                  verification::TapeOrigin::Kind::Reset);
+        EXPECT_EQ(report.expandedTape->origins[3].kind, verification::TapeOrigin::Kind::Reset);
         EXPECT_EQ(report.expandedTape->staticInstructions, copy ? 8 : 4);
         if (copy) {
             EXPECT_EQ(report.expandedTape->origins[4].copySite, 4);
@@ -227,10 +226,8 @@ TEST(IndependentFiniteReplay, InternalChordAndStationaryTrackOverlapAreNotGlobal
     const auto puzzle = Ordinary();
     auto machine = Machine();
     // p0-p2 is a geometric chord, not an extra edge in the serialized path.
-    machine.objects.push_back(
-        {"track", {10, 10}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}});
-    machine.objects.push_back(
-        {"track", {10, 10}, {}, {1, 0, 0, 0, 2, 0, 1, 1, 1, 0}});
+    machine.objects.push_back({"track", {10, 10}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}});
+    machine.objects.push_back({"track", {10, 10}, {}, {1, 0, 0, 0, 2, 0, 1, 1, 1, 0}});
     machine.objects.push_back({"arm1", {10, 11}, {{'B', 0}}, {1, 0, 0, 1, 1}});
     const auto replay = verification::ReplayFiniteMachine(puzzle, machine, 100);
     EXPECT_EQ(replay.outcome, verification::ReplayOutcome::Completed) << replay.detail;
@@ -249,11 +246,9 @@ TEST(IndependentFiniteReplay, InternalChordUsesSequenceNeighborsAndBothEndpointN
     machine.objects[0].position = {-1, 0};
     machine.objects[1].position = {-1, 2};
     machine.objects[2].bodyData[1] = 3;
-    machine.objects[2].instructions = {{'G', 0}, {'a', 1}, {'A', 2}, {'A', 3},
-                                       {'A', 4}, {'A', 5}, {'g', 6}, {'a', 7},
-                                       {'a', 8}, {'a', 9}, {'a', 10}};
-    machine.objects.push_back(
-        {"track", {}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}});
+    machine.objects[2].instructions = {{'G', 0}, {'a', 1}, {'A', 2}, {'A', 3}, {'A', 4}, {'A', 5},
+                                       {'g', 6}, {'a', 7}, {'a', 8}, {'a', 9}, {'a', 10}};
+    machine.objects.push_back({"track", {}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}});
     const auto replay = verification::ReplayFiniteMachine(puzzle, machine, 100);
     ASSERT_EQ(replay.outcome, verification::ReplayOutcome::Completed) << replay.detail;
     EXPECT_EQ(replay.detail, "independent finite execution completed every ordinary output");
@@ -270,7 +265,8 @@ TEST(IndependentFiniteReplay, InternalChordUsesSequenceNeighborsAndBothEndpointN
     }
     std::vector<int> expectedMotions, expectedOutputs;
     for (int iteration = 0; iteration < 6; ++iteration) {
-        for (const int offset : {2, 3, 4}) expectedMotions.push_back(11 * iteration + offset);
+        for (const int offset : {2, 3, 4})
+            expectedMotions.push_back(11 * iteration + offset);
         expectedOutputs.push_back(11 * iteration + 6);
     }
     EXPECT_EQ(motionCycles, expectedMotions);
@@ -286,8 +282,7 @@ TEST(IndependentFiniteReplay, SharedOldBaseRejectsBothTrackDirectionsBeforeCompl
         auto machine = Machine();
         machine.objects.push_back(
             {"track", {10, 10}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}});
-        machine.objects.push_back(
-            {"track", {10, 10}, {}, {1, 0, 0, 0, 2, 0, 1, 1, 1, 0}});
+        machine.objects.push_back({"track", {10, 10}, {}, {1, 0, 0, 0, 2, 0, 1, 1, 1, 0}});
         machine.objects.push_back({"arm1", {10, 11}, {{action, 0}}, {1, 0, 0, 1, 1}});
         const auto replay = verification::ReplayFiniteMachine(Ordinary(), machine, 100);
         EXPECT_EQ(replay.outcome, verification::ReplayOutcome::Unavailable);
@@ -309,11 +304,11 @@ TEST(IndependentFiniteReplay, UniqueOldBaseMayEnterSharedCellButNextTrackActionI
         auto machine = Machine();
         machine.objects.push_back(
             {"track", {10, 10}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}});
-        machine.objects.push_back(
-            {"track", {10, 10}, {}, {1, 0, 0, 0, 2, 0, 1, 1, 1, 0}});
-        machine.objects.push_back({"arm1", action == 'A' ? core::HexCoord{11, 10}
-                                                       : core::HexCoord{10, 12},
-                                   {{action, 0}, {action, 1}}, {1, 0, 0, 2, 1}});
+        machine.objects.push_back({"track", {10, 10}, {}, {1, 0, 0, 0, 2, 0, 1, 1, 1, 0}});
+        machine.objects.push_back({"arm1",
+                                   action == 'A' ? core::HexCoord{11, 10} : core::HexCoord{10, 12},
+                                   {{action, 0}, {action, 1}},
+                                   {1, 0, 0, 2, 1}});
         const auto replay = verification::ReplayFiniteMachine(Ordinary(), machine, 100);
         EXPECT_EQ(replay.outcome, verification::ReplayOutcome::Unavailable);
         EXPECT_EQ(replay.detail, "ambiguous overlapping track reset/motion");
@@ -330,10 +325,8 @@ TEST(IndependentFiniteReplay, UniqueOldBaseMayEnterSharedCellButNextTrackActionI
 }
 TEST(IndependentFiniteReplay, EnteringSharedTrackCellWithAnotherBaseIsACollisionNotAmbiguity) {
     auto machine = Machine();
-    machine.objects.push_back(
-        {"track", {10, 10}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}});
-    machine.objects.push_back(
-        {"track", {10, 10}, {}, {1, 0, 0, 0, 2, 0, 1, 1, 1, 0}});
+    machine.objects.push_back({"track", {10, 10}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}});
+    machine.objects.push_back({"track", {10, 10}, {}, {1, 0, 0, 0, 2, 0, 1, 1, 1, 0}});
     machine.objects.push_back({"arm1", {11, 10}, {{'A', 0}}, {1, 0, 0, 1, 1}});
     machine.objects.push_back({"arm1", {10, 11}, {{'B', 0}}, {1, 0, 0, 1, 2}});
     const auto replay = verification::ReplayFiniteMachine(Ordinary(), machine, 100);
@@ -359,7 +352,8 @@ TEST(IndependentFiniteReplay, RotatingWheelsRemainUncertifiedInBothDirections) {
         machine.objects.push_back({"baron", {20, 0}, {{action, 0}}, {1, 0, 0, 1, 1}});
         const auto result = verification::VerifyIndependent(Ordinary(), machine, 100);
         EXPECT_EQ(result.status, io::VerificationStatus::Unavailable) << action;
-        EXPECT_EQ(result.detail, "dynamic reference trajectories and area are not certified") << action;
+        EXPECT_EQ(result.detail, "dynamic reference trajectories and area are not certified")
+            << action;
     }
 }
 TEST(IndependentFiniteReplay, AnisotropicLatticeRotationCannotUseAPixelToleranceAsCertification) {
@@ -387,8 +381,8 @@ TEST(IndependentFiniteReplay, InventoryBoundAllows8192AtomsAndRejectsTheNextInpu
     io::SolutionData machine;
     machine.objects.push_back({"out-std", {-100, -100}, {}, {1, 0, 0, 0, 0}});
     for (int index = 0; index < 128; ++index)
-        machine.objects.push_back({"input", {(index % 16) * 64, (index / 16) * 2},
-                                   {}, {1, 0, 0, 0, 0}});
+        machine.objects.push_back(
+            {"input", {(index % 16) * 64, (index / 16) * 2}, {}, {1, 0, 0, 0, 0}});
     const auto within = verification::ReplayFiniteMachine(puzzle, machine, 1);
     ASSERT_EQ(within.outcome, verification::ReplayOutcome::CycleLimit) << within.detail;
     EXPECT_EQ(within.acquired, 8192U);
@@ -401,11 +395,9 @@ TEST(IndependentFiniteReplay, InventoryBoundAllows8192AtomsAndRejectsTheNextInpu
 TEST(IndependentFiniteReplay, ArmCountBoundIsCheckedBeforeConstructingTheNextTape) {
     const auto puzzle = Ordinary();
     io::SolutionData machine;
-    machine.objects = {{"input", {}, {}, {1, 0, 0, 0, 0}},
-                       {"out-std", {}, {}, {1, 0, 0, 0, 0}}};
+    machine.objects = {{"input", {}, {}, {1, 0, 0, 0, 0}}, {"out-std", {}, {}, {1, 0, 0, 0, 0}}};
     for (int index = 0; index < 128; ++index)
-        machine.objects.push_back({"arm1", {10 + 3 * index, 0}, {{'B', 0}},
-                                   {1, 0, 0, 1, index}});
+        machine.objects.push_back({"arm1", {10 + 3 * index, 0}, {{'B', 0}}, {1, 0, 0, 1, index}});
     const auto within = verification::ReplayFiniteMachine(puzzle, machine, 100);
     ASSERT_EQ(within.outcome, verification::ReplayOutcome::Completed) << within.detail;
     machine.objects.push_back({"arm1", {400, 0}, {{'Z', 0}}, {1, 0, 0, 1, 128}});
@@ -416,8 +408,7 @@ TEST(IndependentFiniteReplay, ArmCountBoundIsCheckedBeforeConstructingTheNextTap
 TEST(IndependentFiniteReplay, StaticWheelsWithDuplicateEditorNumbersCountTowardTheArmBound) {
     const auto puzzle = Ordinary();
     io::SolutionData machine;
-    machine.objects = {{"input", {}, {}, {1, 0, 0, 0, 0}},
-                       {"out-std", {}, {}, {1, 0, 0, 0, 0}}};
+    machine.objects = {{"input", {}, {}, {1, 0, 0, 0, 0}}, {"out-std", {}, {}, {1, 0, 0, 0, 0}}};
     for (int index = 0; index < 128; ++index)
         machine.objects.push_back({"baron", {10 + 4 * index, 0}, {}, {1, 0, 0, 0, 0}});
     const auto within = verification::ReplayFiniteMachine(puzzle, machine, 100);
@@ -492,8 +483,8 @@ TEST(IndependentFiniteReplay, CurrentTapePositionGateDistinguishesBoundsFromInt3
 TEST(IndependentFiniteReplay, TapeGatePreservesEntryStatusAndErrorOrder) {
     const auto puzzlePath = root / "asset/puzzle/easy/just-salt.puzzle";
     const auto puzzle = io::BinaryParser::ParsePuzzleFile(puzzlePath);
-    const auto file = root / ("build/independent-tape-gate-" +
-                              std::to_string(test::ProcessId()) + ".solution");
+    const auto file =
+        root / ("build/independent-tape-gate-" + std::to_string(test::ProcessId()) + ".solution");
     struct Cleanup {
         std::filesystem::path file;
         ~Cleanup() {
@@ -784,7 +775,7 @@ TEST(IndependentFiniteReplay, OptionalTimingsCoverMovingFragmentAndHeldQueries) 
         const auto timed = verification::ReplayFiniteMachine(puzzle, machine, cycleLimit, true);
         EXPECT_EQ(canonical.outcome, timed.outcome);
         EXPECT_EQ(timed.outcome, cycleLimit == 1 ? verification::ReplayOutcome::CycleLimit
-                                               : verification::ReplayOutcome::Completed);
+                                                 : verification::ReplayOutcome::Completed);
         EXPECT_EQ(canonical.cycles, timed.cycles);
         EXPECT_EQ(canonical.outputs, timed.outputs);
         EXPECT_EQ(canonical.acquired, timed.acquired);
@@ -795,11 +786,15 @@ TEST(IndependentFiniteReplay, OptionalTimingsCoverMovingFragmentAndHeldQueries) 
         EXPECT_EQ(canonical.diagnostics->counters, timed.diagnostics->counters);
         EXPECT_EQ(canonical.diagnostics->completedCycles, timed.diagnostics->completedCycles);
         EXPECT_EQ(canonical.diagnostics->outputs, timed.diagnostics->outputs);
-        EXPECT_GT(timed.diagnostics->counters[
-                      static_cast<std::size_t>(io::VerificationCounter::FragmentQueries)], 0);
+        EXPECT_GT(
+            timed.diagnostics
+                ->counters[static_cast<std::size_t>(io::VerificationCounter::FragmentQueries)],
+            0);
         if (timed.outcome == verification::ReplayOutcome::Completed) {
-            EXPECT_GT(timed.diagnostics->counters[
-                          static_cast<std::size_t>(io::VerificationCounter::HeldQueries)], 0);
+            EXPECT_GT(
+                timed.diagnostics
+                    ->counters[static_cast<std::size_t>(io::VerificationCounter::HeldQueries)],
+                0);
         }
         EXPECT_FALSE(canonical.diagnostics->timingsCollected);
         EXPECT_TRUE(timed.diagnostics->timingsCollected);
@@ -852,8 +847,8 @@ io::PuzzleData RepeatingPuzzle(int size) {
         if (q) material.bonds.push_back({1, {q - 1, 0}, {q, 0}});
     }
     puzzle.inputs = {material};
-    puzzle.outputs = {{{{core::AtomType::Salt, {}}, {core::AtomType::Repeat, {1, 0}}},
-                        {{1, {}, {1, 0}}}}};
+    puzzle.outputs = {
+        {{{core::AtomType::Salt, {}}, {core::AtomType::Repeat, {1, 0}}}, {{1, {}, {1, 0}}}}};
     return puzzle;
 }
 io::SolutionData RepeatingMachine() {
@@ -861,7 +856,7 @@ io::SolutionData RepeatingMachine() {
     machine.objects[1].typeName = "out-rep";
     return machine;
 }
-}
+} // namespace
 TEST(IndependentFiniteReplay, RepeatingOptInUsesRealInventoryAndStableHighWater) {
     for (int size : {1, 3, 5, 6, 7}) {
         auto puzzle = RepeatingPuzzle(size);
@@ -929,10 +924,9 @@ TEST(IndependentFiniteReplay, RepeatingMechanicalGrowthThenShorteningRetainsHigh
     puzzle.outputs.push_back(puzzle.outputs[0]);
     auto machine = RepeatingMachine();
     machine.objects[0].position = {2, 0};
-    machine.objects[2] = {"arm1", {2, -1},
-        {{'G', 0}, {'A', 1}, {'A', 3}, {'A', 5}, {'B', 7}}, {1, 1, 0, 8, 0}};
-    machine.objects.push_back({"track", {2, -1}, {},
-        {1, 0, 0, 0, 4, 0, 0, -1, 0, -2, 0, -3, 0}});
+    machine.objects[2] = {
+        "arm1", {2, -1}, {{'G', 0}, {'A', 1}, {'A', 3}, {'A', 5}, {'B', 7}}, {1, 1, 0, 8, 0}};
+    machine.objects.push_back({"track", {2, -1}, {}, {1, 0, 0, 0, 4, 0, 0, -1, 0, -2, 0, -3, 0}});
     machine.objects.push_back({"out-rep", {20, 0}, {}, {1, 0, 1, 0, 0}});
     const auto original = io::BinaryWriter::WriteSolution(machine);
     for (const auto [limit, expected] : {std::pair{1, 0U}, {2, 0U}, {4, 6U}, {6, 6U}, {8, 6U}}) {

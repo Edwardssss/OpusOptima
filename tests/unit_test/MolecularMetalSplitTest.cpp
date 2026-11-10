@@ -1,12 +1,12 @@
 #include "MolecularMetalSplit.hpp"
-#include "IO/BinaryWriter.hpp"
-#include "IO/SolutionVerifier.hpp"
 #include "AssemblySolver.hpp"
 #include "ChemicalPlanner.hpp"
+#include "IO/BinaryWriter.hpp"
+#include "IO/SolutionVerifier.hpp"
+#include "RepoRoot.hpp"
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 
 namespace opusoptima::solvers { namespace {
 const auto root = opusoptima::test::RepoRoot(__FILE__);

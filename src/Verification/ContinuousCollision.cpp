@@ -2,13 +2,13 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <cfenv>
 #include <cfloat>
+#include <cmath>
 #include <limits>
 #include <vector>
 #if defined(__SSE__)
-#include <xmmintrin.h>
+#    include <xmmintrin.h>
 #endif
 
 namespace opusoptima::verification::continuous {
@@ -122,8 +122,7 @@ bool SupportedEnvironment() {
     volatile Real epsilon = std::numeric_limits<Real>::epsilon();
     volatile Real next = one + epsilon;
     if (next <= one) return false;
-    if (!std::numeric_limits<double>::is_iec559 ||
-        std::numeric_limits<double>::radix != 2 ||
+    if (!std::numeric_limits<double>::is_iec559 || std::numeric_limits<double>::radix != 2 ||
         !std::numeric_limits<Real>::is_iec559 || std::numeric_limits<Real>::radix != 2 ||
         std::numeric_limits<Real>::digits < std::numeric_limits<double>::digits ||
         std::numeric_limits<Real>::min_exponent - std::numeric_limits<Real>::digits >
@@ -242,25 +241,25 @@ Separation CheckSeparation(const Trajectory& a, const Trajectory& b, double mini
     return Complete(Separation::Separated, work);
 }
 
-Separation CheckBoundedSeparation(const Trajectory& a, double positionErrorA,
-                                  const Trajectory& b, double positionErrorB,
-                                  double minimumDistance, Options options, Work* work) {
+Separation CheckBoundedSeparation(const Trajectory& a, double positionErrorA, const Trajectory& b,
+                                  double positionErrorB, double minimumDistance, Options options,
+                                  Work* work) {
     if (!SupportedEnvironment() || !std::isfinite(positionErrorA) || positionErrorA < 0 ||
-        !std::isfinite(positionErrorB) || positionErrorB < 0 ||
-        !std::isfinite(minimumDistance) || minimumDistance < 0 || minimumDistance > 1.e9) {
+        !std::isfinite(positionErrorB) || positionErrorB < 0 || !std::isfinite(minimumDistance) ||
+        minimumDistance < 0 || minimumDistance > 1.e9) {
         if (work) ++work->calls;
         return Complete(Separation::Uncertain, work);
     }
     if (positionErrorA == 0 && positionErrorB == 0)
         return CheckSeparation(a, b, minimumDistance, options, work);
-    const Real expanded = Up(Up(static_cast<Real>(minimumDistance) + positionErrorA) +
-                             positionErrorB);
+    const Real expanded =
+        Up(Up(static_cast<Real>(minimumDistance) + positionErrorA) + positionErrorB);
     if (expanded > 1.e9L) {
         if (work) ++work->calls;
         return Complete(Separation::Uncertain, work);
     }
-    const double threshold = std::nextafter(static_cast<double>(expanded),
-                                            std::numeric_limits<double>::infinity());
+    const double threshold =
+        std::nextafter(static_cast<double>(expanded), std::numeric_limits<double>::infinity());
     const auto result = CheckSeparation(a, b, threshold, options, work);
     // Collision inside an enlarged exclusion radius is not a collision of the real bodies.
     if (result == Separation::Collision) return Complete(Separation::Uncertain, work);

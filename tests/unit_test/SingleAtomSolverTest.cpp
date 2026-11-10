@@ -4,8 +4,8 @@
 #include <memory>
 
 #include "BinaryWriter.hpp"
-#include "SingleAtomSolver.hpp"
 #include "RepoRoot.hpp"
+#include "SingleAtomSolver.hpp"
 #ifdef HAS_LIBVERIFY
 #    include "libverify.h"
 #endif

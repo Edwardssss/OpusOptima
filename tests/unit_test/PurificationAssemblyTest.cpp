@@ -1,13 +1,13 @@
 #include "PurificationAssembly.hpp"
+#include "AssemblySolver.hpp"
 #include "IO/BinaryWriter.hpp"
 #include "IO/SolutionVerifier.hpp"
-#include "AssemblySolver.hpp"
+#include "RepoRoot.hpp"
 #include "RowAssembly.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 
 namespace opusoptima::solvers { namespace {
 const auto root = opusoptima::test::RepoRoot(__FILE__);
@@ -48,7 +48,9 @@ TEST(PurificationAssemblyTest, FiniteMolecularFeedRequiresExplicitOptInAndPositi
     EXPECT_THROW((void)CompileRowAssemblyFiniteBatch(p, plan, ends, 0), std::invalid_argument);
     EXPECT_NO_THROW((void)CompileRowAssemblyFiniteBatch(p, plan, ends, 2));
     EXPECT_EQ(ends.size(), 2U);
-    const auto rowBytes = [](const auto& solution) { return io::BinaryWriter::WriteSolution(solution); };
+    const auto rowBytes = [](const auto& solution) {
+        return io::BinaryWriter::WriteSolution(solution);
+    };
     EXPECT_EQ(rowBytes(CompileRowAssemblySingleProduct(p, plan)),
               rowBytes(CompileRowAssemblySingleProduct(p, plan, deadline)));
     EXPECT_THROW((void)CompileRowAssemblySingleProduct(p, plan, std::chrono::steady_clock::now()),
@@ -60,8 +62,9 @@ TEST(PurificationAssemblyTest, FiniteMolecularFeedRequiresExplicitOptInAndPositi
     EXPECT_EQ(rowBytes(CompileRowAssemblyBatch(p, batchPlan, oldEnds)),
               rowBytes(CompileRowAssemblyBatch(p, batchPlan, newEnds, deadline)));
     EXPECT_EQ(oldEnds, newEnds);
-    EXPECT_THROW((void)CompileRowAssemblyBatch(p, batchPlan, newEnds,
-                 std::chrono::steady_clock::now()), std::invalid_argument);
+    EXPECT_THROW(
+        (void)CompileRowAssemblyBatch(p, batchPlan, newEnds, std::chrono::steady_clock::now()),
+        std::invalid_argument);
 }
 #ifdef HAS_LIBVERIFY
 TEST(PurificationAssemblyTest, MolecularMetalSupplyVerifies) {

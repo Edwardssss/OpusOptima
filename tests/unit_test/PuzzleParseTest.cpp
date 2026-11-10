@@ -99,7 +99,8 @@ BufferBuilder PuzzleListPrefix(const int list) {
     if (list == 5) return buffer;
     buffer.PushI32(list == 6 ? 1 : 0);
     if (list == 6) {
-        for (int i = 0; i < 4; ++i) buffer.PushU8(0);
+        for (int i = 0; i < 4; ++i)
+            buffer.PushU8(0);
     }
     return buffer;
 }
@@ -113,7 +114,8 @@ TEST(PuzzleParseUnitTest, RejectsImpossibleListCountsBeforeAllocation) {
             SCOPED_TRACE(count);
             auto buffer = PuzzleListPrefix(list);
             buffer.PushI32(count);
-            for (int i = 0; i < 16; ++i) buffer.PushU8(0);
+            for (int i = 0; i < 16; ++i)
+                buffer.PushU8(0);
             EXPECT_THROW(opusoptima::io::BinaryParser::ParsePuzzle(buffer.Span()),
                          opusoptima::io::ParseError);
         }
@@ -143,19 +145,24 @@ TEST(PuzzleParseUnitTest, AcceptsMinimumSizedListEntries) {
     buffer.PushU8(0);
     buffer.PushU8(0);
     buffer.PushI32(1);
-    for (int i = 0; i < 5; ++i) buffer.PushU8(0);
+    for (int i = 0; i < 5; ++i)
+        buffer.PushU8(0);
     buffer.PushI32(1);
     buffer.PushU8(1);
-    for (int i = 0; i < 3; ++i) buffer.PushU8(0);
+    for (int i = 0; i < 3; ++i)
+        buffer.PushU8(0);
     buffer.PushI32(1);
-    for (int i = 0; i < 3; ++i) buffer.PushU8(0);
+    for (int i = 0; i < 3; ++i)
+        buffer.PushU8(0);
     buffer.PushI32(1);
-    for (int i = 0; i < 4; ++i) buffer.PushU8(0);
+    for (int i = 0; i < 4; ++i)
+        buffer.PushU8(0);
     buffer.PushI32(1);
     buffer.PushU8(0);
     buffer.PushU8(0);
     buffer.PushI32(1);
-    for (int i = 0; i < 3; ++i) buffer.PushU8(0);
+    for (int i = 0; i < 3; ++i)
+        buffer.PushU8(0);
     buffer.PushI32(0);
 
     const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzle(buffer.Span());

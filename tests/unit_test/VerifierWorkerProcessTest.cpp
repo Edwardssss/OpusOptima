@@ -2,8 +2,8 @@
 #include "ProductionMolecular.hpp"
 #include "SolutionVerifier.hpp"
 
-#include <gtest/gtest.h>
 #include "RepoRoot.hpp"
+#include <gtest/gtest.h>
 
 #if defined(__linux__) && defined(OPUSOPTIMA_FAULT_WORKER_PATH)
 #    include <atomic>

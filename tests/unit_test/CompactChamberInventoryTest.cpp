@@ -4,6 +4,7 @@
 #include "SolutionVerifier.hpp"
 #include "Verification/StaticProductionVerifier.hpp"
 
+#include "RepoRoot.hpp"
 #include "UnitTestConstants.hpp"
 #include <algorithm>
 #include <chrono>
@@ -12,7 +13,6 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include <thread>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;

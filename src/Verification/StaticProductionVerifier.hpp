@@ -39,8 +39,8 @@ struct StaticProductionReport {
 
 // Bounded ordinary replay with full (up to 4096 events) atom audit; not a legacy authority gate.
 [[nodiscard]] StaticProductionReport AuditOrdinaryMachine(const io::PuzzleData&,
-                                                         const io::SolutionData&,
-                                                         int cycleLimit = 96);
+                                                          const io::SolutionData&,
+                                                          int cycleLimit = 96);
 // Independent bounded replay; unsupported instructions and mechanical profiles fail closed.
 [[nodiscard]] StaticProductionReport VerifyStaticProduction(const io::PuzzleData&,
                                                             const io::SolutionData&,

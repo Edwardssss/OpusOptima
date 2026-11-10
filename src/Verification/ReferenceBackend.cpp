@@ -1,7 +1,7 @@
 #include "ReferenceBackend.hpp"
 
-#include "Verification/libverify.h"
 #include "StaticProductionVerifier.hpp"
+#include "Verification/libverify.h"
 
 #include <cstring>
 #include <memory>

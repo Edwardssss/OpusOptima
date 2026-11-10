@@ -16,7 +16,8 @@
 namespace {
 
 std::filesystem::path GetRepoRoot() {
-    return opusoptima::test::RepoRoot(__FILE__);}
+    return opusoptima::test::RepoRoot(__FILE__);
+}
 
 void CollectFiles(const std::filesystem::path& dir, const std::string& extension,
                   std::vector<std::filesystem::path>& out) {

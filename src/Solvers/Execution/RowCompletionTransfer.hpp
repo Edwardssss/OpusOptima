@@ -39,7 +39,8 @@ struct RowCompletionTransfer {
     std::map<ExecutionIR::AtomId, core::HexCoord> retentionTargets;
     io::VerificationMode mode{io::VerificationMode::Independent};
     std::function<io::VerificationReport(const io::SolutionData&,
-        std::chrono::steady_clock::time_point)> nativeGate;
+                                         std::chrono::steady_clock::time_point)>
+        nativeGate;
     std::function<bool(const io::SolutionData&)> accept;
     io::VerificationReport verification;
     bool published{};

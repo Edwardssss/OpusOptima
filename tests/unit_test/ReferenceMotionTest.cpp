@@ -1,27 +1,31 @@
 #include "Verification/ReferenceMotion.hpp"
-#include "Verification/IndependentMetrics.hpp"
 #include "Verification/ContinuousCollision.hpp"
-#include <gtest/gtest.h>
+#include "Verification/IndependentMetrics.hpp"
+#include <cfenv>
 #include <cfloat>
 #include <cmath>
-#include <cfenv>
+#include <gtest/gtest.h>
 #include <limits>
 #if defined(__SSE__)
-#include <xmmintrin.h>
+#    include <xmmintrin.h>
 #endif
 
 namespace {
 struct RestoreRounding {
     int previous = std::fegetround();
-    ~RestoreRounding() { std::fesetround(previous); }
+    ~RestoreRounding() {
+        std::fesetround(previous);
+    }
 };
 #if defined(__SSE__)
 struct RestoreControl {
     unsigned previous = _mm_getcsr();
-    ~RestoreControl() { _mm_setcsr(previous); }
+    ~RestoreControl() {
+        _mm_setcsr(previous);
+    }
 };
 #endif
-}
+} // namespace
 
 namespace rm = opusoptima::verification::reference_motion;
 
@@ -61,10 +65,10 @@ TEST(ReferenceMotion, SevenCandidatesCoverHorizontalAxisWithinBoundedDomain) {
     ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
     const float limit = std::ldexp(1.f, 26);
     // Probe radius contacts, snap ties, and the largest admitted magnitudes.
-    for (float boundary : {-limit, -41.f, -38.f, -33.f, -24.f, 0.f,
-                           24.f, 33.f, 38.f, 41.f, limit}) {
-        for (float x : {std::nextafter(boundary, -INFINITY), boundary,
-                        std::nextafter(boundary, INFINITY)}) {
+    for (float boundary :
+         {-limit, -41.f, -38.f, -33.f, -24.f, 0.f, 24.f, 33.f, 38.f, 41.f, limit}) {
+        for (float x :
+             {std::nextafter(boundary, -INFINITY), boundary, std::nextafter(boundary, INFINITY)}) {
             if (std::abs(x) > limit) continue;
             const auto snapped = rm::SnapToHex({x, 0.f});
             ASSERT_TRUE(snapped);
@@ -76,18 +80,18 @@ TEST(ReferenceMotion, SevenCandidatesCoverHorizontalAxisWithinBoundedDomain) {
                 std::size_t expectedCount = 0;
                 for (int u = snapped->u - 3; u <= snapped->u + 3; ++u) {
                     for (int v = -2; v <= 2; ++v) {
-                        const float dx = 82.f * (static_cast<float>(u) +
-                                                 .5f * static_cast<float>(v)) - x;
+                        const float dx =
+                            82.f * (static_cast<float>(u) + .5f * static_cast<float>(v)) - x;
                         const float dy = 71.f * static_cast<float>(v);
-                        const float distance = static_cast<float>(
-                            std::sqrt(static_cast<double>(dx * dx + dy * dy)));
+                        const float distance =
+                            static_cast<float>(std::sqrt(static_cast<double>(dx * dx + dy * dy)));
                         if (distance >= radius + 29.f) continue;
                         ++expectedCount;
                         bool found = false;
                         for (std::size_t i = 0; i < *count; ++i)
                             found |= cells[i].u == u && cells[i].v == v;
-                        EXPECT_TRUE(found) << "x=" << x << " radius=" << radius
-                                           << " cell=" << u << ',' << v;
+                        EXPECT_TRUE(found)
+                            << "x=" << x << " radius=" << radius << " cell=" << u << ',' << v;
                     }
                 }
                 EXPECT_EQ(*count, expectedCount);
@@ -102,28 +106,33 @@ TEST(ReferenceMotion, SevenCandidatesCoverGeneralTwoDimensionalAdversaries) {
     ASSERT_EQ(FLT_EVAL_METHOD, 0);
     ASSERT_EQ(std::numeric_limits<double>::digits, 53);
     constexpr int limit = 1 << 20;
-    const rm::Hex anchors[] = {{0, 0}, {17, -31}, {-31, 17},
-        {limit - 3, limit - 3}, {-limit + 3, -limit + 3},
-        {limit - 3, -limit + 3}, {-limit + 3, limit - 3},
-        {limit - 3, 1}, {1, limit - 3}, {-limit + 3, -1},
-        {-1, -limit + 3}, {524288, 524288}, {-524288, 524288}};
+    const rm::Hex anchors[] = {{0, 0},
+                               {17, -31},
+                               {-31, 17},
+                               {limit - 3, limit - 3},
+                               {-limit + 3, -limit + 3},
+                               {limit - 3, -limit + 3},
+                               {-limit + 3, limit - 3},
+                               {limit - 3, 1},
+                               {1, limit - 3},
+                               {-limit + 3, -1},
+                               {-1, -limit + 3},
+                               {524288, 524288},
+                               {-524288, 524288}};
     // Oblique cube ties, contact neighbourhoods, and large-coordinate cancellation.
-    const rm::Point offsets[] = {{0.f, 0.f}, {41.f, 35.5f}, {-41.f, -35.5f},
-        {20.5f, 35.5f}, {-20.5f, 35.5f}, {41.f, 71.f / 3.f},
-        {-41.f, -71.f / 3.f}, {26.4f, 35.2f}, {29.4f, 39.2f},
-        {34.8f, 46.4f}, {-34.8f, 46.4f}};
+    const rm::Point offsets[] = {{0.f, 0.f},           {41.f, 35.5f},   {-41.f, -35.5f},
+                                 {20.5f, 35.5f},       {-20.5f, 35.5f}, {41.f, 71.f / 3.f},
+                                 {-41.f, -71.f / 3.f}, {26.4f, 35.2f},  {29.4f, 39.2f},
+                                 {34.8f, 46.4f},       {-34.8f, 46.4f}};
     std::size_t accepted = 0;
     for (const auto anchor : anchors) {
-        const float ax = 82.f * (static_cast<float>(anchor.u) +
-                                 .5f * static_cast<float>(anchor.v));
+        const float ax = 82.f * (static_cast<float>(anchor.u) + .5f * static_cast<float>(anchor.v));
         const float ay = 71.f * static_cast<float>(anchor.v);
         for (const auto offset : offsets) {
             const float x = ax + offset.x;
             const float y = ay + offset.y;
-            for (float cx : {std::nextafter(x, -INFINITY), x,
-                             std::nextafter(x, INFINITY)}) {
-                for (float cy : {std::nextafter(y, -INFINITY), y,
-                                 std::nextafter(y, INFINITY)}) {
+            for (float cx : {std::nextafter(x, -INFINITY), x, std::nextafter(x, INFINITY)}) {
+                for (float cy : {std::nextafter(y, -INFINITY), y, std::nextafter(y, INFINITY)}) {
                     const rm::Point center{cx, cy};
                     const auto snapped = rm::SnapToHex(center);
                     ASSERT_TRUE(snapped);
@@ -136,20 +145,21 @@ TEST(ReferenceMotion, SevenCandidatesCoverGeneralTwoDimensionalAdversaries) {
                         for (int u = snapped->u - 4; u <= snapped->u + 4; ++u) {
                             for (int v = snapped->v - 4; v <= snapped->v + 4; ++v) {
                                 if (std::abs(u) > limit || std::abs(v) > limit) continue;
-                                const float dx = 82.f * (static_cast<float>(u) +
-                                    .5f * static_cast<float>(v)) - cx;
+                                const float dx =
+                                    82.f * (static_cast<float>(u) + .5f * static_cast<float>(v)) -
+                                    cx;
                                 const float dy = 71.f * static_cast<float>(v) - cy;
-                                const float distance = static_cast<float>(std::sqrt(
-                                    static_cast<double>(dx * dx + dy * dy)));
+                                const float distance = static_cast<float>(
+                                    std::sqrt(static_cast<double>(dx * dx + dy * dy)));
                                 if (distance >= radius + 29.f) continue;
                                 ++expected;
                                 bool found = false;
                                 for (std::size_t i = 0; i < *count; ++i)
                                     found |= cells[i].u == u && cells[i].v == v;
-                                EXPECT_TRUE(found) << std::hexfloat << "center=" << cx
-                                    << ',' << cy << " radius=" << radius
-                                    << " snap=" << snapped->u << ',' << snapped->v
-                                    << " cell=" << u << ',' << v << " d=" << distance;
+                                EXPECT_TRUE(found)
+                                    << std::hexfloat << "center=" << cx << ',' << cy
+                                    << " radius=" << radius << " snap=" << snapped->u << ','
+                                    << snapped->v << " cell=" << u << ',' << v << " d=" << distance;
                             }
                         }
                         EXPECT_EQ(*count, expected);
@@ -232,7 +242,8 @@ TEST(ReferenceMotion, DyadicCountsAcrossEveryCadenceTransition) {
             const auto increment = rm::CollisionIncrement(distance);
             ASSERT_TRUE(increment);
             std::size_t iterativeCount = 0;
-            for (float t = *increment; t < 1.f; t += *increment) ++iterativeCount;
+            for (float t = *increment; t < 1.f; t += *increment)
+                ++iterativeCount;
             EXPECT_EQ(rm::InteriorSampleCount(distance, iterativeCount), iterativeCount);
             EXPECT_FALSE(rm::InteriorSampleCount(distance, iterativeCount - 1));
         }
@@ -395,10 +406,10 @@ TEST(ReferenceMotion, CadenceAndResourceLimits) {
 
 TEST(ReferenceMotion, BaseBoundCoversRoundingAndCoordinateExtremes) {
     constexpr int limit = 1 << 20;
-    const rm::Hex positions[] = {{0, 0}, {limit, limit}, {-limit, limit},
-                                 {limit - 1, -limit + 3}, {1, -1}};
-    const float progress[] = {0.f, std::numeric_limits<float>::denorm_min(),
-        .1f, .5f, std::nextafter(1.f, 0.f), 1.f};
+    const rm::Hex positions[] = {
+        {0, 0}, {limit, limit}, {-limit, limit}, {limit - 1, -limit + 3}, {1, -1}};
+    const float progress[] = {
+        0.f, std::numeric_limits<float>::denorm_min(), .1f, .5f, std::nextafter(1.f, 0.f), 1.f};
     for (const auto base : positions) {
         for (const auto translation : positions) {
             rm::Motion m;
@@ -413,7 +424,7 @@ TEST(ReferenceMotion, BaseBoundCoversRoundingAndCoordinateExtremes) {
                 ASSERT_TRUE(actual);
                 const long double q = 1.L - static_cast<long double>(t);
                 const long double x = 82.L * (base.u + .5L * base.v) -
-                    82.L * (translation.u + .5L * translation.v) * q;
+                                      82.L * (translation.u + .5L * translation.v) * q;
                 const long double y = 71.L * base.v - 71.L * translation.v * q;
                 EXPECT_LE(std::abs(actual->x - x) + std::abs(actual->y - y), *bound);
             }
@@ -429,10 +440,10 @@ TEST(ReferenceMotion, BaseBoundCoversRoundingAndCoordinateExtremes) {
 
 TEST(ReferenceMotion, TrackAtomBoundCoversWholeExpression) {
     constexpr int limit = 1 << 20;
-    const rm::Hex positions[] = {{0, 0}, {limit, limit}, {-limit, limit},
-                                 {limit - 1, -limit + 3}, {1, -1}};
-    const float progress[] = {0.f, std::numeric_limits<float>::denorm_min(),
-        .1f, .5f, std::nextafter(1.f, 0.f), 1.f};
+    const rm::Hex positions[] = {
+        {0, 0}, {limit, limit}, {-limit, limit}, {limit - 1, -limit + 3}, {1, -1}};
+    const float progress[] = {
+        0.f, std::numeric_limits<float>::denorm_min(), .1f, .5f, std::nextafter(1.f, 0.f), 1.f};
     for (const auto position : positions) {
         for (const auto translation : positions) {
             rm::Motion m;
@@ -448,12 +459,13 @@ TEST(ReferenceMotion, TrackAtomBoundCoversWholeExpression) {
             for (const auto t : progress) {
                 const auto actual = rm::AtomAt(m, t);
                 ASSERT_TRUE(actual);
-                const long double u = 3.L * position.u + translation.u *
-                    static_cast<long double>(t);
-                const long double v = 3.L * position.v + translation.v *
-                    static_cast<long double>(t);
+                const long double u =
+                    3.L * position.u + translation.u * static_cast<long double>(t);
+                const long double v =
+                    3.L * position.v + translation.v * static_cast<long double>(t);
                 EXPECT_LE(std::abs(actual->x - (82.L * u + 41.L * v)) +
-                          std::abs(actual->y - 71.L * v), *bound);
+                              std::abs(actual->y - 71.L * v),
+                          *bound);
             }
         }
     }
@@ -472,9 +484,8 @@ TEST(ReferenceMotion, TrackAtomBoundCoversWholeExpression) {
     m.pistonExtension = 1;
     EXPECT_FALSE(rm::TrackAtomPositionErrorBound(m));
     m.pistonExtension = 0;
-    for (auto field : {&rm::Motion::base, &rm::Motion::translation,
-                       &rm::Motion::grabberOffset, &rm::Motion::atom,
-                       &rm::Motion::absoluteGrabPosition}) {
+    for (auto field : {&rm::Motion::base, &rm::Motion::translation, &rm::Motion::grabberOffset,
+                       &rm::Motion::atom, &rm::Motion::absoluteGrabPosition}) {
         for (int outside : {-limit - 1, limit + 1}) {
             m.*field = {outside, 0};
             EXPECT_FALSE(rm::TrackAtomPositionErrorBound(m));
@@ -488,16 +499,15 @@ TEST(ReferenceMotion, TrackAtomBoundCoversWholeExpression) {
 
 TEST(ReferenceMotion, TrackAtomBoundCoversIndependentFields) {
     constexpr int limit = 1 << 20;
-    const rm::Hex positions[] = {{0, 0}, {limit, -limit}, {-limit, limit},
-                                 {limit - 1, limit - 3}, {-limit + 3, -limit + 1}};
+    const rm::Hex positions[] = {
+        {0, 0}, {limit, -limit}, {-limit, limit}, {limit - 1, limit - 3}, {-limit + 3, -limit + 1}};
     constexpr int combinations = 5 * 5 * 5 * 5 * 5;
     for (int combination = 0; combination < combinations; ++combination) {
         rm::Motion m;
         m.mechanism = rm::Mechanism::Track;
         int remaining = combination;
-        for (auto field : {&rm::Motion::base, &rm::Motion::translation,
-                           &rm::Motion::grabberOffset, &rm::Motion::atom,
-                           &rm::Motion::absoluteGrabPosition}) {
+        for (auto field : {&rm::Motion::base, &rm::Motion::translation, &rm::Motion::grabberOffset,
+                           &rm::Motion::atom, &rm::Motion::absoluteGrabPosition}) {
             m.*field = positions[remaining % 5];
             remaining /= 5;
         }
@@ -506,14 +516,12 @@ TEST(ReferenceMotion, TrackAtomBoundCoversIndependentFields) {
         for (float t : {0.f, .125f, .5f, .875f, 1.f}) {
             const auto actual = rm::AtomAt(m, t);
             ASSERT_TRUE(actual);
-            const long double u = static_cast<long double>(m.base.u) +
-                m.grabberOffset.u + m.atom.u - m.absoluteGrabPosition.u -
-                m.translation.u * (1.L - t);
-            const long double v = static_cast<long double>(m.base.v) +
-                m.grabberOffset.v + m.atom.v - m.absoluteGrabPosition.v -
-                m.translation.v * (1.L - t);
-            EXPECT_LE(std::abs(actual->x - (82.L * u + 41.L * v)) +
-                      std::abs(actual->y - 71.L * v), *bound)
+            const long double u = static_cast<long double>(m.base.u) + m.grabberOffset.u +
+                                  m.atom.u - m.absoluteGrabPosition.u - m.translation.u * (1.L - t);
+            const long double v = static_cast<long double>(m.base.v) + m.grabberOffset.v +
+                                  m.atom.v - m.absoluteGrabPosition.v - m.translation.v * (1.L - t);
+            EXPECT_LE(std::abs(actual->x - (82.L * u + 41.L * v)) + std::abs(actual->y - 71.L * v),
+                      *bound)
                 << "combination=" << combination << ", t=" << t;
         }
     }
@@ -535,8 +543,7 @@ TEST(ReferenceMotion, TrackFieldCancellationExceedsEndpointScaleUncertainty) {
     ASSERT_EQ(m.baseRotation, 0);
     ASSERT_EQ(m.rotation, 0);
     ASSERT_EQ(m.pistonExtension, 0);
-    for (auto h : {m.base, m.translation, m.grabberOffset, m.atom,
-                   m.absoluteGrabPosition}) {
+    for (auto h : {m.base, m.translation, m.grabberOffset, m.atom, m.absoluteGrabPosition}) {
         EXPECT_GE(h.u, -limit);
         EXPECT_LE(h.u, limit);
         EXPECT_EQ(h.v, 0);
@@ -570,22 +577,23 @@ TEST(ReferenceMotion, TrackFieldCancellationExceedsEndpointScaleUncertainty) {
     const auto pixelX = [](int q, int r) { return 82. * q + 41. * r; };
     const double b = pixelX(m.base.u, m.base.v);
     const double g = pixelX(m.grabberOffset.u, m.grabberOffset.v);
-    const double o = pixelX(m.atom.u - m.absoluteGrabPosition.u,
-                            m.atom.v - m.absoluteGrabPosition.v);
+    const double o =
+        pixelX(m.atom.u - m.absoluteGrabPosition.u, m.atom.v - m.absoluteGrabPosition.v);
     const double p = pixelX(position.q, position.r);
     const double d = pixelX(translation.q, translation.r);
     EXPECT_EQ(o, -85983232.);
     EXPECT_EQ(d, pixelX(m.translation.u, m.translation.v));
     EXPECT_EQ(p, b + g + o - d); // P=B+G+O-T; D=T, not an inferred API mapping.
-    EXPECT_EQ(position.r, m.base.v + m.grabberOffset.v + m.atom.v -
-                          m.absoluteGrabPosition.v - m.translation.v);
+    EXPECT_EQ(position.r,
+              m.base.v + m.grabberOffset.v + m.atom.v - m.absoluteGrabPosition.v - m.translation.v);
     EXPECT_EQ(translation.r, m.translation.v);
     EXPECT_EQ(p + d, 0.);
     // Diagnostic specialization of EndMotions' current zero-angle formula only;
     // no private RasterPoint center/U observation or cell/area-error assertion.
     const double nominal = p + d * t;
-    const double uncertainty = .05 + 16. * std::numeric_limits<float>::epsilon() *
-        (std::abs(p) + std::abs(d)); // C=0, turns=0: no maximumRadius term.
+    const double uncertainty =
+        .05 + 16. * std::numeric_limits<float>::epsilon() *
+                  (std::abs(p) + std::abs(d)); // C=0, turns=0: no maximumRadius term.
     EXPECT_EQ(nominal, -41.);
     EXPECT_DOUBLE_EQ(uncertainty, 0.050312805175781253);
     const double error = std::abs(static_cast<double>(actual->x) - nominal);
@@ -613,13 +621,15 @@ TEST(ReferenceMotion, TrackFieldCancellationExceedsEndpointScaleUncertainty) {
 TEST(ReferenceMotion, TrackBoundsComposeWithContinuousSeparation) {
     namespace cc = opusoptima::verification::continuous;
     const auto ideal = [](const rm::Motion& m) {
-        const double u = static_cast<double>(m.base.u) + m.grabberOffset.u +
-                         m.atom.u - m.absoluteGrabPosition.u - m.translation.u;
-        const double v = static_cast<double>(m.base.v) + m.grabberOffset.v +
-                         m.atom.v - m.absoluteGrabPosition.v - m.translation.v;
-        return cc::Trajectory{{82. * u + 41. * v, 71. * v}, {},
-                              {82. * m.translation.u + 41. * m.translation.v,
-                               71. * m.translation.v}, 0.};
+        const double u = static_cast<double>(m.base.u) + m.grabberOffset.u + m.atom.u -
+                         m.absoluteGrabPosition.u - m.translation.u;
+        const double v = static_cast<double>(m.base.v) + m.grabberOffset.v + m.atom.v -
+                         m.absoluteGrabPosition.v - m.translation.v;
+        return cc::Trajectory{
+            {82. * u + 41. * v, 71. * v},
+            {},
+            {82. * m.translation.u + 41. * m.translation.v, 71. * m.translation.v},
+            0.};
     };
     rm::Motion a;
     a.mechanism = rm::Mechanism::Track;

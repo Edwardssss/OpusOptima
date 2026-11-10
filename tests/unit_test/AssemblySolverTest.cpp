@@ -3,10 +3,10 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <optional>
 #include <fstream>
 #include <limits>
 #include <numeric>
+#include <optional>
 #include <set>
 
 #include "AssemblySolver.hpp"
@@ -14,10 +14,10 @@
 #include "BinaryWriter.hpp"
 #include "CandidateArchive.hpp"
 #include "ChemicalPlanner.hpp"
-#include "SolutionVerifier.hpp"
-#include "RowAssembly.hpp"
 #include "PurificationAssembly.hpp"
 #include "RepoRoot.hpp"
+#include "RowAssembly.hpp"
+#include "SolutionVerifier.hpp"
 
 namespace {
 using namespace opusoptima;
@@ -32,8 +32,10 @@ struct ScopedEmbeddingOff {
         setenv("OPUSOPTIMA_STATIC_EMBEDDING", "off", 1);
     }
     ~ScopedEmbeddingOff() {
-        if (prior) setenv("OPUSOPTIMA_STATIC_EMBEDDING", prior->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_STATIC_EMBEDDING");
+        if (prior)
+            setenv("OPUSOPTIMA_STATIC_EMBEDDING", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_STATIC_EMBEDDING");
     }
 };
 
@@ -41,28 +43,37 @@ struct ScopedCompactLayout {
     std::optional<std::string> prior;
     explicit ScopedCompactLayout(const char* value) {
         if (const auto* existing = std::getenv("OPUSOPTIMA_COMPACT_LAYOUT")) prior = existing;
-        if (value) setenv("OPUSOPTIMA_COMPACT_LAYOUT", value, 1);
-        else unsetenv("OPUSOPTIMA_COMPACT_LAYOUT");
+        if (value)
+            setenv("OPUSOPTIMA_COMPACT_LAYOUT", value, 1);
+        else
+            unsetenv("OPUSOPTIMA_COMPACT_LAYOUT");
     }
     ~ScopedCompactLayout() {
-        if (prior) setenv("OPUSOPTIMA_COMPACT_LAYOUT", prior->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_COMPACT_LAYOUT");
+        if (prior)
+            setenv("OPUSOPTIMA_COMPACT_LAYOUT", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_COMPACT_LAYOUT");
     }
 };
 
 struct ScopedRowClockPortfolioOff {
     std::optional<std::string> priorClock, priorGap;
     ScopedRowClockPortfolioOff() {
-        if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO")) priorClock = existing;
+        if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO"))
+            priorClock = existing;
         if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_GAP_PORTFOLIO")) priorGap = existing;
         setenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO", "off", 1);
         setenv("OPUSOPTIMA_ROW_GAP_PORTFOLIO", "off", 1);
     }
     ~ScopedRowClockPortfolioOff() {
-        if (priorClock) setenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO", priorClock->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO");
-        if (priorGap) setenv("OPUSOPTIMA_ROW_GAP_PORTFOLIO", priorGap->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_ROW_GAP_PORTFOLIO");
+        if (priorClock)
+            setenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO", priorClock->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO");
+        if (priorGap)
+            setenv("OPUSOPTIMA_ROW_GAP_PORTFOLIO", priorGap->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_GAP_PORTFOLIO");
     }
 };
 
@@ -94,34 +105,44 @@ struct ComponentEnvironment {
         if (const auto* value = std::getenv("OPUSOPTIMA_ROW_COMPONENT")) prior = value;
     }
     ~ComponentEnvironment() {
-        if (prior) setenv("OPUSOPTIMA_ROW_COMPONENT", prior->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_ROW_COMPONENT");
+        if (prior)
+            setenv("OPUSOPTIMA_ROW_COMPONENT", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_COMPONENT");
     }
 };
 TEST(AssemblyDiagnostics, ComponentRequiresExactOptInAndSharesQuota) {
     ComponentEnvironment restore;
     std::vector<std::vector<std::byte>> baseline;
     for (const char* mode : {static_cast<const char*>(nullptr), "off", "unknown", "on"}) {
-        if (mode) setenv("OPUSOPTIMA_ROW_COMPONENT", mode, 1);
-        else unsetenv("OPUSOPTIMA_ROW_COMPONENT");
+        if (mode)
+            setenv("OPUSOPTIMA_ROW_COMPONENT", mode, 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_COMPONENT");
         auto p = Pair();
         p.permissionBits = ((1ULL << 29) - 1) & ~(1ULL << 17);
         ASSERT_TRUE(solvers::SupportsComponentRowAssembly(p));
         std::vector<std::vector<std::byte>> submitted;
         AssemblySolver solver;
-        const auto first = solver.CollectVerified(p, [&](const auto& candidate, const auto&) {
-            auto canonical = candidate;
-            canonical.solutionName.clear(); canonical.metrics = {};
-            submitted.push_back(io::BinaryWriter::WriteSolution(canonical));
-            io::VerificationReport report;
-            report.status = io::VerificationStatus::Passed;
-            return report;
-        }, 12);
+        const auto first = solver.CollectVerified(
+            p,
+            [&](const auto& candidate, const auto&) {
+                auto canonical = candidate;
+                canonical.solutionName.clear();
+                canonical.metrics = {};
+                submitted.push_back(io::BinaryWriter::WriteSolution(canonical));
+                io::VerificationReport report;
+                report.status = io::VerificationStatus::Passed;
+                return report;
+            },
+            12);
         EXPECT_FALSE(first.objects.empty());
         EXPECT_LE(submitted.size(), 4U);
         ASSERT_GE(submitted.size(), 2U);
-        if (!mode) baseline = submitted;
-        else if (std::string(mode) != "on") EXPECT_EQ(submitted, baseline);
+        if (!mode)
+            baseline = submitted;
+        else if (std::string(mode) != "on")
+            EXPECT_EQ(submitted, baseline);
         else {
             EXPECT_EQ(submitted.front(), baseline.front());
             EXPECT_EQ(submitted[1], baseline[1]);
@@ -134,8 +155,10 @@ TEST(AssemblyDiagnostics, IneligibleCompactPreservesBaselineCandidatesAndQuota) 
     struct Restore {
         std::optional<std::string> prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_COMPACT_SPARE", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_COMPACT_SPARE");
+            if (prior)
+                setenv("OPUSOPTIMA_COMPACT_SPARE", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_COMPACT_SPARE");
         }
     } restore{value ? std::optional<std::string>(value) : std::nullopt};
     std::vector<std::pair<std::string, std::vector<std::byte>>> baseline;
@@ -145,17 +168,23 @@ TEST(AssemblyDiagnostics, IneligibleCompactPreservesBaselineCandidatesAndQuota) 
         puzzle.name = "arbitrary-no-animismus";
         puzzle.permissionBits = (1ULL << 29) - 1;
         std::vector<std::pair<std::string, std::vector<std::byte>>> submitted;
-        const auto first = AssemblySolver{}.CollectVerified(puzzle, [&](const auto& candidate, const auto& family) {
-            auto canonical = candidate;
-            canonical.solutionName.clear(); canonical.metrics = {};
-            submitted.emplace_back(family, io::BinaryWriter::WriteSolution(canonical));
-            io::VerificationReport report;
-            report.status = io::VerificationStatus::Passed;
-            return report;
-        }, 3);
+        const auto first = AssemblySolver{}.CollectVerified(
+            puzzle,
+            [&](const auto& candidate, const auto& family) {
+                auto canonical = candidate;
+                canonical.solutionName.clear();
+                canonical.metrics = {};
+                submitted.emplace_back(family, io::BinaryWriter::WriteSolution(canonical));
+                io::VerificationReport report;
+                report.status = io::VerificationStatus::Passed;
+                return report;
+            },
+            3);
         EXPECT_FALSE(first.objects.empty());
-        if (std::string(mode) == "off") baseline = submitted;
-        else EXPECT_EQ(submitted, baseline);
+        if (std::string(mode) == "off")
+            baseline = submitted;
+        else
+            EXPECT_EQ(submitted, baseline);
     }
 }
 TEST(AssemblyDiagnostics, WholeFeedSingletonOptInAuthorityFallbackAndDeadline) {
@@ -163,26 +192,33 @@ TEST(AssemblyDiagnostics, WholeFeedSingletonOptInAuthorityFallbackAndDeadline) {
     struct Restore {
         std::optional<std::string> prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_WHOLE_FEED_DOCKING", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_WHOLE_FEED_DOCKING");
+            if (prior)
+                setenv("OPUSOPTIMA_WHOLE_FEED_DOCKING", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_WHOLE_FEED_DOCKING");
         }
     } restore{value ? std::optional<std::string>(value) : std::nullopt};
     const auto root = opusoptima::test::RepoRoot(__FILE__);
-    const auto p = io::BinaryParser::ParsePuzzleFile(
-        root / "asset/puzzle/24hour-1-test/GEN879.puzzle");
+    const auto p =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/24hour-1-test/GEN879.puzzle");
     std::vector<std::byte> baseline;
     for (const char* mode : {static_cast<const char*>(nullptr), "off", "unknown", "1"}) {
-        if (mode) setenv("OPUSOPTIMA_WHOLE_FEED_DOCKING", mode, 1);
-        else unsetenv("OPUSOPTIMA_WHOLE_FEED_DOCKING");
+        if (mode)
+            setenv("OPUSOPTIMA_WHOLE_FEED_DOCKING", mode, 1);
+        else
+            unsetenv("OPUSOPTIMA_WHOLE_FEED_DOCKING");
         AssemblySolver solver;
         std::vector<std::string> stages;
-        const auto first = solver.CollectVerified(p, [&](const auto&, const auto& stage) {
-            stages.push_back(stage);
-            io::VerificationReport report;
-            report.status = io::VerificationStatus::Passed;
-            report.authority = io::VerificationAuthority::LegacyGate;
-            return report;
-        }, 1);
+        const auto first = solver.CollectVerified(
+            p,
+            [&](const auto&, const auto& stage) {
+                stages.push_back(stage);
+                io::VerificationReport report;
+                report.status = io::VerificationStatus::Passed;
+                report.authority = io::VerificationAuthority::LegacyGate;
+                return report;
+            },
+            1);
         ASSERT_EQ(stages.size(), 1);
         if (mode && std::string_view(mode) == "1") {
             EXPECT_EQ(stages.front(), "whole-feed-singleton-receivers");
@@ -196,16 +232,19 @@ TEST(AssemblyDiagnostics, WholeFeedSingletonOptInAuthorityFallbackAndDeadline) {
     setenv("OPUSOPTIMA_WHOLE_FEED_DOCKING", "1", 1);
     AssemblySolver fallback;
     bool dockingRejected = false, fallbackCalled = false;
-    const auto first = fallback.CollectVerified(p, [&](const auto&, const auto& stage) {
-        const bool docking = stage == "whole-feed-singleton-receivers";
-        dockingRejected |= docking;
-        fallbackCalled |= !docking;
-        io::VerificationReport report;
-        report.status = io::VerificationStatus::Passed;
-        report.authority = docking ? io::VerificationAuthority::Independent
-                                   : io::VerificationAuthority::LegacyGate;
-        return report;
-    }, 1);
+    const auto first = fallback.CollectVerified(
+        p,
+        [&](const auto&, const auto& stage) {
+            const bool docking = stage == "whole-feed-singleton-receivers";
+            dockingRejected |= docking;
+            fallbackCalled |= !docking;
+            io::VerificationReport report;
+            report.status = io::VerificationStatus::Passed;
+            report.authority = docking ? io::VerificationAuthority::Independent
+                                       : io::VerificationAuthority::LegacyGate;
+            return report;
+        },
+        1);
     EXPECT_TRUE(dockingRejected);
     EXPECT_TRUE(fallbackCalled);
     EXPECT_NE(first.solutionName, "Closed whole-feed dock and identity scalar handoff");
@@ -213,11 +252,15 @@ TEST(AssemblyDiagnostics, WholeFeedSingletonOptInAuthorityFallbackAndDeadline) {
     expired.SetDeadline(std::chrono::steady_clock::now());
     int dockingCalls = 0;
     try {
-        (void)expired.CollectVerified(p, [&](const auto&, const auto& stage) {
-            dockingCalls += stage == "whole-feed-singleton-receivers";
-            return io::VerificationReport{};
-        }, 1);
-    } catch (const std::exception&) {}
+        (void)expired.CollectVerified(
+            p,
+            [&](const auto&, const auto& stage) {
+                dockingCalls += stage == "whole-feed-singleton-receivers";
+                return io::VerificationReport{};
+            },
+            1);
+    } catch (const std::exception&) {
+    }
     EXPECT_EQ(dockingCalls, 0);
 }
 TEST(AssemblyDiagnostics, StaticEmbeddingDefaultExplicitOffQuotaFirstAndDeadline) {
@@ -225,32 +268,46 @@ TEST(AssemblyDiagnostics, StaticEmbeddingDefaultExplicitOffQuotaFirstAndDeadline
     struct Restore {
         std::optional<std::string> prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_STATIC_EMBEDDING", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_STATIC_EMBEDDING");
+            if (prior)
+                setenv("OPUSOPTIMA_STATIC_EMBEDDING", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_STATIC_EMBEDDING");
         }
     } restore{value ? std::optional<std::string>(value) : std::nullopt};
     const auto root = opusoptima::test::RepoRoot(__FILE__);
-    const auto p = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/campaign/ch2/P021.puzzle");
+    const auto p =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/campaign/ch2/P021.puzzle");
     std::vector<std::byte> originalFirst;
     for (const char* mode : {static_cast<const char*>(nullptr), "off", "unknown", "on"}) {
-        if(mode) setenv("OPUSOPTIMA_STATIC_EMBEDDING",mode,1); else unsetenv("OPUSOPTIMA_STATIC_EMBEDDING");
-        for (std::size_t cap : {1U,12U}) for(bool expire : {false,true}) {
-            AssemblySolver solver;
-            std::size_t calls=0; bool embedding=false;
-            const auto first=solver.CollectVerified(p,[&](const auto& candidate,const auto& stage) {
-                if(calls++==0) {
-                    auto bytes=io::BinaryWriter::WriteSolution(candidate);
-                    if(originalFirst.empty()) originalFirst=bytes;
-                    EXPECT_EQ(originalFirst,bytes);
-                }
-                embedding |= stage=="portfolio-static-embedding";
-                if(expire) solver.SetDeadline(std::chrono::steady_clock::now());
-                io::VerificationReport report; report.status=io::VerificationStatus::Passed; report.authority=io::VerificationAuthority::LegacyGate; return report;
-            },cap);
-            EXPECT_FALSE(first.objects.empty());
-            EXPECT_LE(calls,std::min(cap,std::size_t{4}));
-            EXPECT_EQ(embedding,(!mode || std::string(mode)!="off") && cap>1 && !expire);
-        }
+        if (mode)
+            setenv("OPUSOPTIMA_STATIC_EMBEDDING", mode, 1);
+        else
+            unsetenv("OPUSOPTIMA_STATIC_EMBEDDING");
+        for (std::size_t cap : {1U, 12U})
+            for (bool expire : {false, true}) {
+                AssemblySolver solver;
+                std::size_t calls = 0;
+                bool embedding = false;
+                const auto first = solver.CollectVerified(
+                    p,
+                    [&](const auto& candidate, const auto& stage) {
+                        if (calls++ == 0) {
+                            auto bytes = io::BinaryWriter::WriteSolution(candidate);
+                            if (originalFirst.empty()) originalFirst = bytes;
+                            EXPECT_EQ(originalFirst, bytes);
+                        }
+                        embedding |= stage == "portfolio-static-embedding";
+                        if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
+                        io::VerificationReport report;
+                        report.status = io::VerificationStatus::Passed;
+                        report.authority = io::VerificationAuthority::LegacyGate;
+                        return report;
+                    },
+                    cap);
+                EXPECT_FALSE(first.objects.empty());
+                EXPECT_LE(calls, std::min(cap, std::size_t{4}));
+                EXPECT_EQ(embedding, (!mode || std::string(mode) != "off") && cap > 1 && !expire);
+            }
     }
 }
 
@@ -259,17 +316,22 @@ TEST(AssemblyDiagnostics, StaticReactionDefaultOffDomainQuotaAndFirst) {
     struct Restore {
         std::optional<std::string> prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_STATIC_REACTION", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_STATIC_REACTION");
+            if (prior)
+                setenv("OPUSOPTIMA_STATIC_REACTION", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_STATIC_REACTION");
         }
     } restore{value ? std::optional<std::string>(value) : std::nullopt};
     const auto root = opusoptima::test::RepoRoot(__FILE__);
-    const auto domain = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/campaign/ch4/P032.puzzle");
+    const auto domain =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/campaign/ch4/P032.puzzle");
     std::vector<std::byte> originalFirst;
     std::vector<std::pair<std::string, std::vector<std::byte>>> externalBaseline;
     for (const char* mode : {"off", static_cast<const char*>(nullptr), "on", "unknown"}) {
-        if (mode) setenv("OPUSOPTIMA_STATIC_REACTION", mode, 1);
-        else unsetenv("OPUSOPTIMA_STATIC_REACTION");
+        if (mode)
+            setenv("OPUSOPTIMA_STATIC_REACTION", mode, 1);
+        else
+            unsetenv("OPUSOPTIMA_STATIC_REACTION");
         const bool enabled = !mode || std::string(mode) != "off";
         for (bool external : {false, true}) {
             for (std::size_t cap : {1U, 12U}) {
@@ -278,37 +340,48 @@ TEST(AssemblyDiagnostics, StaticReactionDefaultOffDomainQuotaAndFirst) {
                     AssemblySolver solver;
                     solver.EnableExperimentalSharedAssembly(true);
                     std::vector<std::pair<std::string, std::vector<std::byte>>> submitted;
-                    const auto first = solver.CollectVerified(puzzle, [&](const auto& candidate, const auto& stage) {
-                        auto canonical = candidate;
-                        canonical.metrics = {};
-                        submitted.emplace_back(stage, io::BinaryWriter::WriteSolution(canonical));
-                        if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
-                        io::VerificationReport report;
-                        report.status = io::VerificationStatus::Passed;
-                        report.authority = io::VerificationAuthority::LegacyGate;
-                        return report;
-                    }, cap);
+                    const auto first = solver.CollectVerified(
+                        puzzle,
+                        [&](const auto& candidate, const auto& stage) {
+                            auto canonical = candidate;
+                            canonical.metrics = {};
+                            submitted.emplace_back(stage,
+                                                   io::BinaryWriter::WriteSolution(canonical));
+                            if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
+                            io::VerificationReport report;
+                            report.status = io::VerificationStatus::Passed;
+                            report.authority = io::VerificationAuthority::LegacyGate;
+                            return report;
+                        },
+                        cap);
                     ASSERT_FALSE(submitted.empty());
                     auto canonicalFirst = first;
                     canonicalFirst.metrics = {};
-                    EXPECT_EQ(io::BinaryWriter::WriteSolution(canonicalFirst), submitted.front().second);
+                    EXPECT_EQ(io::BinaryWriter::WriteSolution(canonicalFirst),
+                              submitted.front().second);
                     EXPECT_LE(submitted.size(), std::min(cap, std::size_t{4}));
-                    const bool station = std::any_of(submitted.begin(), submitted.end(), [](const auto& item) {
-                        return item.first == "portfolio-static-reaction";
-                    });
+                    const bool station =
+                        std::any_of(submitted.begin(), submitted.end(), [](const auto& item) {
+                            return item.first == "portfolio-static-reaction";
+                        });
                     EXPECT_EQ(station, enabled && !external && cap > 1 && !expire);
                     if (!external) {
                         if (originalFirst.empty()) originalFirst = submitted.front().second;
                         EXPECT_EQ(submitted.front().second, originalFirst);
                     } else if (cap == 12 && !expire) {
-                        if (mode && std::string(mode) == "off") externalBaseline = submitted;
-                        else EXPECT_EQ(submitted, externalBaseline);
+                        if (mode && std::string(mode) == "off")
+                            externalBaseline = submitted;
+                        else
+                            EXPECT_EQ(submitted, externalBaseline);
                     }
                 }
             }
         }
         int calls = 0;
-        (void)AssemblySolver{}.SolveAccepted(domain, [&](const auto&) { ++calls; return true; });
+        (void)AssemblySolver{}.SolveAccepted(domain, [&](const auto&) {
+            ++calls;
+            return true;
+        });
         EXPECT_EQ(calls, 1);
     }
 }
@@ -318,38 +391,47 @@ TEST(AssemblyDiagnostics, StaticPurificationReusesReactionSlotAndPreservesFirst)
     struct Restore {
         std::optional<std::string> prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_STATIC_REACTION", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_STATIC_REACTION");
+            if (prior)
+                setenv("OPUSOPTIMA_STATIC_REACTION", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_STATIC_REACTION");
         }
     } restore{value ? std::optional<std::string>(value) : std::nullopt};
     const auto root = opusoptima::test::RepoRoot(__FILE__);
-    const auto p = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/edge-cases/c988640836512960.puzzle");
+    const auto p =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/edge-cases/c988640836512960.puzzle");
     std::vector<std::byte> originalFirst;
     // Rejected and nonnative purification preserve the embedding opportunity.
     for (int mode = 0; mode < 7; ++mode) {
-        if (mode == 0) setenv("OPUSOPTIMA_STATIC_REACTION", "off", 1);
-        else unsetenv("OPUSOPTIMA_STATIC_REACTION");
+        if (mode == 0)
+            setenv("OPUSOPTIMA_STATIC_REACTION", "off", 1);
+        else
+            unsetenv("OPUSOPTIMA_STATIC_REACTION");
         AssemblySolver solver;
         std::size_t calls = 0;
         bool purification = false, embedding = false;
         const std::size_t cap = mode == 2 ? 1 : 3;
-        const auto first = solver.CollectVerified(p, [&](const auto& candidate, const auto& stage) {
-            if (calls++ == 0) {
-                const auto bytes = io::BinaryWriter::WriteSolution(candidate);
-                if (originalFirst.empty()) originalFirst = bytes;
-                EXPECT_EQ(bytes, originalFirst);
-            }
-            const bool isPurification = stage == "portfolio-static-reaction-purification";
-            purification |= isPurification;
-            embedding |= stage == "portfolio-static-embedding";
-            if (mode == 3) solver.SetDeadline(std::chrono::steady_clock::now());
-            io::VerificationReport report;
-            report.status = mode == 5 && isPurification ? io::VerificationStatus::Rejected :
-                io::VerificationStatus::Passed;
-            report.authority = mode == 4 || (mode == 6 && isPurification) ?
-                io::VerificationAuthority::Independent : io::VerificationAuthority::LegacyGate;
-            return report;
-        }, cap);
+        const auto first = solver.CollectVerified(
+            p,
+            [&](const auto& candidate, const auto& stage) {
+                if (calls++ == 0) {
+                    const auto bytes = io::BinaryWriter::WriteSolution(candidate);
+                    if (originalFirst.empty()) originalFirst = bytes;
+                    EXPECT_EQ(bytes, originalFirst);
+                }
+                const bool isPurification = stage == "portfolio-static-reaction-purification";
+                purification |= isPurification;
+                embedding |= stage == "portfolio-static-embedding";
+                if (mode == 3) solver.SetDeadline(std::chrono::steady_clock::now());
+                io::VerificationReport report;
+                report.status = mode == 5 && isPurification ? io::VerificationStatus::Rejected
+                                                            : io::VerificationStatus::Passed;
+                report.authority = mode == 4 || (mode == 6 && isPurification)
+                                       ? io::VerificationAuthority::Independent
+                                       : io::VerificationAuthority::LegacyGate;
+                return report;
+            },
+            cap);
         EXPECT_EQ(io::BinaryWriter::WriteSolution(first), originalFirst);
         EXPECT_EQ(purification, mode == 1 || mode == 5 || mode == 6);
         EXPECT_EQ(embedding, mode == 0 || mode == 5 || mode == 6);
@@ -363,12 +445,15 @@ TEST(AssemblyDiagnostics, SingletonChainUsesRemainingSlotAndRetainsFirstAndStati
     struct Restore {
         std::optional<std::string> prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN");
+            if (prior)
+                setenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN");
         }
     } restore{value ? std::optional<std::string>(value) : std::nullopt};
     const auto root = opusoptima::test::RepoRoot(__FILE__);
-    const auto p = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/campaign/ch4/P036.puzzle");
+    const auto p =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/campaign/ch4/P036.puzzle");
     std::vector<std::byte> originalFirst, originalStatic;
     // Additional modes cover depths two through four, direct target supply,
     // nearest-source selection and explicit on at the original depth five.
@@ -377,51 +462,61 @@ TEST(AssemblyDiagnostics, SingletonChainUsesRemainingSlotAndRetainsFirstAndStati
         auto puzzle = p;
         const auto target = puzzle.outputs[0].atoms[0].type;
         if (mode >= 9 && mode <= 11)
-            puzzle.inputs[0].atoms[0].type = static_cast<decltype(target)>(
-                static_cast<int>(target) + mode - 7);
+            puzzle.inputs[0].atoms[0].type =
+                static_cast<decltype(target)>(static_cast<int>(target) + mode - 7);
         if (mode == 12 || mode == 13) {
             auto feed = puzzle.inputs[0];
-            feed.atoms[0].type = static_cast<decltype(target)>(
-                static_cast<int>(target) + (mode == 13 ? 3 : 0));
+            feed.atoms[0].type =
+                static_cast<decltype(target)>(static_cast<int>(target) + (mode == 13 ? 3 : 0));
             puzzle.inputs.push_back(feed);
         }
         EXPECT_TRUE(solvers::SupportsSingletonPurificationChain(puzzle));
         EXPECT_EQ(solvers::AdmitsSingletonPurificationChain(puzzle),
                   mode != 9 && mode != 10 && mode != 12 && mode != 13);
-        if (mode == 0) setenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN", "off", 1);
-        else if (mode == 8) setenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN", "invalid", 1);
-        else if (mode == 14) setenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN", "on", 1);
-        else unsetenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN");
+        if (mode == 0)
+            setenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN", "off", 1);
+        else if (mode == 8)
+            setenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN", "invalid", 1);
+        else if (mode == 14)
+            setenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN", "on", 1);
+        else
+            unsetenv("OPUSOPTIMA_SINGLETON_PURIFICATION_CHAIN");
         AssemblySolver solver;
         std::vector<std::string> stages;
         const std::size_t cap = mode == 2 ? 1 : mode == 3 ? 2 : 3;
         const bool originalPuzzle = mode < 9 || mode == 14;
-        const auto first = solver.CollectVerified(puzzle, [&](const auto& candidate, const auto& stage) {
-            stages.push_back(stage);
-            const auto bytes = io::BinaryWriter::WriteSolution(candidate);
-            if (stages.size() == 1 && originalPuzzle) {
-                if (originalFirst.empty()) originalFirst = bytes;
-                EXPECT_EQ(bytes, originalFirst);
-            }
-            if (stage == "portfolio-static-reaction-purification" && originalPuzzle) {
-                if (originalStatic.empty()) originalStatic = bytes;
-                EXPECT_EQ(bytes, originalStatic);
-            }
-            if (mode == 4) solver.SetDeadline(std::chrono::steady_clock::now());
-            io::VerificationReport report;
-            report.status = mode == 7 && stage == "portfolio-singleton-purification-chain" ?
-                io::VerificationStatus::Rejected : io::VerificationStatus::Passed;
-            report.authority = mode == 5 || (mode == 6 &&
-                stage == "portfolio-singleton-purification-chain") ?
-                io::VerificationAuthority::Independent : io::VerificationAuthority::LegacyGate;
-            return report;
-        }, cap);
+        const auto first = solver.CollectVerified(
+            puzzle,
+            [&](const auto& candidate, const auto& stage) {
+                stages.push_back(stage);
+                const auto bytes = io::BinaryWriter::WriteSolution(candidate);
+                if (stages.size() == 1 && originalPuzzle) {
+                    if (originalFirst.empty()) originalFirst = bytes;
+                    EXPECT_EQ(bytes, originalFirst);
+                }
+                if (stage == "portfolio-static-reaction-purification" && originalPuzzle) {
+                    if (originalStatic.empty()) originalStatic = bytes;
+                    EXPECT_EQ(bytes, originalStatic);
+                }
+                if (mode == 4) solver.SetDeadline(std::chrono::steady_clock::now());
+                io::VerificationReport report;
+                report.status = mode == 7 && stage == "portfolio-singleton-purification-chain"
+                                    ? io::VerificationStatus::Rejected
+                                    : io::VerificationStatus::Passed;
+                report.authority =
+                    mode == 5 || (mode == 6 && stage == "portfolio-singleton-purification-chain")
+                        ? io::VerificationAuthority::Independent
+                        : io::VerificationAuthority::LegacyGate;
+                return report;
+            },
+            cap);
         if (originalPuzzle) EXPECT_EQ(io::BinaryWriter::WriteSolution(first), originalFirst);
         EXPECT_EQ(std::count(stages.begin(), stages.end(), "portfolio-static-embedding"),
                   mode == 12 ? 1 : 0);
         const bool chain = mode == 1 || mode == 6 || mode == 7 || mode == 11 || mode == 14;
-        EXPECT_EQ(std::count(stages.begin(), stages.end(), "portfolio-singleton-purification-chain"),
-                  chain ? 1 : 0);
+        EXPECT_EQ(
+            std::count(stages.begin(), stages.end(), "portfolio-singleton-purification-chain"),
+            chain ? 1 : 0);
         if (chain) {
             ASSERT_EQ(stages.size(), 3U);
             EXPECT_EQ(stages[1], "portfolio-static-reaction-purification");
@@ -437,17 +532,20 @@ TEST(AssemblyDiagnostics, PortfolioDeduplicatesAndPreservesFirst) {
     p.permissionBits = (1ULL << 29) - 1;
     std::vector<std::vector<std::byte>> submitted;
     AssemblySolver solver;
-    auto first = solver.CollectVerified(p, [&](const auto& candidate, const auto&) {
-        auto normalized = candidate;
-        normalized.metrics = {};
-        normalized.solutionName.clear();
-        auto bytes = io::BinaryWriter::WriteSolution(normalized);
-        EXPECT_EQ(std::count(submitted.begin(), submitted.end(), bytes), 0);
-        submitted.push_back(bytes);
-        io::VerificationReport report;
-        report.status = io::VerificationStatus::Passed;
-        return report;
-    }, 5);
+    auto first = solver.CollectVerified(
+        p,
+        [&](const auto& candidate, const auto&) {
+            auto normalized = candidate;
+            normalized.metrics = {};
+            normalized.solutionName.clear();
+            auto bytes = io::BinaryWriter::WriteSolution(normalized);
+            EXPECT_EQ(std::count(submitted.begin(), submitted.end(), bytes), 0);
+            submitted.push_back(bytes);
+            io::VerificationReport report;
+            report.status = io::VerificationStatus::Passed;
+            return report;
+        },
+        5);
     first.metrics = {};
     first.solutionName.clear();
     ASSERT_GE(submitted.size(), 2U);
@@ -462,14 +560,17 @@ TEST(AssemblyDiagnostics, PortfolioRetainsFirstWhenAlternativesRejectOrBudgetExp
         AssemblySolver solver;
         int submissions = 0;
         std::vector<std::byte> acceptedBytes;
-        auto first = solver.CollectVerified(p, [&](const auto& candidate, const auto&) {
-            if (submissions == 0) acceptedBytes = io::BinaryWriter::WriteSolution(candidate);
-            io::VerificationReport report;
-            report.status = ++submissions == 1 ? io::VerificationStatus::Passed
-                                              : io::VerificationStatus::Rejected;
-            if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
-            return report;
-        }, 4);
+        auto first = solver.CollectVerified(
+            p,
+            [&](const auto& candidate, const auto&) {
+                if (submissions == 0) acceptedBytes = io::BinaryWriter::WriteSolution(candidate);
+                io::VerificationReport report;
+                report.status = ++submissions == 1 ? io::VerificationStatus::Passed
+                                                   : io::VerificationStatus::Rejected;
+                if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
+                return report;
+            },
+            4);
         EXPECT_FALSE(first.objects.empty());
         EXPECT_EQ(io::BinaryWriter::WriteSolution(first), acceptedBytes);
         if (expire) {
@@ -483,10 +584,10 @@ TEST(AssemblyDiagnostics, PortfolioRetainsFirstWhenAlternativesRejectOrBudgetExp
 TEST(AssemblyDiagnostics, CompactRelayPreservesParentCapsAndDeadline) {
     auto puzzle = Pair();
     puzzle.permissionBits = (1ULL << 32) - 1;
-    puzzle.inputs = {{{{core::AtomType::Air, {0, 0}}, {core::AtomType::Air, {1, 0}}},
-                       {{1, {0, 0}, {1, 0}}}}};
-    puzzle.outputs = {{{{core::AtomType::Salt, {0, 0}}, {core::AtomType::Salt, {1, 0}}},
-                        {{1, {0, 0}, {1, 0}}}}};
+    puzzle.inputs = {
+        {{{core::AtomType::Air, {0, 0}}, {core::AtomType::Air, {1, 0}}}, {{1, {0, 0}, {1, 0}}}}};
+    puzzle.outputs = {
+        {{{core::AtomType::Salt, {0, 0}}, {core::AtomType::Salt, {1, 0}}}, {{1, {0, 0}, {1, 0}}}}};
     for (bool enabled : {false, true}) {
         for (bool expire : {false, true}) {
             for (std::size_t cap : {1U, 3U}) {
@@ -495,15 +596,18 @@ TEST(AssemblyDiagnostics, CompactRelayPreservesParentCapsAndDeadline) {
                 std::vector<std::byte> parent;
                 std::size_t submissions = 0;
                 bool relay = false;
-                const auto first = solver.CollectVerified(puzzle, [&](const auto& candidate, const auto& stage) {
-                    ++submissions;
-                    if (submissions == 1) parent = io::BinaryWriter::WriteSolution(candidate);
-                    if (stage == "portfolio-compact-chemistry-relay") relay = true;
-                    if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
-                    io::VerificationReport report;
-                    report.status = io::VerificationStatus::Passed;
-                    return report;
-                }, cap);
+                const auto first = solver.CollectVerified(
+                    puzzle,
+                    [&](const auto& candidate, const auto& stage) {
+                        ++submissions;
+                        if (submissions == 1) parent = io::BinaryWriter::WriteSolution(candidate);
+                        if (stage == "portfolio-compact-chemistry-relay") relay = true;
+                        if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
+                        io::VerificationReport report;
+                        report.status = io::VerificationStatus::Passed;
+                        return report;
+                    },
+                    cap);
                 EXPECT_EQ(io::BinaryWriter::WriteSolution(first), parent);
                 EXPECT_LE(submissions, cap);
                 EXPECT_EQ(relay, enabled && !expire && cap > 1);
@@ -515,20 +619,24 @@ TEST(AssemblyDiagnostics, CompactRelayPreservesParentCapsAndDeadline) {
     AssemblySolver solver;
     solver.EnableExperimentalCompactRelay(true);
     std::size_t submissions = 0;
-    solver.CollectVerified(multi, [&](const auto&, const auto& stage) {
-        ++submissions;
-        EXPECT_NE(stage, "portfolio-compact-chemistry-relay");
-        io::VerificationReport report;
-        report.status = io::VerificationStatus::Passed;
-        return report;
-    }, 3);
+    solver.CollectVerified(
+        multi,
+        [&](const auto&, const auto& stage) {
+            ++submissions;
+            EXPECT_NE(stage, "portfolio-compact-chemistry-relay");
+            io::VerificationReport report;
+            report.status = io::VerificationStatus::Passed;
+            return report;
+        },
+        3);
     EXPECT_EQ(submissions, 1U);
 }
 
 TEST(AssemblyDiagnostics, BatchConsumerRetainsFirstAndRejectsWithinParentCap) {
     ScopedEmbeddingOff isolateLegacyPortfolio;
     const auto root = opusoptima::test::RepoRoot(__FILE__);
-    const auto puzzle = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal8/P102.puzzle");
+    const auto puzzle =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal8/P102.puzzle");
     for (bool enabled : {false, true}) {
         for (bool expire : {false, true}) {
             AssemblySolver solver;
@@ -539,16 +647,19 @@ TEST(AssemblyDiagnostics, BatchConsumerRetainsFirstAndRejectsWithinParentCap) {
             std::vector<std::byte> parent;
             std::size_t submissions = 0;
             bool bypass = false;
-            const auto first = solver.CollectVerified(puzzle, [&](const auto& candidate, const auto& stage) {
-                ++submissions;
-                if (submissions == 1) parent = io::BinaryWriter::WriteSolution(candidate);
-                bypass |= stage == "portfolio-shared-batch-consumer";
-                io::VerificationReport report;
-                report.status = submissions <= 2 ? io::VerificationStatus::Passed
-                                                 : io::VerificationStatus::Rejected;
-                if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
-                return report;
-            }, 3);
+            const auto first = solver.CollectVerified(
+                puzzle,
+                [&](const auto& candidate, const auto& stage) {
+                    ++submissions;
+                    if (submissions == 1) parent = io::BinaryWriter::WriteSolution(candidate);
+                    bypass |= stage == "portfolio-shared-batch-consumer";
+                    io::VerificationReport report;
+                    report.status = submissions <= 2 ? io::VerificationStatus::Passed
+                                                     : io::VerificationStatus::Rejected;
+                    if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
+                    return report;
+                },
+                3);
             EXPECT_EQ(io::BinaryWriter::WriteSolution(first), parent);
             EXPECT_LE(submissions, 3U);
             EXPECT_EQ(bypass, enabled && !expire);
@@ -558,7 +669,8 @@ TEST(AssemblyDiagnostics, BatchConsumerRetainsFirstAndRejectsWithinParentCap) {
 
 TEST(AssemblyDiagnostics, NearCacheRetainsFirstAndRejectsWithinParentCap) {
     const auto root = opusoptima::test::RepoRoot(__FILE__);
-    const auto puzzle = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal8/P102.puzzle");
+    const auto puzzle =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal8/P102.puzzle");
     for (bool enabled : {false, true}) {
         for (bool expire : {false, true}) {
             AssemblySolver solver;
@@ -570,16 +682,19 @@ TEST(AssemblyDiagnostics, NearCacheRetainsFirstAndRejectsWithinParentCap) {
             std::vector<std::byte> parent;
             std::size_t submissions = 0;
             bool bypass = false;
-            const auto first = solver.CollectVerified(puzzle, [&](const auto& candidate, const auto& stage) {
-                ++submissions;
-                if (submissions == 1) parent = io::BinaryWriter::WriteSolution(candidate);
-                bypass |= stage == "portfolio-shared-near-cache";
-                io::VerificationReport report;
-                report.status = submissions <= 2 ? io::VerificationStatus::Passed
-                                                 : io::VerificationStatus::Rejected;
-                if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
-                return report;
-            }, 3);
+            const auto first = solver.CollectVerified(
+                puzzle,
+                [&](const auto& candidate, const auto& stage) {
+                    ++submissions;
+                    if (submissions == 1) parent = io::BinaryWriter::WriteSolution(candidate);
+                    bypass |= stage == "portfolio-shared-near-cache";
+                    io::VerificationReport report;
+                    report.status = submissions <= 2 ? io::VerificationStatus::Passed
+                                                     : io::VerificationStatus::Rejected;
+                    if (expire) solver.SetDeadline(std::chrono::steady_clock::now());
+                    return report;
+                },
+                3);
             EXPECT_EQ(io::BinaryWriter::WriteSolution(first), parent);
             EXPECT_LE(submissions, 3U);
             EXPECT_EQ(bypass, enabled && !expire);
@@ -593,12 +708,15 @@ TEST(AssemblyDiagnostics, PortfolioNeverExpandsCallerAcceptedCap) {
         p.permissionBits = (1ULL << 29) - 1;
         AssemblySolver solver;
         std::size_t submissions = 0;
-        auto first = solver.CollectVerified(p, [&](const auto&, const auto&) {
-            ++submissions;
-            io::VerificationReport report;
-            report.status = io::VerificationStatus::Passed;
-            return report;
-        }, cap);
+        auto first = solver.CollectVerified(
+            p,
+            [&](const auto&, const auto&) {
+                ++submissions;
+                io::VerificationReport report;
+                report.status = io::VerificationStatus::Passed;
+                return report;
+            },
+            cap);
         EXPECT_FALSE(first.objects.empty());
         EXPECT_LE(submissions, cap);
     }
@@ -610,12 +728,15 @@ TEST(AssemblyDiagnostics, MultipleOutputsStopFallbackAfterFirstVerified) {
     p.permissionBits = (1ULL << 29) - 1;
     AssemblySolver solver;
     std::size_t submissions = 0;
-    auto first = solver.CollectVerified(p, [&](const auto&, const auto&) {
-        ++submissions;
-        io::VerificationReport report;
-        report.status = io::VerificationStatus::Passed;
-        return report;
-    }, 3);
+    auto first = solver.CollectVerified(
+        p,
+        [&](const auto&, const auto&) {
+            ++submissions;
+            io::VerificationReport report;
+            report.status = io::VerificationStatus::Passed;
+            return report;
+        },
+        3);
     EXPECT_FALSE(first.objects.empty());
     EXPECT_EQ(submissions, 1U);
 }
@@ -900,30 +1021,35 @@ TEST_F(AssemblyVerifierTest, PortfolioArchivesDistinctRealStructures) {
     solver.SetDeadline(std::chrono::steady_clock::now() + std::chrono::seconds(10));
     std::set<std::string> accepted;
     std::array<std::optional<int>, 3> best;
-    auto first = solver.CollectVerified(p, [&](const auto& candidate, const auto& family) {
-        auto report = archive.Submit(candidate, family);
-        if (report.Passed()) {
-            accepted.insert(family);
-            const std::array<int, 3> scores{report.metrics.cost, report.metrics.cycles, report.metrics.area};
-            for (std::size_t i = 0; i < best.size(); ++i)
-                best[i] = best[i] ? std::min(*best[i], scores[i]) : scores[i];
-        }
-        const auto& slots = archive.Slots();
-        for (std::size_t i = 0; i < best.size(); ++i) {
-            if (!best[i]) continue;
-            EXPECT_TRUE(slots[i]);
-            if (!slots[i]) continue;
-            const auto& m = slots[i]->verification.metrics;
-            EXPECT_EQ((std::array<int, 3>{m.cost, m.cycles, m.area})[i], *best[i]);
-        }
-        return report;
-    }, 4);
+    auto first = solver.CollectVerified(
+        p,
+        [&](const auto& candidate, const auto& family) {
+            auto report = archive.Submit(candidate, family);
+            if (report.Passed()) {
+                accepted.insert(family);
+                const std::array<int, 3> scores{report.metrics.cost, report.metrics.cycles,
+                                                report.metrics.area};
+                for (std::size_t i = 0; i < best.size(); ++i)
+                    best[i] = best[i] ? std::min(*best[i], scores[i]) : scores[i];
+            }
+            const auto& slots = archive.Slots();
+            for (std::size_t i = 0; i < best.size(); ++i) {
+                if (!best[i]) continue;
+                EXPECT_TRUE(slots[i]);
+                if (!slots[i]) continue;
+                const auto& m = slots[i]->verification.metrics;
+                EXPECT_EQ((std::array<int, 3>{m.cost, m.cycles, m.area})[i], *best[i]);
+            }
+            return report;
+        },
+        4);
     ASSERT_EQ(accepted.size(), 4U);
     ASSERT_TRUE(archive.First());
     EXPECT_EQ(first.objects.size(), archive.First()->solution.objects.size());
     EXPECT_TRUE(archive.Publish({}).Passed());
     EXPECT_EQ(io::BinaryParser::ReadAllBytes(solutionPath), archive.First()->bytes);
-    for (const auto& slot : archive.Slots()) ASSERT_TRUE(slot);
+    for (const auto& slot : archive.Slots())
+        ASSERT_TRUE(slot);
     EXPECT_LT(archive.Slots()[0]->verification.metrics.cost,
               archive.First()->verification.metrics.cost);
     std::filesystem::remove(solutionPath.string() + ".objectives.json");
@@ -939,10 +1065,12 @@ TEST_F(AssemblyVerifierTest, PortfolioSemanticTransformsAndPermissionBoundary) {
         auto p = Pair();
         p.permissionBits = (1ULL << 29) - 1;
         auto transform = [&](core::HexCoord c) {
-            for (int i = 0; i < rotation; ++i) c = {-c.r, c.q + c.r};
+            for (int i = 0; i < rotation; ++i)
+                c = {-c.r, c.q + c.r};
             return core::HexCoord{c.q + 3, c.r - 2};
         };
-        for (auto& atom : p.outputs[0].atoms) atom.position = transform(atom.position);
+        for (auto& atom : p.outputs[0].atoms)
+            atom.position = transform(atom.position);
         for (auto& bond : p.outputs[0].bonds) {
             bond.from = transform(bond.from);
             bond.to = transform(bond.to);
@@ -952,13 +1080,16 @@ TEST_F(AssemblyVerifierTest, PortfolioSemanticTransformsAndPermissionBoundary) {
         std::set<std::string> families;
         auto solver = AssemblySolver{};
         solver.SetDeadline(std::chrono::steady_clock::now() + std::chrono::seconds(2));
-        auto first = solver.CollectVerified(p, [&](const auto& candidate, const auto& family) {
-            io::BinaryWriter::WriteSolutionFile(solutionPath, candidate);
-            auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
-            EXPECT_TRUE(report.Passed()) << family << ": " << report.detail;
-            if (report.Passed()) families.insert(family);
-            return report;
-        }, 4);
+        auto first = solver.CollectVerified(
+            p,
+            [&](const auto& candidate, const auto& family) {
+                io::BinaryWriter::WriteSolutionFile(solutionPath, candidate);
+                auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
+                EXPECT_TRUE(report.Passed()) << family << ": " << report.detail;
+                if (report.Passed()) families.insert(family);
+                return report;
+            },
+            4);
         EXPECT_FALSE(first.objects.empty());
         EXPECT_TRUE(families.count("portfolio-row-compact") ||
                     families.count("portfolio-row-retimed"));
@@ -967,15 +1098,18 @@ TEST_F(AssemblyVerifierTest, PortfolioSemanticTransformsAndPermissionBoundary) {
         WriteGeneratedPuzzle(puzzlePath, p);
         bool permissionAccepted = false;
         solver.SetDeadline(std::chrono::steady_clock::now() + std::chrono::seconds(2));
-        solver.CollectVerified(p, [&](const auto& candidate, const auto& family) {
-            EXPECT_NE(family, "portfolio-row-compact");
-            EXPECT_NE(family, "portfolio-row-retimed");
-            EXPECT_NE(family, "portfolio-row-clearance");
-            io::BinaryWriter::WriteSolutionFile(solutionPath, candidate);
-            auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
-            permissionAccepted |= report.Passed();
-            return report;
-        }, 4);
+        solver.CollectVerified(
+            p,
+            [&](const auto& candidate, const auto& family) {
+                EXPECT_NE(family, "portfolio-row-compact");
+                EXPECT_NE(family, "portfolio-row-retimed");
+                EXPECT_NE(family, "portfolio-row-clearance");
+                io::BinaryWriter::WriteSolutionFile(solutionPath, candidate);
+                auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
+                permissionAccepted |= report.Passed();
+                return report;
+            },
+            4);
         EXPECT_TRUE(permissionAccepted);
     }
 }
@@ -1979,9 +2113,10 @@ TEST_F(AssemblyVerifierTest, IndependentOutputs) {
 }
 TEST_F(AssemblyVerifierTest, RowEmptyResetRetiming) {
     for (int mutation = 0; mutation < 3; ++mutation) {
-        auto p = Generated({{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}},
-                           {{0, 1}, {1, 2}, {0, 3}, {2, 4}});
-        for (auto& input : p.inputs) input.atoms[0].type = core::AtomType::Salt;
+        auto p =
+            Generated({{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}}, {{0, 1}, {1, 2}, {0, 3}, {2, 4}});
+        for (auto& input : p.inputs)
+            input.atoms[0].type = core::AtomType::Salt;
         for (auto& atom : p.outputs[0].atoms) {
             atom.type = core::AtomType::Salt;
             if (mutation == 1) atom.position = core::Add(atom.position, {4, -3});
@@ -2001,21 +2136,22 @@ TEST_F(AssemblyVerifierTest, RowEmptyResetRetiming) {
         // This test isolates retiming equivalence; the compact scheduled
         // layout is covered by CompactLayout.* and would change the geometry.
         ScopedCompactLayout compactOff("off");
-        const auto scheduled=solvers::CompileScheduledRowAssembly(
-            p,plan,std::chrono::steady_clock::now()+std::chrono::seconds(3));
-        EXPECT_EQ(io::BinaryWriter::WriteSolution(scheduled),io::BinaryWriter::WriteSolution(retimed));
+        const auto scheduled = solvers::CompileScheduledRowAssembly(
+            p, plan, std::chrono::steady_clock::now() + std::chrono::seconds(3));
+        EXPECT_EQ(io::BinaryWriter::WriteSolution(scheduled),
+                  io::BinaryWriter::WriteSolution(retimed));
         WriteGeneratedPuzzle(puzzlePath, p);
         io::BinaryWriter::WriteSolutionFile(solutionPath, parent);
-        const auto parentReport=io::VerifySolutionFiles(puzzlePath,solutionPath,30000,2000);
-        ASSERT_TRUE(parentReport.Passed())<<parentReport.detail;
-        EXPECT_EQ(parentReport.authority,io::VerificationAuthority::LegacyGate);
+        const auto parentReport = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
+        ASSERT_TRUE(parentReport.Passed()) << parentReport.detail;
+        EXPECT_EQ(parentReport.authority, io::VerificationAuthority::LegacyGate);
         io::BinaryWriter::WriteSolutionFile(solutionPath, retimed);
         const auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
         ASSERT_TRUE(report.Passed()) << report.detail << " cycle=" << report.errorCycle;
-        EXPECT_EQ(report.authority,io::VerificationAuthority::LegacyGate);
-        EXPECT_EQ(report.metrics.cost,parentReport.metrics.cost);
-        EXPECT_LE(report.metrics.area,parentReport.metrics.area);
-        EXPECT_LT(report.metrics.cycles,parentReport.metrics.cycles);
+        EXPECT_EQ(report.authority, io::VerificationAuthority::LegacyGate);
+        EXPECT_EQ(report.metrics.cost, parentReport.metrics.cost);
+        EXPECT_LE(report.metrics.area, parentReport.metrics.area);
+        EXPECT_LT(report.metrics.cycles, parentReport.metrics.cycles);
         auto forbidden = p;
         forbidden.permissionBits &= ~(1ULL << 2);
         EXPECT_THROW(solvers::CompileRetimedRowAssembly(forbidden, plan), std::invalid_argument);
@@ -2025,16 +2161,16 @@ TEST_F(AssemblyVerifierTest, RowEmptyResetRetiming) {
 TEST_F(AssemblyVerifierTest, RowDemandBoundedEscape) {
     for (int family = 0; family < 4; ++family) {
         for (int mutation = 0; mutation < 4; ++mutation) {
-            auto p = family == 1
-                ? Generated({{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}},
-                            {{0, 1}, {1, 2}, {0, 3}, {2, 4}})
-                : Generated({{0, 0}, {1, 0}}, {{0, 1}});
+            auto p = family == 1 ? Generated({{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}},
+                                             {{0, 1}, {1, 2}, {0, 3}, {2, 4}})
+                                 : Generated({{0, 0}, {1, 0}}, {{0, 1}});
             if (family == 2) {
                 p = Generated({{0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}, {5, 0}, {6, 0}},
                               {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 6}});
                 p.inputs.resize(1);
-                p.inputs[0].atoms = {{core::AtomType::Salt, {0, 0}}, {core::AtomType::Salt, {1, 0}},
-                    {core::AtomType::Salt, {0, 1}}, {core::AtomType::Salt, {-1, 1}},
+                p.inputs[0].atoms = {
+                    {core::AtomType::Salt, {0, 0}},  {core::AtomType::Salt, {1, 0}},
+                    {core::AtomType::Salt, {0, 1}},  {core::AtomType::Salt, {-1, 1}},
                     {core::AtomType::Salt, {-1, 0}}, {core::AtomType::Salt, {0, -1}},
                     {core::AtomType::Salt, {1, -1}}};
                 p.inputs[0].bonds.clear();
@@ -2045,7 +2181,8 @@ TEST_F(AssemblyVerifierTest, RowDemandBoundedEscape) {
                 p = Generated({{0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}},
                               {{0, 1}, {1, 2}, {2, 3}, {3, 4}});
             for (auto& input : p.inputs)
-                for (auto& atom : input.atoms) atom.type = core::AtomType::Salt;
+                for (auto& atom : input.atoms)
+                    atom.type = core::AtomType::Salt;
             auto transform = [&](core::HexCoord c) {
                 if (mutation == 1) return core::Add(c, {4, -3});
                 if (mutation == 2) return core::RotateClockwise(c);
@@ -2056,7 +2193,8 @@ TEST_F(AssemblyVerifierTest, RowDemandBoundedEscape) {
                 atom.position = transform(atom.position);
             }
             for (auto& bond : p.outputs[0].bonds) {
-                bond.from = transform(bond.from); bond.to = transform(bond.to);
+                bond.from = transform(bond.from);
+                bond.to = transform(bond.to);
             }
             if (mutation == 3) std::reverse(p.inputs.begin(), p.inputs.end());
             p.permissionBits |= (1ULL << 2) | (1ULL << 3) | (1ULL << 9);
@@ -2076,8 +2214,10 @@ TEST_F(AssemblyVerifierTest, RowDemandBoundedEscape) {
             EXPECT_LE(report.metrics.area, baseline.metrics.area);
             EXPECT_EQ(report.metrics.cycles, baseline.metrics.cycles);
             for (int bit : {2, 3}) {
-                auto forbidden = p; forbidden.permissionBits &= ~(1ULL << bit);
-                EXPECT_THROW(solvers::CompileStructuredRowAssembly(forbidden, plan), std::invalid_argument);
+                auto forbidden = p;
+                forbidden.permissionBits &= ~(1ULL << bit);
+                EXPECT_THROW(solvers::CompileStructuredRowAssembly(forbidden, plan),
+                             std::invalid_argument);
             }
         }
     }
@@ -2086,16 +2226,16 @@ TEST_F(AssemblyVerifierTest, RowDemandBoundedEscape) {
 TEST_F(AssemblyVerifierTest, RowCloseFeedBank) {
     for (int family = 0; family < 4; ++family) {
         for (int mutation = 0; mutation < 4; ++mutation) {
-            auto p = family == 1
-                ? Generated({{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}},
-                            {{0, 1}, {1, 2}, {0, 3}, {2, 4}})
-                : Generated({{0, 0}, {1, 0}}, {{0, 1}});
+            auto p = family == 1 ? Generated({{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}},
+                                             {{0, 1}, {1, 2}, {0, 3}, {2, 4}})
+                                 : Generated({{0, 0}, {1, 0}}, {{0, 1}});
             if (family == 2) {
                 p = Generated({{0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}, {5, 0}, {6, 0}},
                               {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 6}});
                 p.inputs.resize(1);
-                p.inputs[0].atoms = {{core::AtomType::Salt, {0, 0}}, {core::AtomType::Salt, {1, 0}},
-                    {core::AtomType::Salt, {0, 1}}, {core::AtomType::Salt, {-1, 1}},
+                p.inputs[0].atoms = {
+                    {core::AtomType::Salt, {0, 0}},  {core::AtomType::Salt, {1, 0}},
+                    {core::AtomType::Salt, {0, 1}},  {core::AtomType::Salt, {-1, 1}},
                     {core::AtomType::Salt, {-1, 0}}, {core::AtomType::Salt, {0, -1}},
                     {core::AtomType::Salt, {1, -1}}};
                 p.inputs[0].bonds.clear();
@@ -2106,7 +2246,8 @@ TEST_F(AssemblyVerifierTest, RowCloseFeedBank) {
                 p = Generated({{0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}},
                               {{0, 1}, {1, 2}, {2, 3}, {3, 4}});
             for (auto& input : p.inputs)
-                for (auto& atom : input.atoms) atom.type = core::AtomType::Salt;
+                for (auto& atom : input.atoms)
+                    atom.type = core::AtomType::Salt;
             auto transform = [&](core::HexCoord c) {
                 if (mutation == 1) return core::Add(c, {4, -3});
                 if (mutation == 2) return core::RotateClockwise(c);
@@ -2117,7 +2258,8 @@ TEST_F(AssemblyVerifierTest, RowCloseFeedBank) {
                 atom.position = transform(atom.position);
             }
             for (auto& bond : p.outputs[0].bonds) {
-                bond.from = transform(bond.from); bond.to = transform(bond.to);
+                bond.from = transform(bond.from);
+                bond.to = transform(bond.to);
             }
             if (mutation == 3) std::reverse(p.inputs.begin(), p.inputs.end());
             p.permissionBits |= (1ULL << 2) | (1ULL << 3) | (1ULL << 9);
@@ -2137,8 +2279,10 @@ TEST_F(AssemblyVerifierTest, RowCloseFeedBank) {
             EXPECT_LE(report.metrics.area, baseline.metrics.area);
             EXPECT_LT(report.metrics.cycles, baseline.metrics.cycles);
             for (int bit : {2, 3}) {
-                auto forbidden = p; forbidden.permissionBits &= ~(1ULL << bit);
-                EXPECT_THROW(solvers::CompileCloseFeedRowAssembly(forbidden, plan), std::invalid_argument);
+                auto forbidden = p;
+                forbidden.permissionBits &= ~(1ULL << bit);
+                EXPECT_THROW(solvers::CompileCloseFeedRowAssembly(forbidden, plan),
+                             std::invalid_argument);
             }
         }
     }
@@ -2154,12 +2298,14 @@ TEST_F(AssemblyVerifierTest, RowDemandBoundedEscapeRejectsWideOrLarge) {
     auto wide = Generated({{0, 0}, {1, 0}}, {{0, 1}});
     wide.permissionBits |= (1ULL << 2) | (1ULL << 3) | (1ULL << 9);
     wide.inputs.resize(1);
-    wide.inputs[0].atoms.clear(); wide.inputs[0].bonds.clear();
+    wide.inputs[0].atoms.clear();
+    wide.inputs[0].bonds.clear();
     for (int q = -2; q <= 2; ++q)
         for (int r = -2; r <= 2; ++r)
             if (std::abs(q + r) <= 2)
                 wide.inputs[0].atoms.push_back({core::AtomType::Salt, {q, r}});
-    for (auto& atom : wide.outputs[0].atoms) atom.type = core::AtomType::Salt;
+    for (auto& atom : wide.outputs[0].atoms)
+        atom.type = core::AtomType::Salt;
     EXPECT_THROW(solvers::CompileCloseFeedRowAssembly(wide, AssemblyPlanner::Plan(wide)),
                  std::invalid_argument);
     EXPECT_THROW(solvers::CompileStructuredRowAssembly(wide, AssemblyPlanner::Plan(wide)),
@@ -2835,67 +2981,83 @@ TEST_F(AssemblyVerifierTest, OriginalExplosivePhialRequiresPostBondCalcification
 #ifdef HAS_LIBVERIFY
 TEST_F(AssemblyVerifierTest, ComponentRowHandoff) {
     for (int transform = 0; transform < 4; ++transform)
-    for (int family = 0; family < 3; ++family) {
-        auto p = family == 0 ? Generated({{0,0},{1,0},{2,0}}, {{0,1},{1,2}})
-            : family == 1 ? Generated({{0,0},{1,0},{0,1},{1,1}}, {{0,1},{2,3},{0,2}})
-            : Generated({{0,0},{1,0},{2,0},{0,1},{1,1},{2,1}},
-                        {{0,1},{1,2},{3,4},{4,5},{0,3},{2,5}});
-        p.permissionBits |= (1ULL << 2) | (1ULL << 3);
-        if (transform & 1) {
-            for (auto& atom : p.outputs[0].atoms) { atom.position.q += 4; atom.position.r -= 3; }
-            for (auto& bond : p.outputs[0].bonds) {
-                bond.from.q += 4; bond.from.r -= 3; bond.to.q += 4; bond.to.r -= 3;
+        for (int family = 0; family < 3; ++family) {
+            auto p = family == 0 ? Generated({{0, 0}, {1, 0}, {2, 0}}, {{0, 1}, {1, 2}})
+                     : family == 1
+                         ? Generated({{0, 0}, {1, 0}, {0, 1}, {1, 1}}, {{0, 1}, {2, 3}, {0, 2}})
+                         : Generated({{0, 0}, {1, 0}, {2, 0}, {0, 1}, {1, 1}, {2, 1}},
+                                     {{0, 1}, {1, 2}, {3, 4}, {4, 5}, {0, 3}, {2, 5}});
+            p.permissionBits |= (1ULL << 2) | (1ULL << 3);
+            if (transform & 1) {
+                for (auto& atom : p.outputs[0].atoms) {
+                    atom.position.q += 4;
+                    atom.position.r -= 3;
+                }
+                for (auto& bond : p.outputs[0].bonds) {
+                    bond.from.q += 4;
+                    bond.from.r -= 3;
+                    bond.to.q += 4;
+                    bond.to.r -= 3;
+                }
+            }
+            if (transform & 2) std::reverse(p.inputs.begin(), p.inputs.end());
+            ASSERT_TRUE(solvers::SupportsComponentRowAssembly(p));
+            for (int bit : {2, 3}) {
+                auto forbidden = p;
+                forbidden.permissionBits &= ~(1ULL << bit);
+                EXPECT_FALSE(solvers::SupportsComponentRowAssembly(forbidden));
+                EXPECT_THROW(
+                    solvers::CompileComponentRowAssembly(forbidden, AssemblyPlanner::Plan(p)),
+                    std::invalid_argument);
+            }
+            const auto plan = AssemblyPlanner::Plan(p);
+            const auto child = solvers::CompileComponentRowAssembly(p, plan);
+            WriteGeneratedPuzzle(puzzlePath, p);
+            io::BinaryWriter::WriteSolutionFile(solutionPath, child);
+            const auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
+            EXPECT_TRUE(report.Passed())
+                << "family=" << family << " " << report.detail << " cycle=" << report.errorCycle;
+            auto parent = solvers::CompileRowAssembly(p, plan);
+            io::BinaryWriter::WriteSolutionFile(solutionPath, parent);
+            const auto parentReport =
+                io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
+            ASSERT_TRUE(parentReport.Passed()) << parentReport.detail;
+            std::cout << "COMPONENT_METRICS " << family << " " << transform << " parent "
+                      << parentReport.metrics.cost << " " << parentReport.metrics.cycles << " "
+                      << parentReport.metrics.area << " child " << report.metrics.cost << " "
+                      << report.metrics.cycles << " " << report.metrics.area << std::endl;
+            EXPECT_LT(report.metrics.cycles, parentReport.metrics.cycles);
+            if (!transform) {
+                const test::ScopedTestDirectory scratch;
+                WriteGeneratedPuzzle(
+                    scratch.Path() / ("family-" + std::to_string(family) + ".puzzle"), p);
             }
         }
-        if (transform & 2) std::reverse(p.inputs.begin(), p.inputs.end());
-        ASSERT_TRUE(solvers::SupportsComponentRowAssembly(p));
-        for (int bit : {2, 3}) {
-            auto forbidden = p; forbidden.permissionBits &= ~(1ULL << bit);
-            EXPECT_FALSE(solvers::SupportsComponentRowAssembly(forbidden));
-            EXPECT_THROW(solvers::CompileComponentRowAssembly(forbidden, AssemblyPlanner::Plan(p)),
-                         std::invalid_argument);
-        }
-        const auto plan = AssemblyPlanner::Plan(p);
-        const auto child = solvers::CompileComponentRowAssembly(p, plan);
-        WriteGeneratedPuzzle(puzzlePath, p);
-        io::BinaryWriter::WriteSolutionFile(solutionPath, child);
-        const auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
-        EXPECT_TRUE(report.Passed()) << "family=" << family << " " << report.detail
-                                    << " cycle=" << report.errorCycle;
-        auto parent = solvers::CompileRowAssembly(p, plan);
-        io::BinaryWriter::WriteSolutionFile(solutionPath, parent);
-        const auto parentReport = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
-        ASSERT_TRUE(parentReport.Passed()) << parentReport.detail;
-        std::cout << "COMPONENT_METRICS " << family << " " << transform << " parent "
-                  << parentReport.metrics.cost << " " << parentReport.metrics.cycles << " "
-                  << parentReport.metrics.area << " child " << report.metrics.cost << " "
-                  << report.metrics.cycles << " " << report.metrics.area << std::endl;
-        EXPECT_LT(report.metrics.cycles, parentReport.metrics.cycles);
-        if (!transform) {
-            const test::ScopedTestDirectory scratch;
-            WriteGeneratedPuzzle(scratch.Path() /
-                                 ("family-" + std::to_string(family) + ".puzzle"), p);
-        }
-    }
 }
 
 TEST(AssemblyDiagnostics, ComponentRowRegisteredRejections) {
-    auto valid = Generated({{0,0},{1,0},{0,1},{1,1}}, {{0,1},{2,3},{0,2}});
+    auto valid = Generated({{0, 0}, {1, 0}, {0, 1}, {1, 1}}, {{0, 1}, {2, 3}, {0, 2}});
     valid.permissionBits |= (1ULL << 2) | (1ULL << 3);
     ASSERT_TRUE(solvers::SupportsComponentRowAssembly(valid));
-    auto broken = valid; broken.outputs[0].bonds.erase(broken.outputs[0].bonds.begin());
+    auto broken = valid;
+    broken.outputs[0].bonds.erase(broken.outputs[0].bonds.begin());
     EXPECT_FALSE(solvers::SupportsComponentRowAssembly(broken));
-    auto hole = valid; hole.outputs[0].atoms.pop_back();
+    auto hole = valid;
+    hole.outputs[0].atoms.pop_back();
     EXPECT_FALSE(solvers::SupportsComponentRowAssembly(hole));
     auto rotated = valid;
-    for (auto& atom : rotated.outputs[0].atoms) atom.position = core::RotateClockwise(atom.position);
+    for (auto& atom : rotated.outputs[0].atoms)
+        atom.position = core::RotateClockwise(atom.position);
     for (auto& bond : rotated.outputs[0].bonds) {
-        bond.from = core::RotateClockwise(bond.from); bond.to = core::RotateClockwise(bond.to);
+        bond.from = core::RotateClockwise(bond.from);
+        bond.to = core::RotateClockwise(bond.to);
     }
     EXPECT_FALSE(solvers::SupportsComponentRowAssembly(rotated));
-    auto multi = valid; multi.inputs[0].atoms.push_back({core::AtomType::Salt,{1,0}});
+    auto multi = valid;
+    multi.inputs[0].atoms.push_back({core::AtomType::Salt, {1, 0}});
     EXPECT_FALSE(solvers::SupportsComponentRowAssembly(multi));
-    auto triplex = valid; triplex.outputs[0].bonds[0].bits = 2;
+    auto triplex = valid;
+    triplex.outputs[0].bonds[0].bits = 2;
     EXPECT_FALSE(solvers::SupportsComponentRowAssembly(triplex));
 }
 
@@ -2905,33 +3067,43 @@ TEST_F(AssemblyVerifierTest, SerialWorkstationPreregisteredFamilies) {
     int constructed = 0, passed = 0;
     for (int family = 0; family < 3; ++family) {
         for (int rotation = 0; rotation < 6; ++rotation) {
-            auto p = Generated({{0,0}, {1,0}, family == 0 ? core::HexCoord{2,0} : core::HexCoord{1,1}},
-                               {{0,1}, {1,2}});
+            auto p = Generated(
+                {{0, 0}, {1, 0}, family == 0 ? core::HexCoord{2, 0} : core::HexCoord{1, 1}},
+                {{0, 1}, {1, 2}});
             p.permissionBits |= (1ULL << 2) | (1ULL << 3) | (1ULL << 26);
             if (family == 2) {
                 p.outputs[0].atoms[2].type = p.outputs[0].atoms[0].type;
                 p.inputs.pop_back();
             }
             auto transform = [&](core::HexCoord cell) {
-                for (int turn = 0; turn < rotation; ++turn) cell = core::RotateClockwise(cell);
-                return core::Add(cell, {2,-3});
+                for (int turn = 0; turn < rotation; ++turn)
+                    cell = core::RotateClockwise(cell);
+                return core::Add(cell, {2, -3});
             };
-            for (auto& atom : p.outputs[0].atoms) atom.position = transform(atom.position);
+            for (auto& atom : p.outputs[0].atoms)
+                atom.position = transform(atom.position);
             for (auto& bond : p.outputs[0].bonds) {
-                bond.from = transform(bond.from); bond.to = transform(bond.to);
+                bond.from = transform(bond.from);
+                bond.to = transform(bond.to);
             }
-            for (auto& input : p.inputs) input.atoms[0].position = {3,-2};
-            const auto stem = evidence / ("family-" + std::to_string(family) + "-rotation-" + std::to_string(rotation));
+            for (auto& input : p.inputs)
+                input.atoms[0].position = {3, -2};
+            const auto stem = evidence / ("family-" + std::to_string(family) + "-rotation-" +
+                                          std::to_string(rotation));
             auto candidate = solvers::CompileSharedWorkstation(p);
             for (const int bit : {2, 3, 8, 26}) {
                 auto denied = p;
                 denied.permissionBits &= ~(1ULL << bit);
-                EXPECT_FALSE(solvers::CompileSharedWorkstation(denied).has_value()) << "permission=" << bit;
+                EXPECT_FALSE(solvers::CompileSharedWorkstation(denied).has_value())
+                    << "permission=" << bit;
             }
             if (family < 2) EXPECT_TRUE(candidate.has_value());
             std::cout << "WORKSTATION family=" << family << " rotation=" << rotation
                       << " constructed=" << candidate.has_value();
-            if (!candidate) { std::cout << '\n'; continue; }
+            if (!candidate) {
+                std::cout << '\n';
+                continue;
+            }
             ++constructed;
             const auto puzzle = stem.string() + ".puzzle";
             const auto solution = stem.string() + ".solution";
@@ -2943,7 +3115,8 @@ TEST_F(AssemblyVerifierTest, SerialWorkstationPreregisteredFamilies) {
                       << " cost=" << gate.metrics.cost << " cycles=" << gate.metrics.cycles
                       << " area=" << gate.metrics.area << '\n';
             EXPECT_EQ(std::count_if(candidate->objects.begin(), candidate->objects.end(),
-                                   [](const auto& part) { return part.typeName == "bonder"; }), 1);
+                                    [](const auto& part) { return part.typeName == "bonder"; }),
+                      1);
         }
     }
     std::cout << "WORKSTATION total constructed=" << constructed << " passed=" << passed << '\n';
@@ -2957,12 +3130,16 @@ struct ScopedFeedPrefetch {
     std::optional<std::string> prior;
     explicit ScopedFeedPrefetch(const char* value) {
         if (const auto* existing = std::getenv("OPUSOPTIMA_FEED_PREFETCH")) prior = existing;
-        if (value) setenv("OPUSOPTIMA_FEED_PREFETCH", value, 1);
-        else unsetenv("OPUSOPTIMA_FEED_PREFETCH");
+        if (value)
+            setenv("OPUSOPTIMA_FEED_PREFETCH", value, 1);
+        else
+            unsetenv("OPUSOPTIMA_FEED_PREFETCH");
     }
     ~ScopedFeedPrefetch() {
-        if (prior) setenv("OPUSOPTIMA_FEED_PREFETCH", prior->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_FEED_PREFETCH");
+        if (prior)
+            setenv("OPUSOPTIMA_FEED_PREFETCH", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_FEED_PREFETCH");
     }
 };
 // These diagnostics describe the shared serpentine feeder, so they pin the
@@ -2975,13 +3152,16 @@ struct ScopedSharedFeeder {
         setenv("OPUSOPTIMA_DIRECT_INPUT", "off", 1);
     }
     ~ScopedSharedFeeder() {
-        if (prior) setenv("OPUSOPTIMA_DIRECT_INPUT", prior->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_DIRECT_INPUT");
+        if (prior)
+            setenv("OPUSOPTIMA_DIRECT_INPUT", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_DIRECT_INPUT");
     }
 };
 std::string ActionSequence(const io::SolutionObject& object) {
     std::string actions;
-    for (const auto& instruction : object.instructions) actions.push_back(instruction.action);
+    for (const auto& instruction : object.instructions)
+        actions.push_back(instruction.action);
     return actions;
 }
 int LastTick(const io::SolutionData& solution) {
@@ -3010,20 +3190,23 @@ TEST(AssemblyDiagnostics, FeedPrefetchIsOptInDeterministicAndRetimesOnlyTheFeede
         off = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
         baseline = io::BinaryWriter::WriteSolution(off);
         EXPECT_EQ(io::BinaryWriter::WriteSolution(
-                      solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)), baseline);
+                      solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)),
+                  baseline);
     }
     // Any value other than exactly "on" preserves the serialized emitter.
     {
         ScopedFeedPrefetch flag("off");
         EXPECT_EQ(io::BinaryWriter::WriteSolution(
-                      solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)), baseline);
+                      solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)),
+                  baseline);
     }
 
     ScopedFeedPrefetch flag("on");
     const auto on = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     const auto onBytes = io::BinaryWriter::WriteSolution(on);
     EXPECT_EQ(io::BinaryWriter::WriteSolution(
-                  solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)), onBytes);
+                  solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)),
+              onBytes);
     EXPECT_NE(onBytes, baseline);
 
     ASSERT_EQ(on.objects.size(), off.objects.size());
@@ -3040,12 +3223,16 @@ struct ScopedRowPipeline {
     std::optional<std::string> prior;
     explicit ScopedRowPipeline(const char* value) {
         if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_PIPELINE")) prior = existing;
-        if (value) setenv("OPUSOPTIMA_ROW_PIPELINE", value, 1);
-        else unsetenv("OPUSOPTIMA_ROW_PIPELINE");
+        if (value)
+            setenv("OPUSOPTIMA_ROW_PIPELINE", value, 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_PIPELINE");
     }
     ~ScopedRowPipeline() {
-        if (prior) setenv("OPUSOPTIMA_ROW_PIPELINE", prior->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_ROW_PIPELINE");
+        if (prior)
+            setenv("OPUSOPTIMA_ROW_PIPELINE", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_PIPELINE");
     }
 };
 } // namespace
@@ -3099,12 +3286,16 @@ struct ScopedRowAssemblyClocks {
     std::optional<std::string> prior;
     explicit ScopedRowAssemblyClocks(const char* value) {
         if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS")) prior = existing;
-        if (value) setenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS", value, 1);
-        else unsetenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
+        if (value)
+            setenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS", value, 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
     }
     ~ScopedRowAssemblyClocks() {
-        if (prior) setenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS", prior->c_str(), 1);
-        else unsetenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
+        if (prior)
+            setenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
     }
 };
 } // namespace
@@ -3170,8 +3361,7 @@ TEST(AssemblyDiagnostics, ClockedScheduledRowKeepsActionsAndShortensTicks) {
     const auto compact = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     const auto clocked = solvers::CompileScheduledRowClockAssembly(puzzle, plan, deadline);
     const auto again = solvers::CompileScheduledRowClockAssembly(puzzle, plan, deadline);
-    EXPECT_EQ(io::BinaryWriter::WriteSolution(clocked),
-              io::BinaryWriter::WriteSolution(again));
+    EXPECT_EQ(io::BinaryWriter::WriteSolution(clocked), io::BinaryWriter::WriteSolution(again));
     ASSERT_EQ(clocked.objects.size(), compact.objects.size());
     for (std::size_t i = 0; i < compact.objects.size(); ++i) {
         EXPECT_EQ(clocked.objects[i].typeName, compact.objects[i].typeName) << i;

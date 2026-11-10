@@ -22,7 +22,8 @@ using opusoptima::core::MachineState;
 namespace {
 
 std::filesystem::path GetRepoRoot() {
-    return opusoptima::test::RepoRoot(__FILE__);}
+    return opusoptima::test::RepoRoot(__FILE__);
+}
 
 } // namespace
 

@@ -1,16 +1,16 @@
 #include "Verification/ContinuousCollision.hpp"
 
 #include <array>
-#include <cmath>
 #include <cfenv>
-#include <utility>
+#include <cmath>
 #include <gtest/gtest.h>
 #include <limits>
+#include <utility>
 #if defined(__GLIBC__) && (defined(__i386__) || defined(__x86_64__))
-#include <fpu_control.h>
+#    include <fpu_control.h>
 #endif
 #if defined(__SSE__)
-#include <xmmintrin.h>
+#    include <xmmintrin.h>
 #endif
 
 namespace {
@@ -242,7 +242,9 @@ TEST(ContinuousCollision, NonfiniteUnboundedAndInvalidInputsCannotPass) {
 TEST(ContinuousCollision, NonDefaultRoundingCannotCertifySeparation) {
     struct RestoreRounding {
         int mode = std::fegetround();
-        ~RestoreRounding() { std::fesetround(mode); }
+        ~RestoreRounding() {
+            std::fesetround(mode);
+        }
     } restore;
     for (const int mode : {FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
         ASSERT_EQ(std::fesetround(mode), 0);
@@ -257,7 +259,9 @@ TEST(ContinuousCollision, NonDefaultRoundingCannotCertifySeparation) {
 TEST(ContinuousCollision, FlushAndDenormalsModesCannotCertifyZeroClearance) {
     struct RestoreControl {
         unsigned value = _mm_getcsr();
-        ~RestoreControl() { _mm_setcsr(value); }
+        ~RestoreControl() {
+            _mm_setcsr(value);
+        }
     } restore;
     for (const unsigned mode : {0x40U, 0x8000U, 0x8040U}) {
         _mm_setcsr(restore.value | mode);
@@ -269,9 +273,9 @@ TEST(ContinuousCollision, FlushAndDenormalsModesCannotCertifyZeroClearance) {
 }
 #endif
 TEST(ContinuousCollision, TinyPositiveClearanceAtCoincidentPositionsIsNotZero) {
-    EXPECT_NE(CheckSeparation(Fixed({0, 0}), Fixed({0, 0}),
-                              std::numeric_limits<double>::denorm_min()),
-              Separation::Separated);
+    EXPECT_NE(
+        CheckSeparation(Fixed({0, 0}), Fixed({0, 0}), std::numeric_limits<double>::denorm_min()),
+        Separation::Separated);
 }
 TEST(ContinuousCollision, MovingApartAndSmallClearancesCanBeProved) {
     EXPECT_EQ(CheckSeparation(Line({0, 0}, {-1, 0}), Fixed({1.000001, 0}), 1),
@@ -294,8 +298,7 @@ TEST(ContinuousCollision, CircularDistanceOracleCoversSignedAngleAndCoordinateLi
             EXPECT_EQ(separated.broad, 0U);
             EXPECT_EQ(CheckSeparation(circle, Fixed(center), 40), Separation::Collision);
             EXPECT_EQ(CheckSeparation(Fixed(center), circle, 24), Separation::Separated);
-            EXPECT_EQ(CheckSeparation(circle, Fixed(center), 24, {0, 40}),
-                      Separation::Uncertain);
+            EXPECT_EQ(CheckSeparation(circle, Fixed(center), 24, {0, 40}), Separation::Uncertain);
         }
     }
 }
@@ -318,16 +321,15 @@ TEST(ContinuousCollision, BoundedPositionErrorsCoverCurvesAndBudgetFailure) {
     const auto center = Fixed({0, 0});
     EXPECT_EQ(CheckBoundedSeparation(circle, .1, center, .1, 1.7), Separation::Separated);
     EXPECT_EQ(CheckBoundedSeparation(circle, .1, center, .1, 1.9), Separation::Uncertain);
-    EXPECT_EQ(CheckBoundedSeparation(circle, .1, center, .1, 1.7, {0, 40}),
-              Separation::Uncertain);
+    EXPECT_EQ(CheckBoundedSeparation(circle, .1, center, .1, 1.7, {0, 40}), Separation::Uncertain);
     EXPECT_EQ(CheckBoundedSeparation(center, .1, circle, .1, 1.7), Separation::Separated);
 }
 TEST(ContinuousCollision, BoundedPositionErrorsRejectInvalidAndUnrepresentableBounds) {
     const auto a = Fixed({0, 0});
     const auto b = Fixed({2, 0});
-    for (const double error : {-1., std::numeric_limits<double>::infinity(),
-                               std::numeric_limits<double>::quiet_NaN(),
-                               std::numeric_limits<double>::max()}) {
+    for (const double error :
+         {-1., std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN(),
+          std::numeric_limits<double>::max()}) {
         EXPECT_EQ(CheckBoundedSeparation(a, error, b, 0, 1), Separation::Uncertain);
         EXPECT_EQ(CheckBoundedSeparation(a, 0, b, error, 1), Separation::Uncertain);
     }
@@ -339,19 +341,22 @@ TEST(ContinuousCollision, BoundedPositionErrorsRejectInvalidAndUnrepresentableBo
     EXPECT_EQ(CheckBoundedSeparation(invalid, .1, b, .1, 1), Separation::Uncertain);
     EXPECT_EQ(CheckBoundedSeparation(a, .1, b, .1, 1, {1048577, 40}), Separation::Uncertain);
     EXPECT_EQ(CheckBoundedSeparation(a, .1, b, .1, 1, {4096, 65}), Separation::Uncertain);
-    EXPECT_EQ(CheckBoundedSeparation(a, std::numeric_limits<double>::denorm_min(),
-                                     Fixed({1, 0}), 0, 1), Separation::Uncertain);
+    EXPECT_EQ(
+        CheckBoundedSeparation(a, std::numeric_limits<double>::denorm_min(), Fixed({1, 0}), 0, 1),
+        Separation::Uncertain);
 }
 TEST(ContinuousCollision, BoundedPositionErrorsRejectUnsupportedArithmetic) {
     struct RestoreRounding {
         int mode = std::fegetround();
-        ~RestoreRounding() { std::fesetround(mode); }
+        ~RestoreRounding() {
+            std::fesetround(mode);
+        }
     } restore;
     for (const int mode : {FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO}) {
         ASSERT_EQ(std::fesetround(mode), 0);
         Work work;
-        EXPECT_EQ(CheckBoundedSeparation(Fixed({0, 0}), .1, Fixed({2, 0}), .1, 1,
-                                         {}, &work), Separation::Uncertain);
+        EXPECT_EQ(CheckBoundedSeparation(Fixed({0, 0}), .1, Fixed({2, 0}), .1, 1, {}, &work),
+                  Separation::Uncertain);
         EXPECT_EQ(work.calls, 1U);
         EXPECT_EQ(work.uncertain, 1U);
         EXPECT_EQ(work.linear, 0U);
@@ -361,14 +366,17 @@ TEST(ContinuousCollision, BoundedPositionErrorsRejectUnsupportedArithmetic) {
 TEST(ContinuousCollision, BoundedPositionErrorsRejectFlushAndDenormalsModes) {
     struct RestoreControl {
         unsigned value = _mm_getcsr();
-        ~RestoreControl() { _mm_setcsr(value); }
+        ~RestoreControl() {
+            _mm_setcsr(value);
+        }
     } restore;
     for (const unsigned mode : {0x40U, 0x8000U, 0x8040U}) {
         _mm_setcsr(restore.value | mode);
         for (const double error : {0., .1, std::numeric_limits<double>::denorm_min()}) {
             Work work;
-            EXPECT_EQ(CheckBoundedSeparation(Fixed({0, 0}), error, Fixed({2, 0}), error,
-                                             1, {}, &work), Separation::Uncertain);
+            EXPECT_EQ(
+                CheckBoundedSeparation(Fixed({0, 0}), error, Fixed({2, 0}), error, 1, {}, &work),
+                Separation::Uncertain);
             EXPECT_EQ(work.calls, 1U);
             EXPECT_EQ(work.uncertain, 1U);
             EXPECT_EQ(work.linear, 0U);

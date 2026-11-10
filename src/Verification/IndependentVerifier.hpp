@@ -1,8 +1,8 @@
 #pragma once
 
-#include "StaticProductionVerifier.hpp"
-#include "FiniteTapeExpansion.hpp"
 #include "FiniteRepeatingProgress.hpp"
+#include "FiniteTapeExpansion.hpp"
+#include "StaticProductionVerifier.hpp"
 
 namespace opusoptima::verification {
 enum class ReplayOutcome { Completed, Rejected, CycleLimit, Timeout, Unavailable, Error };
@@ -22,8 +22,9 @@ struct RepeatingFiniteReplayReport {
     bool resourceUnavailable{};
 };
 // Functional opt-in only; fixed six-monomer bound, no raw C/X expansion.
-[[nodiscard]] RepeatingFiniteReplayReport ReplayRepeatingFiniteMachine(
-    const io::PuzzleData&, const io::SolutionData&, int cycleLimit = 150000);
+[[nodiscard]] RepeatingFiniteReplayReport ReplayRepeatingFiniteMachine(const io::PuzzleData&,
+                                                                       const io::SolutionData&,
+                                                                       int cycleLimit = 150000);
 
 struct ExpandedFiniteReplayReport {
     FiniteReplayReport execution;
@@ -34,8 +35,9 @@ struct ExpandedFiniteReplayReport {
     std::uint64_t totalMicros{};
 };
 // Explicit opt-in functional execution only; no verification authority or raw metrics.
-[[nodiscard]] ExpandedFiniteReplayReport ReplayExpandedFiniteMachine(
-    const io::PuzzleData&, const io::SolutionData&, int cycleLimit = 150000);
+[[nodiscard]] ExpandedFiniteReplayReport ReplayExpandedFiniteMachine(const io::PuzzleData&,
+                                                                     const io::SolutionData&,
+                                                                     int cycleLimit = 150000);
 
 [[nodiscard]] FiniteReplayReport ReplayFiniteMachine(const io::PuzzleData&, const io::SolutionData&,
                                                      int cycleLimit = 150000,

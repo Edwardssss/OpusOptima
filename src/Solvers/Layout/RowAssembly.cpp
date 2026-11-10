@@ -1,10 +1,10 @@
-#include "RowPhaseProfile.hpp"
-#include "RowAssemblyInternal.hpp"
-#include "FeedLayout.hpp"
-#include "ProgramBuilder.hpp"
-#include "InventorySearch.hpp"
-#include "FragmentCustody.hpp"
 #include "ExecutionPlan.hpp"
+#include "FeedLayout.hpp"
+#include "FragmentCustody.hpp"
+#include "InventorySearch.hpp"
+#include "ProgramBuilder.hpp"
+#include "RowAssemblyInternal.hpp"
+#include "RowPhaseProfile.hpp"
 #include "SerialArmExecution.hpp"
 #include <cmath>
 
@@ -26,7 +26,8 @@ static thread_local int g_intakeMode = 0;
 // the portfolio only compiles a feeder fallback when it can differ.
 static thread_local bool g_intakeApplied = false;
 namespace {
-SupplyPlan PlanProxySupply(const io::PuzzleData& p, std::chrono::steady_clock::time_point deadline) {
+SupplyPlan PlanProxySupply(const io::PuzzleData& p,
+                           std::chrono::steady_clock::time_point deadline) {
     try {
         return AssemblyPlanner::PlanSupply(p, false, 20000, deadline);
     } catch (const std::invalid_argument&) {
@@ -122,18 +123,14 @@ struct MixedInventoryProgram {
     std::vector<MixedReaction> reactions;
 };
 static io::SolutionData CompileRowsWithRetimingPolicy(
-    const io::PuzzleData& p, const AssemblyPlan& plan,
-    const io::PuzzleData* sharedOutputs, const io::Molecule* labels,
-    const std::vector<core::HexCoord>* productOrigins, bool postCalcification,
-    std::vector<int>* productEnds, bool singleProduct,
-    std::size_t finiteProducts, const SupplyPlan* supplied,
-    const io::PuzzleData* validationPuzzle, int feedSpacing,
-    bool retimeEmptyResets, bool boundEscapeStation,
-    bool closeFeedBank, bool componentRows,
-    std::vector<SharedFactoryEmission>* emissions,
+    const io::PuzzleData& p, const AssemblyPlan& plan, const io::PuzzleData* sharedOutputs,
+    const io::Molecule* labels, const std::vector<core::HexCoord>* productOrigins,
+    bool postCalcification, std::vector<int>* productEnds, bool singleProduct,
+    std::size_t finiteProducts, const SupplyPlan* supplied, const io::PuzzleData* validationPuzzle,
+    int feedSpacing, bool retimeEmptyResets, bool boundEscapeStation, bool closeFeedBank,
+    bool componentRows, std::vector<SharedFactoryEmission>* emissions,
     const std::vector<ProductAtomRef>* owners, bool animismus,
-    const io::PuzzleData* reactionAssembly,
-    const MixedInventoryProgram* mixedInventory,
+    const io::PuzzleData* reactionAssembly, const MixedInventoryProgram* mixedInventory,
     std::chrono::steady_clock::time_point deadline,
     const std::function<std::chrono::steady_clock::time_point()>& clock,
     std::vector<FragmentCustodyEvent>* custody, RowCompletionTransfer* completionTransfer,
@@ -150,8 +147,9 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     const bool surplusRetention = completionTransfer && completionTransfer->surplusRetention;
     const bool wheelSource = completionTransfer && completionTransfer->wheelSecondSingletonSource;
     if (wheelSource && (!completionTransfer->secondSingletonSource ||
-        !(p.permissionBits & (1ULL << 13)) || !(p.permissionBits & (1ULL << 28))))
-        throw std::invalid_argument("wheel second source requires real two-source dispatch and wheel/duplication permissions");
+                        !(p.permissionBits & (1ULL << 13)) || !(p.permissionBits & (1ULL << 28))))
+        throw std::invalid_argument("wheel second source requires real two-source dispatch and "
+                                    "wheel/duplication permissions");
     const bool secondSource = completionTransfer && completionTransfer->secondSingletonSource;
     core::AtomType wheelElement = core::AtomType::Salt;
     int wheelOrientation = 0;
@@ -166,16 +164,18 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 throw std::invalid_argument("second source requires singleton inputs");
             const auto type = input.atoms[0].type;
             if (type >= core::AtomType::Air && type <= core::AtomType::Water) {
-                ++cardinal; cardinalInput = i;
-            } else if (type == core::AtomType::Quicksilver) ++mercury;
+                ++cardinal;
+                cardinalInput = i;
+            } else if (type == core::AtomType::Quicksilver)
+                ++mercury;
         }
         if (cardinal != 1 || mercury != 1)
             throw std::invalid_argument("second source requires cardinal and Quicksilver");
     }
-    if (surplusRetention && (!coproductTransfer ||
-        !std::getenv("OPUSOPTIMA_FINITE_RETENTION") ||
-        std::string(std::getenv("OPUSOPTIMA_FINITE_RETENTION")) != "1"))
-        throw std::invalid_argument("surplus retention requires coproduct and finite retention opt-in");
+    if (surplusRetention && (!coproductTransfer || !std::getenv("OPUSOPTIMA_FINITE_RETENTION") ||
+                             std::string(std::getenv("OPUSOPTIMA_FINITE_RETENTION")) != "1"))
+        throw std::invalid_argument(
+            "surplus retention requires coproduct and finite retention opt-in");
     const auto& materialPuzzle = coproductTransfer && reactionAssembly ? *reactionAssembly : p;
     if (completionTransfer) {
         if (completionTransfer->mode != io::VerificationMode::LegacyGate ||
@@ -183,21 +183,25 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             throw std::invalid_argument("completion transfer requires explicit native-only gate");
         if (!finiteProducts || singleProduct || sharedOutputs || labels || productOrigins ||
             supplied || validationPuzzle || retimeEmptyResets || boundEscapeStation ||
-            closeFeedBank || componentRows || animismus || (reactionAssembly && !coproductTransfer) || mixedInventory ||
+            closeFeedBank || componentRows || animismus ||
+            (reactionAssembly && !coproductTransfer) || mixedInventory ||
             p.inputs.size() != (secondSource ? 2u : 1u) || p.outputs.size() != 1 ||
             p.inputs.front().atoms.size() != 1 || !p.inputs.front().bonds.empty())
-            throw std::invalid_argument("completion transfer requires finite reaction-free singleton rows");
+            throw std::invalid_argument(
+                "completion transfer requires finite reaction-free singleton rows");
         if (coproductTransfer) {
             if (!reactionAssembly || finiteProducts != 6 || !(p.permissionBits & (1ULL << 16)) ||
                 (secondSource && (materialPuzzle.permissionBits != p.permissionBits)) ||
                 materialPuzzle.inputs.size() != p.inputs.size())
-                throw std::invalid_argument("coproduct transfer requires matching real source and six products");
+                throw std::invalid_argument(
+                    "coproduct transfer requires matching real source and six products");
             for (std::size_t i = 0; i < p.inputs.size(); ++i) {
                 const auto& actual = materialPuzzle.inputs[i];
                 const auto& proxy = p.inputs[i];
                 if (actual.atoms.size() != 1 || actual.atoms[0].type != proxy.atoms[0].type ||
                     actual.atoms[0].position != proxy.atoms[0].position || !actual.bonds.empty())
-                    throw std::invalid_argument("coproduct transfer source index/type/pose mismatch");
+                    throw std::invalid_argument(
+                        "coproduct transfer source index/type/pose mismatch");
             }
             int balance = 0, quicksilverDemand = 0, wheelDemand = 0;
             if (materialPuzzle.version != p.version || materialPuzzle.productionInfo ||
@@ -215,31 +219,46 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             for (std::size_t i = 0; i < p.outputs[0].atoms.size(); ++i) {
                 const auto type = materialPuzzle.outputs[0].atoms[i].type;
                 const bool direct = secondSource && type == core::AtomType::Quicksilver;
-                const bool derived = wheelSource && type >= core::AtomType::Air &&
-                                     type <= core::AtomType::Water;
+                const bool derived =
+                    wheelSource && type >= core::AtomType::Air && type <= core::AtomType::Water;
                 if (p.outputs[0].atoms[i].type != (direct ? type : core::AtomType::Salt) ||
                     p.outputs[0].atoms[i].position != materialPuzzle.outputs[0].atoms[i].position ||
                     (!direct && type != core::AtomType::Vitae && type != core::AtomType::Mors &&
                      !derived))
-                    throw std::invalid_argument("coproduct transfer requires aligned typed proxy and mixed target");
-                if (direct) ++quicksilverDemand;
+                    throw std::invalid_argument(
+                        "coproduct transfer requires aligned typed proxy and mixed target");
+                if (direct)
+                    ++quicksilverDemand;
                 else if (derived) {
                     if (wheelElement != core::AtomType::Salt && wheelElement != type)
-                        throw std::invalid_argument("wheel second source requires one cardinal identity");
+                        throw std::invalid_argument(
+                            "wheel second source requires one cardinal identity");
                     wheelElement = type;
                     ++wheelDemand;
-                } else balance += type == core::AtomType::Vitae ? 1 : -1;
+                } else
+                    balance += type == core::AtomType::Vitae ? 1 : -1;
             }
-            if (wheelSource && (wheelDemand == 0 || quicksilverDemand == 0 || !surplusRetention || balance != -1))
-                throw std::invalid_argument("wheel second source requires cardinal/Q and one retained Vitae per product");
+            if (wheelSource &&
+                (wheelDemand == 0 || quicksilverDemand == 0 || !surplusRetention || balance != -1))
+                throw std::invalid_argument(
+                    "wheel second source requires cardinal/Q and one retained Vitae per product");
             if (wheelSource) {
                 core::HexCoord catalyst{};
                 switch (wheelElement) {
-                    case core::AtomType::Air: catalyst = {-1, 1}; break;
-                    case core::AtomType::Earth: catalyst = {1, -1}; break;
-                    case core::AtomType::Fire: catalyst = {0, -1}; break;
-                    case core::AtomType::Water: catalyst = {0, 1}; break;
-                    default: throw std::invalid_argument("wheel second source requires a cardinal target");
+                case core::AtomType::Air:
+                    catalyst = {-1, 1};
+                    break;
+                case core::AtomType::Earth:
+                    catalyst = {1, -1};
+                    break;
+                case core::AtomType::Fire:
+                    catalyst = {0, -1};
+                    break;
+                case core::AtomType::Water:
+                    catalyst = {0, 1};
+                    break;
+                default:
+                    throw std::invalid_argument("wheel second source requires a cardinal target");
                 }
                 while (catalyst != core::HexCoord{0, 1} && wheelOrientation < 6) {
                     catalyst = core::RotateClockwise(catalyst);
@@ -248,26 +267,37 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 if (wheelOrientation == 6)
                     throw std::invalid_argument("wheel catalyst cannot reach fixed contact");
             }
-            if (secondSource && !wheelSource && (quicksilverDemand != 1 || !surplusRetention ||
-                materialPuzzle.outputs[0].atoms.size() != 4 || balance != -1))
-                throw std::invalid_argument("second source requires registered V1/M2/Q1 retention demand");
+            if (secondSource && !wheelSource &&
+                (quicksilverDemand != 1 || !surplusRetention ||
+                 materialPuzzle.outputs[0].atoms.size() != 4 || balance != -1))
+                throw std::invalid_argument(
+                    "second source requires registered V1/M2/Q1 retention demand");
             if ((surplusRetention ? balance != -1 : balance != 0) || p.outputs[0].atoms.empty())
-                throw std::invalid_argument("coproduct transfer requires registered balanced or one-Vitae-surplus demand");
+                throw std::invalid_argument(
+                    "coproduct transfer requires registered balanced or one-Vitae-surplus demand");
         }
         const auto sourceType = p.inputs[cardinalInput].atoms.front().type;
-        const bool converted = std::any_of(p.outputs.front().atoms.begin(), p.outputs.front().atoms.end(),
-            [&](const auto& atom) { return atom.type != sourceType &&
-                !(secondSource && atom.type == core::AtomType::Quicksilver); });
+        const bool converted = std::any_of(
+            p.outputs.front().atoms.begin(), p.outputs.front().atoms.end(), [&](const auto& atom) {
+                return atom.type != sourceType &&
+                       !(secondSource && atom.type == core::AtomType::Quicksilver);
+            });
         if (converted && (p.outputs.front().atoms.size() > 16 ||
-            !std::all_of(p.outputs.front().atoms.begin(), p.outputs.front().atoms.end(),
-                [&](const auto& atom) { return atom.type == core::AtomType::Salt ||
-                    (secondSource && atom.type == core::AtomType::Quicksilver); })))
-            throw std::invalid_argument("completion transfer chemistry requires at most sixteen Salt atoms");
+                          !std::all_of(p.outputs.front().atoms.begin(),
+                                       p.outputs.front().atoms.end(), [&](const auto& atom) {
+                                           return atom.type == core::AtomType::Salt ||
+                                                  (secondSource &&
+                                                   atom.type == core::AtomType::Quicksilver);
+                                       })))
+            throw std::invalid_argument(
+                "completion transfer chemistry requires at most sixteen Salt atoms");
         for (const auto& atom : p.outputs.front().atoms)
-            if (!(secondSource && atom.type == core::AtomType::Quicksilver) && atom.type != sourceType &&
+            if (!(secondSource && atom.type == core::AtomType::Quicksilver) &&
+                atom.type != sourceType &&
                 !(sourceType >= core::AtomType::Air && sourceType <= core::AtomType::Water &&
                   atom.type == core::AtomType::Salt && (p.permissionBits & (1ULL << 12))))
-                throw std::invalid_argument("completion transfer supports only Direct/Calcification singleton supply");
+                throw std::invalid_argument(
+                    "completion transfer supports only Direct/Calcification singleton supply");
         completionTransfer->candidates.clear();
         completionTransfer->events.clear();
         completionTransfer->reactions.clear();
@@ -280,7 +310,10 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     }
     const auto* publishedMixed = mixedInventory;
     MixedInventoryProgram stagedMixed;
-    if (mixedInventory) { stagedMixed = *mixedInventory; mixedInventory = &stagedMixed; }
+    if (mixedInventory) {
+        stagedMixed = *mixedInventory;
+        mixedInventory = &stagedMixed;
+    }
     auto* publishedEmissions = emissions;
     auto* publishedEnds = productEnds;
     auto* publishedCustody = custody;
@@ -305,8 +338,9 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     const auto supply = [&] {
         if (supplied) return *supplied;
         try {
-            return proxySupply ? PlanProxySupply(p, deadline)
-                               : AssemblyPlanner::PlanSupply(p, productOrigins != nullptr, 20000, deadline);
+            return proxySupply
+                       ? PlanProxySupply(p, deadline)
+                       : AssemblyPlanner::PlanSupply(p, productOrigins != nullptr, 20000, deadline);
         } catch (const std::invalid_argument&) {
             checkDeadline();
             if ((productEnds && !finiteProducts) || proxySupply || productOrigins ||
@@ -353,7 +387,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         cells.push_back({a.position.q - minQ, a.position.r - minR});
     auto edge = [&](int a, int dx, int dy) {
         for (const auto& b : target.bonds) {
-        checkDeadline();
+            checkDeadline();
             auto from = core::Subtract(b.from, {minQ, minR});
             auto to = core::Subtract(b.to, {minQ, minR});
             auto next = core::Add(cells[a], {dx, dy});
@@ -372,15 +406,18 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             finiteProducts || singleProduct || p.productionInfo || p.outputs.size() != 1 ||
             width < 2 || width > 8 || height < 1 || height > 2 ||
             cells.size() != static_cast<std::size_t>(width * height) ||
-            std::any_of(p.inputs.begin(), p.inputs.end(), [&](const auto& input) {
-                return input.atoms.size() != 1 || !input.bonds.empty();
-            }) || std::any_of(target.bonds.begin(), target.bonds.end(), [](const auto& bond) {
-                return bond.bits != 1;
-            }) || std::any_of(supply.steps.begin(), supply.steps.end(), [](const auto& step) {
+            std::any_of(p.inputs.begin(), p.inputs.end(),
+                        [&](const auto& input) {
+                            return input.atoms.size() != 1 || !input.bonds.empty();
+                        }) ||
+            std::any_of(target.bonds.begin(), target.bonds.end(),
+                        [](const auto& bond) { return bond.bits != 1; }) ||
+            std::any_of(supply.steps.begin(), supply.steps.end(), [](const auto& step) {
                 return step.kind != SupplyPlan::Kind::Take ||
                        step.conversion != ElementConversion::None;
             }))
-            throw std::invalid_argument("component rows require direct singleton supply and full bounded ordinary rows");
+            throw std::invalid_argument(
+                "component rows require direct singleton supply and full bounded ordinary rows");
         for (int atom = 0; atom < static_cast<int>(cells.size()); ++atom)
             if (cells[atom].q + 1 < width && !edge(atom, 1, 0))
                 throw std::invalid_argument("component row has an unjoined horizontal boundary");
@@ -403,7 +440,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         auto& data = result.objects[id].bodyData;
         data = {1, 0, 0, 0, steps + 1};
         for (int x = 0; x <= steps; ++x) {
-        checkDeadline();
+            checkDeadline();
             data.push_back(x);
             data.push_back(0);
         }
@@ -455,7 +492,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 int direction = 0;
                 auto unit = core::HexCoord{1, 0};
                 while (unit != delta) {
-        checkDeadline();
+                    checkDeadline();
                     unit = core::RotateClockwise(unit);
                     ++direction;
                 }
@@ -476,7 +513,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                                                            rotate({1, 0})};
                         const int colors[] = {8, 2, 4};
                         for (int i = 0; i < 3; ++i) {
-        checkDeadline();
+                            checkDeadline();
                             const auto a = vertices[i], b = vertices[(i + 1) % 3];
                             if ((bits & colors[i]) &&
                                 ((a == base && b == other) || (a == other && b == base)))
@@ -503,14 +540,15 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         vitaeArm = object("arm1", {reactionQ, 2}, 1, 4);
         morsArm = reactionAssembly ? object("arm1", {reactionQ + 2, -1}, 1, 3)
                                    : object("arm1", {reactionQ + 1, -2}, 1, 1);
-        if (!reactionAssembly) for (std::size_t i = 0; i < sharedOutputs->outputs.size(); ++i) {
-        checkDeadline();
-            const bool vitae = sharedOutputs->outputs[i].atoms[0].type == core::AtomType::Vitae;
-            const auto cell = vitae ? core::HexCoord{reactionQ + 1, 1}
-                                    : core::HexCoord{reactionQ + 2, -2};
-            object("out-std", core::Subtract(cell, sharedOutputs->outputs[i].atoms[0].position),
-                   1, 0, static_cast<int>(i));
-        }
+        if (!reactionAssembly)
+            for (std::size_t i = 0; i < sharedOutputs->outputs.size(); ++i) {
+                checkDeadline();
+                const bool vitae = sharedOutputs->outputs[i].atoms[0].type == core::AtomType::Vitae;
+                const auto cell =
+                    vitae ? core::HexCoord{reactionQ + 1, 1} : core::HexCoord{reactionQ + 2, -2};
+                object("out-std", core::Subtract(cell, sharedOutputs->outputs[i].atoms[0].position),
+                       1, 0, static_cast<int>(i));
+            }
     }
     if ((reactionAssembly && !completionTransfer) || (!animismus && productOrigins)) {
         for (std::size_t i = 0; i < productOrigins->size(); ++i)
@@ -520,10 +558,9 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         object("out-std", {2 - minQ, 1 - minR}, 1, 0);
     else if (!sharedOutputs && !animismus && completionTransfer) {
         // Output placement is deferred until the live completion boundary is inspected.
-    }
-    else if (!animismus)
+    } else if (!animismus)
         for (std::size_t i = 0; i < sharedOutputs->outputs.size(); ++i) {
-        checkDeadline();
+            checkDeadline();
             const auto origin = sharedOutputs->outputs[i].atoms[0].position;
             object("out-std", {station + width + 6 + static_cast<int>(i) * 4 - origin.q, -origin.r},
                    1, 0, static_cast<int>(i));
@@ -539,22 +576,26 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     // keeps its relative offset and every pickup/drop clearance still comes from
     // the same slot distances. Anything outside that scope, or any flag value
     // other than exactly "on", compiles the current default machine byte for byte.
-    const bool expandedFeeds = std::any_of(p.inputs.begin(), p.inputs.end(), [&](const auto& input) {
-        const auto layout = PlanExtractionLayout(input);
-        int low = 256, high = -256;
-        for (auto c : layout.cells) {
-        checkDeadline();
-            low = std::min(low, c.r);
-            high = std::max(high, c.r);
-        }
-        return high - low > 2;
-    });
-    const bool compactLayout = allowCompactLayout && [] {
-        const char* flag = std::getenv("OPUSOPTIMA_COMPACT_LAYOUT");
-        // Default-on for the explicit scheduled-row path; explicit off restores
-        // the legacy geometry. Unknown values also keep the legacy geometry.
-        return !flag || std::string_view(flag) == "on";
-    }() && !sharedOutputs && !labels && !productOrigins && !supplied && !validationPuzzle &&
+    const bool expandedFeeds =
+        std::any_of(p.inputs.begin(), p.inputs.end(), [&](const auto& input) {
+            const auto layout = PlanExtractionLayout(input);
+            int low = 256, high = -256;
+            for (auto c : layout.cells) {
+                checkDeadline();
+                low = std::min(low, c.r);
+                high = std::max(high, c.r);
+            }
+            return high - low > 2;
+        });
+    const bool compactLayout =
+        allowCompactLayout &&
+        [] {
+            const char* flag = std::getenv("OPUSOPTIMA_COMPACT_LAYOUT");
+            // Default-on for the explicit scheduled-row path; explicit off restores
+            // the legacy geometry. Unknown values also keep the legacy geometry.
+            return !flag || std::string_view(flag) == "on";
+        }() &&
+        !sharedOutputs && !labels && !productOrigins && !supplied && !validationPuzzle &&
         !finiteProducts && !singleProduct && !componentRows && !animismus && !reactionAssembly &&
         !mixedInventory && !emissions && !owners && !custody && !completionTransfer &&
         !expandedFeeds && p.outputs.size() == 1 && width <= 16 && height <= 16;
@@ -583,7 +624,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             std::set<int> columns;
             for (const auto& atom : input.atoms) {
                 auto cell = atom.position;
-                for (int n = 0; n < layout.rotation; ++n) cell = core::RotateClockwise(cell);
+                for (int n = 0; n < layout.rotation; ++n)
+                    cell = core::RotateClockwise(cell);
                 lowRow = std::min(lowRow, cell.r);
                 highRow = std::max(highRow, cell.r);
                 columns.insert(cell.q);
@@ -596,23 +638,24 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     }();
     g_intakeApplied = directInput;
     if (std::getenv("OPUSOPTIMA_DEBUG_INTAKE"))
-        std::fprintf(stderr, "[intake] clocks=%d mode=%d direct=%d compact=%d\n", int(parallelClocks),
-                     g_intakeMode, int(directInput), int(compactLayout));
+        std::fprintf(stderr, "[intake] clocks=%d mode=%d direct=%d compact=%d\n",
+                     int(parallelClocks), g_intakeMode, int(directInput), int(compactLayout));
     // Measurement-only overrides; they are read only when the layout flag is on.
     const int compactGap = [&] {
-        if (compactLayout && compactGapOverride >= 0)
-            return std::clamp(compactGapOverride, 0, 8);
+        if (compactLayout && compactGapOverride >= 0) return std::clamp(compactGapOverride, 0, 8);
         const char* value = compactLayout ? std::getenv("OPUSOPTIMA_COMPACT_LAYOUT_GAP") : nullptr;
         if (!value) return 2;
         return std::clamp(std::atoi(value), 0, 8);
     }();
     const int compactStride = [&] {
-        const char* value = compactLayout ? std::getenv("OPUSOPTIMA_COMPACT_LAYOUT_STRIDE") : nullptr;
+        const char* value =
+            compactLayout ? std::getenv("OPUSOPTIMA_COMPACT_LAYOUT_STRIDE") : nullptr;
         if (!value) return 1;
         return std::clamp(std::atoi(value), 1, 3);
     }();
     const int compactSpacing = [&] {
-        const char* value = compactLayout ? std::getenv("OPUSOPTIMA_COMPACT_LAYOUT_SPACING") : nullptr;
+        const char* value =
+            compactLayout ? std::getenv("OPUSOPTIMA_COMPACT_LAYOUT_SPACING") : nullptr;
         if (!value) return std::min(2, feedSpacing);
         return std::clamp(std::atoi(value), 1, feedSpacing);
     }();
@@ -652,7 +695,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     int intakeIndex = 0;
     // Caches sit on r=6, above the retracted feeder's r=4 traversal.
     // Keep two empty cells before the source stations and their unbonders.
-    int feedReach = mixedInventory && mixedInventory->cacheCapacity ? mixedInventory->cacheCapacity + 2 : 0;
+    int feedReach =
+        mixedInventory && mixedInventory->cacheCapacity ? mixedInventory->cacheCapacity + 2 : 0;
     struct WideFeed {
         int input, courier, batch, transferDistance, top, startDistance;
         std::vector<int> arms, distances, lifts;
@@ -662,11 +706,11 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     int commonTop = 14, courierStart = -feedOffset - 12;
     if (expandedFeeds)
         for (const auto& input : p.inputs) {
-        checkDeadline();
+            checkDeadline();
             const auto layout = PlanExtractionLayout(input);
             int lowQ = 256, highQ = -256, lowR = 256, highR = -256;
             for (auto c : layout.cells) {
-        checkDeadline();
+                checkDeadline();
                 lowQ = std::min(lowQ, c.q);
                 highQ = std::max(highQ, c.q);
                 lowR = std::min(lowR, c.r);
@@ -703,7 +747,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         const int turns = layout.rotation;
         int lo = 256, hi = -256, lowR = 256;
         for (const auto& a : input.atoms) {
-        checkDeadline();
+            checkDeadline();
             auto c = rotate(a.position, turns);
             lo = std::min(lo, c.q);
             hi = std::max(hi, c.q);
@@ -713,7 +757,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         for (auto c : layout.cells)
             highR = std::max(highR, c.r);
         if (expandedFeeds) {
-        checkDeadline();
+            checkDeadline();
             // Static unbonding leaves each column accessible from above. Track
             // travel, rather than piston stroke, supplies arbitrary pickup depth.
             // The final atom exits underneath the regenerated input instead.
@@ -741,7 +785,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                           {}, {},      {}};
             std::map<int, int> columns;
             for (int j = 0; j < static_cast<int>(layout.cells.size()); ++j) {
-        checkDeadline();
+                checkDeadline();
                 const auto c = core::Add(source, layout.cells[j]);
                 if (!columns.count(c.q)) {
                     const int arm = object("piston", {c.q, top + 3}, 3, 4);
@@ -759,13 +803,13 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 slots.push_back({i, j, 0, 0});
             }
             for (const auto& b : input.bonds) {
-        checkDeadline();
+                checkDeadline();
                 const auto a = core::Add(source, rotate(b.from, turns));
                 const auto c = core::Add(source, rotate(b.to, turns));
                 auto direction = core::HexCoord{1, 0};
                 int rotation = 0;
                 while (direction != core::Subtract(c, a)) {
-        checkDeadline();
+                    checkDeadline();
                     direction = core::RotateClockwise(direction);
                     ++rotation;
                 }
@@ -786,7 +830,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             if (highR2 - lowR > 2)
                 throw std::invalid_argument("direct input requires at most three source rows");
             std::set<int> atomColumns;
-            for (const auto& a : input.atoms) atomColumns.insert(rotate(a.position, turns).q);
+            for (const auto& a : input.atoms)
+                atomColumns.insert(rotate(a.position, turns).q);
             if (atomColumns.size() != input.atoms.size())
                 throw std::invalid_argument("direct input requires one atom per source column");
             const core::HexCoord origin{directCursor - hi, -lowR};
@@ -817,18 +862,18 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         const core::HexCoord origin{-feedOffset - start - hi, 4 - lowR};
         object("input", origin, 1, turns, i);
         for (int j = 0; j < static_cast<int>(input.atoms.size()); ++j) {
-        checkDeadline();
+            checkDeadline();
             auto c = core::Add(origin, rotate(input.atoms[j].position, turns));
             slots.push_back({i, j, 5 + 2 * (-feedOffset - c.q), 6 - c.r});
         }
         for (const auto& b : input.bonds) {
-        checkDeadline();
+            checkDeadline();
             auto a = core::Add(origin, rotate(b.from, turns));
             auto c = core::Add(origin, rotate(b.to, turns));
             auto direction = core::HexCoord{1, 0};
             int rotation = 0;
             while (direction != core::Subtract(c, a)) {
-        checkDeadline();
+                checkDeadline();
                 direction = core::RotateClockwise(direction);
                 ++rotation;
             }
@@ -848,7 +893,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         for (const auto& step : mixedInventory->stores)
             bufferCount = std::max(bufferCount, step.buffer + 1);
         for (const auto& reaction : mixedInventory->reactions)
-            for (int slot : reaction.outputs) bufferCount = std::max(bufferCount, slot + 1);
+            for (int slot : reaction.outputs)
+                bufferCount = std::max(bufferCount, slot + 1);
     }
     if (mixedInventory && mixedInventory->cacheCapacity && expandedFeeds)
         throw std::invalid_argument("near inventory cache requires narrow source stations");
@@ -858,8 +904,9 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         if (mixedInventory && mixedInventory->cacheCapacity) {
             bufferSlots.push_back({-1, b, 5 + 2 * (1 + mixedInventory->cacheSlots.at(b)), 0});
         } else {
-            feedReach += compactLayout ? compactStride
-                                       : mixedInventory && mixedInventory->compactBuffers ? 1 : 3;
+            feedReach += compactLayout                                      ? compactStride
+                         : mixedInventory && mixedInventory->compactBuffers ? 1
+                                                                            : 3;
             bufferSlots.push_back({-1, b, 5 + 2 * feedReach, 2});
         }
     }
@@ -933,10 +980,13 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         data.push_back(0);
     }
     const int conveyor = componentRows ? -1 : object("piston", {-feedOffset, -3}, 2, 1);
-    if (!componentRows) track({-feedOffset, -3},
-          feedOffset + (sharedOutputs ? station + width + 6 +
-                                            static_cast<int>(sharedOutputs->outputs.size() - 1) * 4
-                                      : reactionAssembly ? reactionQ + 3 : 0));
+    if (!componentRows)
+        track({-feedOffset, -3},
+              feedOffset + (sharedOutputs
+                                ? station + width + 6 +
+                                      static_cast<int>(sharedOutputs->outputs.size() - 1) * 4
+                            : reactionAssembly ? reactionQ + 3
+                                               : 0));
     // Local source intake: one piston on a short rail above the sources. Pistons
     // reach at most three cells, so the rail sits on row 3: extension 3 grabs row
     // 0, 2 grabs row 1 and 1 grabs row 2. It always travels retracted.
@@ -947,7 +997,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         const int rail = object("track", {directMinColumn, 3}, 1, 0);
         auto& data = result.objects[rail].bodyData;
         data = {1, 0, 0, 0, span + 1};
-        for (int q = 0; q <= span; ++q) data.insert(data.end(), {q, 0});
+        for (int q = 0; q <= span; ++q)
+            data.insert(data.end(), {q, 0});
         data.push_back(0);
     }
     int wheelDevice = -1;
@@ -976,18 +1027,21 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             include(part.position);
             if (part.typeName == "track")
                 for (int i = 0; i < part.bodyData.at(4); ++i)
-                    include(core::Add(part.position, {part.bodyData.at(5 + 2*i), part.bodyData.at(6 + 2*i)}));
+                    include(core::Add(part.position,
+                                      {part.bodyData.at(5 + 2 * i), part.bodyData.at(6 + 2 * i)}));
             if (part.typeName == "input")
                 for (const auto& atom : p.inputs.at(part.bodyData.at(2)).atoms) {
                     auto cell = atom.position;
-                    for (int n = 0; n < part.bodyData.at(1); ++n) cell = core::RotateClockwise(cell);
+                    for (int n = 0; n < part.bodyData.at(1); ++n)
+                        cell = core::RotateClockwise(cell);
                     include(core::Add(part.position, cell));
                 }
         }
         return maximum;
     };
     if (purification) object("glyph-purification", {-feedOffset + 4, -1}, 1, 0);
-    const bool chemistry = mixedInventory ||
+    const bool chemistry =
+        mixedInventory ||
         std::any_of(supply.steps.begin(), supply.steps.end(), [](const auto& step) {
             return step.conversion == ElementConversion::Calcification;
         });
@@ -1023,17 +1077,17 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         data.push_back(0);
     }
     const int escapePark = feedReach + 3;
-    if (boundEscapeStation &&
-        (sharedOutputs || labels || productOrigins || supplied || validationPuzzle ||
-         finiteProducts || singleProduct || expandedFeeds || width > 16 || height > 16 ||
-         feedReach > 64))
+    if (boundEscapeStation && (sharedOutputs || labels || productOrigins || supplied ||
+                               validationPuzzle || finiteProducts || singleProduct ||
+                               expandedFeeds || width > 16 || height > 16 || feedReach > 64))
         throw std::invalid_argument("bounded escape station outside ordinary narrow row scope");
-    const bool needsEscape = !boundEscapeStation || std::any_of(slots.begin(), slots.end(), [&](const auto& slot) {
-        return slot.input >= 0 && slot.extensions == 2 &&
-               std::any_of(slots.begin(), slots.end(), [&](const auto& other) {
-                   return other.input == slot.input && other.extensions == 0;
-               });
-    });
+    const bool needsEscape =
+        !boundEscapeStation || std::any_of(slots.begin(), slots.end(), [&](const auto& slot) {
+            return slot.input >= 0 && slot.extensions == 2 &&
+                   std::any_of(slots.begin(), slots.end(), [&](const auto& other) {
+                       return other.input == slot.input && other.extensions == 0;
+                   });
+        });
     int escapeArm = -1;
     if (needsEscape && !directInput) {
         escapeArm = object("piston", {-feedOffset - escapePark, 2}, 1, 1);
@@ -1071,7 +1125,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         auto key = [](core::HexCoord c) { return Key{c.q, c.r}; };
         std::set<Key> forbidden, visited;
         for (int i = 0; i < static_cast<int>(cells.size()); ++i) {
-        checkDeadline();
+            checkDeadline();
             const auto type = target.atoms[i].type;
             if (std::find(calcify.begin(), calcify.end(), i) == calcify.end() &&
                 type >= core::AtomType::Air && type <= core::AtomType::Water)
@@ -1080,7 +1134,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         for (auto c : translations)
             visited.insert(key(c));
         for (int atom : calcify) {
-        checkDeadline();
+            checkDeadline();
             const auto goal = key(core::Subtract(glyph, core::Add(cells[atom], {2, 1})));
             if (visited.count(goal)) continue;
             const auto start = key(translations.back());
@@ -1089,12 +1143,12 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             queue.push(start);
             previous[start] = start;
             while (!queue.empty() && !previous.count(goal)) {
-        checkDeadline();
+                checkDeadline();
                 const auto current = queue.front();
                 queue.pop();
                 auto delta = core::HexCoord{1, 0};
                 for (int direction = 0; direction < 6; ++direction) {
-        checkDeadline();
+                    checkDeadline();
                     const Key next{current.first + delta.q, current.second + delta.r};
                     delta = core::RotateClockwise(delta);
                     if (next.first < remote - width - height - 8 ||
@@ -1113,7 +1167,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             for (auto c = goal; c != start; c = previous.at(c))
                 path.push_back(c);
             for (auto it = path.rbegin(); it != path.rend(); ++it) {
-        checkDeadline();
+                checkDeadline();
                 translations.push_back({it->first, it->second});
                 visited.insert(*it);
             }
@@ -1134,10 +1188,11 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         const auto contact = core::Add(result.objects[vitaeArm].position, reach);
         int low = std::numeric_limits<int>::max(), high = std::numeric_limits<int>::min();
         for (const auto& atom : materialPuzzle.outputs.front().atoms) {
-            low = std::min(low, atom.position.q); high = std::max(high, atom.position.q);
+            low = std::min(low, atom.position.q);
+            high = std::max(high, atom.position.q);
         }
         retentionDistance = fullBounds().q - contact.q + high - low +
-            static_cast<int>(completionTransfer->retention.capacity) * 3 + 2;
+                            static_cast<int>(completionTransfer->retention.capacity) * 3 + 2;
         const auto base = core::Add(contact, {1, 0});
         retentionArm = object("arm1", base, 1, 3);
         const int rail = object("track", base, 1, 0);
@@ -1151,13 +1206,16 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             footprint.push_back(core::Add(base, spoke));
             spoke = core::RotateClockwise(spoke);
         }
-        const auto occupied = [&](core::HexCoord cell) { return std::find(footprint.begin(), footprint.end(), cell) != footprint.end(); };
+        const auto occupied = [&](core::HexCoord cell) {
+            return std::find(footprint.begin(), footprint.end(), cell) != footprint.end();
+        };
         for (const auto& hardware : result.objects) {
             if (hardware.typeName == "track") {
                 for (int i = 0; i < hardware.bodyData.at(4); ++i)
-                    if (occupied(core::Add(hardware.position,
-                        {hardware.bodyData.at(5 + 2 * i), hardware.bodyData.at(6 + 2 * i)})))
-                        throw ExecutionIR::LayoutFailure("wheel occupied footprint intersects relative track");
+                    if (occupied(core::Add(hardware.position, {hardware.bodyData.at(5 + 2 * i),
+                                                               hardware.bodyData.at(6 + 2 * i)})))
+                        throw ExecutionIR::LayoutFailure(
+                            "wheel occupied footprint intersects relative track");
             } else if ((hardware.typeName == "piston" || hardware.typeName == "arm1") &&
                        occupied(hardware.position)) {
                 throw ExecutionIR::LayoutFailure("wheel occupied footprint intersects arm base");
@@ -1205,11 +1263,11 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     }();
     const bool rowPipelineRequested = rowPipelineFlag || assemblyClocksRequested;
     const bool bufferedSupply = !bufferSlots.empty();
-    const bool feedPrefetch = (feedPrefetchRequested || rowPipelineRequested) && !expandedFeeds &&
-        !completionTransfer && !mixedInventory && !reactionAssembly && !animismus &&
-        !sharedOutputs && !labels && !productOrigins && !supplied && !validationPuzzle && !custody &&
-        !emissions && !owners && !singleProduct && !finiteProducts && !componentRows &&
-        !bufferedSupply;
+    const bool feedPrefetch =
+        (feedPrefetchRequested || rowPipelineRequested) && !expandedFeeds && !completionTransfer &&
+        !mixedInventory && !reactionAssembly && !animismus && !sharedOutputs && !labels &&
+        !productOrigins && !supplied && !validationPuzzle && !custody && !emissions && !owners &&
+        !singleProduct && !finiteProducts && !componentRows && !bufferedSupply;
     const bool rowPipeline = rowPipelineRequested && feedPrefetch;
     const bool assemblyClocks = assemblyClocksRequested && rowPipeline;
     int feedReady = 0;
@@ -1244,14 +1302,15 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 if (rail.typeName != "track") continue;
                 const int count = rail.bodyData.at(4);
                 for (int i = 0; i < count; ++i) {
-                    const auto cell = core::Add(rail.position,
-                        {rail.bodyData.at(5 + 2 * i), rail.bodyData.at(6 + 2 * i)});
+                    const auto cell = core::Add(
+                        rail.position, {rail.bodyData.at(5 + 2 * i), rail.bodyData.at(6 + 2 * i)});
                     if (cell != origin) continue;
                     const int next = i + displacement.at(arm);
                     if (next < 0 || next >= count)
-                        throw std::invalid_argument("completion transfer holder outside real track");
-                    return core::Add(rail.position,
-                        {rail.bodyData.at(5 + 2 * next), rail.bodyData.at(6 + 2 * next)});
+                        throw std::invalid_argument(
+                            "completion transfer holder outside real track");
+                    return core::Add(rail.position, {rail.bodyData.at(5 + 2 * next),
+                                                     rail.bodyData.at(6 + 2 * next)});
                 }
             }
         }
@@ -1259,17 +1318,19 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     };
     auto tipAt = [&](int arm) {
         core::HexCoord reach{lengths.at(arm), 0};
-        for (int n = 0; n < rotations.at(arm); ++n) reach = core::RotateClockwise(reach);
+        for (int n = 0; n < rotations.at(arm); ++n)
+            reach = core::RotateClockwise(reach);
         return core::Add(baseAt(arm), reach);
     };
     auto record = [&](const IR::Operation& operation, const char* kind) {
         completionTransfer->ledger.AppendFromTail(materialPuzzle, live, operation);
-        const auto id = operation.kind == IR::Kind::Acquire ? live.nextId - 1 :
-            operation.atoms.empty() ? 0 : operation.atoms.front();
+        const auto id = operation.kind == IR::Kind::Acquire ? live.nextId - 1
+                        : operation.atoms.empty()           ? 0
+                                                            : operation.atoms.front();
         row_profile::Scope observerProfile(row_profile::Observer);
-        completionTransfer->events.push_back({time, kind, id,
-            operation.atoms.size() > 1 ? operation.atoms[1] : 0,
-            live.atoms.contains(id) ? live.atoms.at(id).position : core::HexCoord{}});
+        completionTransfer->events.push_back(
+            {time, kind, id, operation.atoms.size() > 1 ? operation.atoms[1] : 0,
+             live.atoms.contains(id) ? live.atoms.at(id).position : core::HexCoord{}});
     };
     auto atomAt = [&](core::HexCoord cell) -> IR::AtomId {
         for (const auto& [id, atom] : live.atoms)
@@ -1279,8 +1340,10 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     auto awaitFeed = [&] {
         // The opt-in feed clock may legitimately run ahead of the shared tick
         // stream; the shared stream only waits when it actually needs the atom.
-        if (feedPrefetch) time = std::max(time, feedTime);
-        else time = std::max(time, feedReady);
+        if (feedPrefetch)
+            time = std::max(time, feedTime);
+        else
+            time = std::max(time, feedReady);
     };
     // Record that every instruction emitted so far has left the shared hand-off
     // cell free at the current shared tick. Under the row pipeline this replaces
@@ -1311,7 +1374,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             awaitUpper();
         std::map<IR::AtomId, std::pair<int, core::HexCoord>> motions;
         for (int arm : arms) {
-        checkDeadline();
+            checkDeadline();
             const auto previousTip = completionTransfer ? tipAt(arm) : core::HexCoord{};
             const auto previousBase = completionTransfer ? baseAt(arm) : core::HexCoord{};
             if (completionTransfer && action == 'G') {
@@ -1321,16 +1384,24 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                     for (const auto& port : result.objects) {
                         if (port.typeName != "input") continue;
                         const int inputIndex = port.bodyData.at(2);
-                        if (inputIndex < 0 || static_cast<std::size_t>(inputIndex) >= p.inputs.size())
+                        if (inputIndex < 0 ||
+                            static_cast<std::size_t>(inputIndex) >= p.inputs.size())
                             throw std::invalid_argument("completion transfer input port index");
                         const auto& input = p.inputs.at(inputIndex);
                         if (input.atoms.size() != 1 || !input.bonds.empty())
-                            throw std::invalid_argument("completion transfer input port must be singleton");
+                            throw std::invalid_argument(
+                                "completion transfer input port must be singleton");
                         auto local = input.atoms.front().position;
                         for (int n = 0; n < port.bodyData.at(1); ++n)
                             local = core::RotateClockwise(local);
                         if (core::Add(port.position, local) == tip) {
-                            record({IR::Kind::Acquire, static_cast<std::size_t>(inputIndex), {}, 0, port.bodyData.at(1), port.position}, "Acquire");
+                            record({IR::Kind::Acquire,
+                                    static_cast<std::size_t>(inputIndex),
+                                    {},
+                                    0,
+                                    port.bodyData.at(1),
+                                    port.position},
+                                   "Acquire");
                             id = atomAt(tip);
                             break;
                         }
@@ -1356,13 +1427,15 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                     const auto fragment = IR::Fragment(live, id);
                     const int turn = action == 'r' ? 1 : action == 'R' ? 5 : 0;
                     auto anchor = previousTip;
-                    for (int n = 0; n < turn; ++n) anchor = core::RotateClockwise(anchor);
+                    for (int n = 0; n < turn; ++n)
+                        anchor = core::RotateClockwise(anchor);
                     const auto translation = core::Subtract(tipAt(arm), anchor);
                     if (turn || translation != core::HexCoord{}) {
                         const auto key = fragment.front();
                         const auto motion = std::pair{turn, translation};
                         if (motions.contains(key) && motions.at(key) != motion)
-                            throw std::invalid_argument("completion transfer inconsistent simultaneous holders");
+                            throw std::invalid_argument(
+                                "completion transfer inconsistent simultaneous holders");
                         motions[key] = motion;
                     }
                     (void)previousBase;
@@ -1379,29 +1452,32 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 const auto type = live.atoms.at(precursor).type;
                 if (type < core::AtomType::Air || type > core::AtomType::Water) continue;
                 if (IR::Fragment(live, precursor).size() != 1)
-                    throw std::invalid_argument("completion transfer calcification requires singleton contact");
+                    throw std::invalid_argument(
+                        "completion transfer calcification requires singleton contact");
                 std::vector<std::size_t> holders;
                 for (const auto& [arm, held] : liveCustody.Held())
                     if (held == precursor) holders.push_back(arm);
                 const auto product = live.nextId;
                 record({IR::Kind::Calcify, 0, {precursor}}, "Calcify");
-                record({IR::Kind::Relocate, 0, {product}, 0, 0, glyph.position}, "ReactionPlacement");
+                record({IR::Kind::Relocate, 0, {product}, 0, 0, glyph.position},
+                       "ReactionPlacement");
                 for (const auto arm : holders) {
                     liveCustody.Drop(arm);
                     liveCustody.Grab(live, arm, tipAt(static_cast<int>(arm)), product);
                 }
-                completionTransfer->events.push_back({time, "ReactionIdentity", precursor, product,
-                                                       glyph.position});
+                completionTransfer->events.push_back(
+                    {time, "ReactionIdentity", precursor, product, glyph.position});
                 liveCustody.Validate(live);
                 RowCompletionTransfer::Boundary reaction{time, live, {}};
                 for (std::size_t arm = 0; arm < result.objects.size(); ++arm) {
                     const auto& object = result.objects[arm];
                     if (object.typeName != "piston" && object.typeName != "arm1") continue;
                     const auto held = liveCustody.Held().find(arm);
-                    reaction.holders.push_back({static_cast<int>(arm), lengths.at(arm),
-                        displacement.at(arm), rotations.at(arm), grabbing.at(arm),
-                        held == liveCustody.Held().end() ? 0 : held->second,
-                        baseAt(static_cast<int>(arm)), tipAt(static_cast<int>(arm))});
+                    reaction.holders.push_back(
+                        {static_cast<int>(arm), lengths.at(arm), displacement.at(arm),
+                         rotations.at(arm), grabbing.at(arm),
+                         held == liveCustody.Held().end() ? 0 : held->second,
+                         baseAt(static_cast<int>(arm)), tipAt(static_cast<int>(arm))});
                 }
                 completionTransfer->reactions.push_back(std::move(reaction));
             }
@@ -1416,86 +1492,95 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                         if (held == precursor) holders.push_back(arm);
                     const auto product = live.nextId;
                     IR::Operation duplicate{IR::Kind::Duplicate, 0, {precursor}};
-                    duplicate.wheelCatalyst = IR::WheelCatalyst{
-                        static_cast<std::size_t>(wheelDevice), wheelElement,
-                        result.objects.at(wheelDevice).bodyData.at(1)};
+                    duplicate.wheelCatalyst =
+                        IR::WheelCatalyst{static_cast<std::size_t>(wheelDevice), wheelElement,
+                                          result.objects.at(wheelDevice).bodyData.at(1)};
                     record(duplicate, "WheelDuplicate");
                     for (const auto arm : holders) {
                         liveCustody.Drop(arm);
                         liveCustody.Grab(live, arm, tipAt(static_cast<int>(arm)), product);
                     }
-                    completionTransfer->events.push_back({time, "WheelIdentity", precursor, product, substrate});
+                    completionTransfer->events.push_back(
+                        {time, "WheelIdentity", precursor, product, substrate});
                     liveCustody.Validate(live);
                     RowCompletionTransfer::Boundary reaction{time, live, {}};
                     for (std::size_t arm = 0; arm < result.objects.size(); ++arm) {
                         const auto& object = result.objects[arm];
                         if (object.typeName != "piston" && object.typeName != "arm1") continue;
                         const auto held = liveCustody.Held().find(arm);
-                        reaction.holders.push_back({static_cast<int>(arm), lengths.at(arm),
-                            displacement.at(arm), rotations.at(arm), grabbing.at(arm),
-                            held == liveCustody.Held().end() ? 0 : held->second,
-                            baseAt(static_cast<int>(arm)), tipAt(static_cast<int>(arm))});
+                        reaction.holders.push_back(
+                            {static_cast<int>(arm), lengths.at(arm), displacement.at(arm),
+                             rotations.at(arm), grabbing.at(arm),
+                             held == liveCustody.Held().end() ? 0 : held->second,
+                             baseAt(static_cast<int>(arm)), tipAt(static_cast<int>(arm))});
                     }
                     completionTransfer->reactions.push_back(std::move(reaction));
                 }
             }
-            if (coproductTransfer) for (const auto& glyph : result.objects) {
-                if (glyph.typeName != "glyph-life-and-death") continue;
-                auto cell = [&](core::HexCoord offset) {
-                    for (int n = 0; n < glyph.bodyData.at(1); ++n)
-                        offset = core::RotateClockwise(offset);
-                    return core::Add(glyph.position, offset);
-                };
-                const auto a = atomAt(cell({0, 0})), b = atomAt(cell({1, 0}));
-                const auto v = cell({0, 1}), m = cell({1, -1});
-                if (!a || !b || atomAt(v) || atomAt(m)) continue;
-                if (live.atoms.at(a).type != core::AtomType::Salt ||
-                    live.atoms.at(b).type != core::AtomType::Salt ||
-                    IR::Fragment(live, a).size() != 1 || IR::Fragment(live, b).size() != 1) continue;
-                bool held = false;
-                for (const auto& [arm, id] : liveCustody.Held()) held |= id == a || id == b;
-                if (held) continue; // Native conversion_input forbids grabbed precursors.
-                RowCompletionTransfer::Boundary inputs{time, live, {}};
-                for (std::size_t arm = 0; arm < result.objects.size(); ++arm) {
-                    const auto& object = result.objects[arm];
-                    if (object.typeName != "piston" && object.typeName != "arm1") continue;
-                    const auto h = liveCustody.Held().find(arm);
-                    inputs.holders.push_back({static_cast<int>(arm), lengths.at(arm),
-                        displacement.at(arm), rotations.at(arm), grabbing.at(arm),
-                        h == liveCustody.Held().end() ? 0 : h->second,
-                        baseAt(static_cast<int>(arm)), tipAt(static_cast<int>(arm))});
+            if (coproductTransfer)
+                for (const auto& glyph : result.objects) {
+                    if (glyph.typeName != "glyph-life-and-death") continue;
+                    auto cell = [&](core::HexCoord offset) {
+                        for (int n = 0; n < glyph.bodyData.at(1); ++n)
+                            offset = core::RotateClockwise(offset);
+                        return core::Add(glyph.position, offset);
+                    };
+                    const auto a = atomAt(cell({0, 0})), b = atomAt(cell({1, 0}));
+                    const auto v = cell({0, 1}), m = cell({1, -1});
+                    if (!a || !b || atomAt(v) || atomAt(m)) continue;
+                    if (live.atoms.at(a).type != core::AtomType::Salt ||
+                        live.atoms.at(b).type != core::AtomType::Salt ||
+                        IR::Fragment(live, a).size() != 1 || IR::Fragment(live, b).size() != 1)
+                        continue;
+                    bool held = false;
+                    for (const auto& [arm, id] : liveCustody.Held())
+                        held |= id == a || id == b;
+                    if (held) continue; // Native conversion_input forbids grabbed precursors.
+                    RowCompletionTransfer::Boundary inputs{time, live, {}};
+                    for (std::size_t arm = 0; arm < result.objects.size(); ++arm) {
+                        const auto& object = result.objects[arm];
+                        if (object.typeName != "piston" && object.typeName != "arm1") continue;
+                        const auto h = liveCustody.Held().find(arm);
+                        inputs.holders.push_back(
+                            {static_cast<int>(arm), lengths.at(arm), displacement.at(arm),
+                             rotations.at(arm), grabbing.at(arm),
+                             h == liveCustody.Held().end() ? 0 : h->second,
+                             baseAt(static_cast<int>(arm)), tipAt(static_cast<int>(arm))});
+                    }
+                    completionTransfer->reactionInputs.push_back(std::move(inputs));
+                    const auto first = live.nextId;
+                    record({IR::Kind::Animismus, 0, {a, b}}, "Animismus");
+                    record({IR::Kind::Relocate, 0, {first}, 0, 0, v}, "ReactionPlacement");
+                    record({IR::Kind::Relocate, 0, {first + 1}, 0, 0, m}, "ReactionPlacement");
+                    completionTransfer->events.push_back({time, "ReactionIdentity", a, first, v});
+                    completionTransfer->events.push_back(
+                        {time, "ReactionIdentity", b, first + 1, m});
+                    // Empty grabbing arms on real outlet cells acquire the fresh identity.
+                    for (std::size_t arm = 0; arm < result.objects.size(); ++arm) {
+                        if (!grabbing.at(arm) || liveCustody.Held().contains(arm)) continue;
+                        const auto tip = tipAt(static_cast<int>(arm));
+                        if (tip == v || tip == m)
+                            liveCustody.Grab(live, arm, tip, tip == v ? first : first + 1);
+                    }
+                    liveCustody.Validate(live);
+                    RowCompletionTransfer::Boundary reaction{time, live, {}};
+                    for (std::size_t arm = 0; arm < result.objects.size(); ++arm) {
+                        const auto& object = result.objects[arm];
+                        if (object.typeName != "piston" && object.typeName != "arm1") continue;
+                        const auto h = liveCustody.Held().find(arm);
+                        reaction.holders.push_back(
+                            {static_cast<int>(arm), lengths.at(arm), displacement.at(arm),
+                             rotations.at(arm), grabbing.at(arm),
+                             h == liveCustody.Held().end() ? 0 : h->second,
+                             baseAt(static_cast<int>(arm)), tipAt(static_cast<int>(arm))});
+                    }
+                    completionTransfer->reactions.push_back(std::move(reaction));
                 }
-                completionTransfer->reactionInputs.push_back(std::move(inputs));
-                const auto first = live.nextId;
-                record({IR::Kind::Animismus, 0, {a, b}}, "Animismus");
-                record({IR::Kind::Relocate, 0, {first}, 0, 0, v}, "ReactionPlacement");
-                record({IR::Kind::Relocate, 0, {first + 1}, 0, 0, m}, "ReactionPlacement");
-                completionTransfer->events.push_back({time, "ReactionIdentity", a, first, v});
-                completionTransfer->events.push_back({time, "ReactionIdentity", b, first + 1, m});
-                // Empty grabbing arms on real outlet cells acquire the fresh identity.
-                for (std::size_t arm = 0; arm < result.objects.size(); ++arm) {
-                    if (!grabbing.at(arm) || liveCustody.Held().contains(arm)) continue;
-                    const auto tip = tipAt(static_cast<int>(arm));
-                    if (tip == v || tip == m)
-                        liveCustody.Grab(live, arm, tip, tip == v ? first : first + 1);
-                }
-                liveCustody.Validate(live);
-                RowCompletionTransfer::Boundary reaction{time, live, {}};
-                for (std::size_t arm = 0; arm < result.objects.size(); ++arm) {
-                    const auto& object = result.objects[arm];
-                    if (object.typeName != "piston" && object.typeName != "arm1") continue;
-                    const auto h = liveCustody.Held().find(arm);
-                    reaction.holders.push_back({static_cast<int>(arm), lengths.at(arm),
-                        displacement.at(arm), rotations.at(arm), grabbing.at(arm),
-                        h == liveCustody.Held().end() ? 0 : h->second,
-                        baseAt(static_cast<int>(arm)), tipAt(static_cast<int>(arm))});
-                }
-                completionTransfer->reactions.push_back(std::move(reaction));
-            }
             for (const auto& glyph : result.objects) {
                 if (glyph.typeName != "bonder") continue;
                 core::HexCoord d{1, 0};
-                for (int n = 0; n < glyph.bodyData.at(1); ++n) d = core::RotateClockwise(d);
+                for (int n = 0; n < glyph.bodyData.at(1); ++n)
+                    d = core::RotateClockwise(d);
                 auto a = atomAt(glyph.position), b = atomAt(core::Add(glyph.position, d));
                 if (a && b) {
                     if (b < a) std::swap(a, b);
@@ -1531,11 +1616,14 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         ++feedTime;
     };
     auto feedAct = [&](char action) {
-        if (feedPrefetch) feedWrite(action);
-        else write({feedArm}, action);
+        if (feedPrefetch)
+            feedWrite(action);
+        else
+            write({feedArm}, action);
     };
     auto feedMove = [&](int distance) {
-        for (int n = 0; n < std::abs(distance); ++n) feedAct(distance > 0 ? 'A' : 'a');
+        for (int n = 0; n < std::abs(distance); ++n)
+            feedAct(distance > 0 ? 'A' : 'a');
     };
     // Upper-arm tail actions on the opt-in assembly clock. The bookkeeping
     // mirrors write() for the given arms; the shared time cursor is untouched so
@@ -1609,7 +1697,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 };
                 occupy();
                 for (char action : t.actions) {
-        checkDeadline();
+                    checkDeadline();
                     if (action == 'e') --length;
                     if (action == 'E') ++length;
                     if (action == 'a') --position;
@@ -1623,17 +1711,18 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         }
         int serial = 0, span = 0;
         for (std::size_t i = 0; eligible && i < tasks.size(); ++i) {
-        checkDeadline();
+            checkDeadline();
             auto& task = tasks[i];
             for (std::size_t j = 0; j < i; ++j) {
-        checkDeadline();
+                checkDeadline();
                 const auto& prior = tasks[j];
-                const bool conflict = task.arm == prior.arm ||
+                const bool conflict =
+                    task.arm == prior.arm ||
                     std::any_of(task.occupancy.begin(), task.occupancy.end(),
                                 [&](auto cell) { return prior.occupancy.count(cell); });
                 if (conflict)
-                    task.start = std::max(task.start,
-                                          prior.start + static_cast<int>(prior.actions.size()));
+                    task.start =
+                        std::max(task.start, prior.start + static_cast<int>(prior.actions.size()));
             }
             serial += static_cast<int>(task.actions.size());
             span = std::max(span, task.start + static_cast<int>(task.actions.size()));
@@ -1647,7 +1736,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                     result.objects[task.arm].instructions.push_back(
                         {task.actions[n], time + task.start + static_cast<int>(n)});
             for (int arm : arms) {
-        checkDeadline();
+                checkDeadline();
                 lengths[arm] = 2;
                 displacement[arm] = 0;
             }
@@ -1656,7 +1745,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             return;
         }
         for (int arm : arms) {
-        checkDeadline();
+            checkDeadline();
             while (lengths[arm] > 2)
                 write({arm}, 'e');
             while (lengths[arm] < 2)
@@ -1674,10 +1763,13 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             return;
         }
         awaitUpper();
-        for (int arm : upper) upperWrite({arm}, 'g');
+        for (int arm : upper)
+            upperWrite({arm}, 'g');
         for (int arm : upper) {
-            while (lengths[arm] > 2) upperWrite({arm}, 'e');
-            while (lengths[arm] < 2) upperWrite({arm}, 'E');
+            while (lengths[arm] > 2)
+                upperWrite({arm}, 'e');
+            while (lengths[arm] < 2)
+                upperWrite({arm}, 'E');
             upperMove({arm}, -displacement[arm]);
         }
     };
@@ -1698,7 +1790,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             IR::Fragment(live, id).size() != 1)
             throw std::invalid_argument("retention contact lacks real singleton Vitae");
         write({retentionArm}, 'G');
-        write({retentionArm}, 'R'); write({retentionArm}, 'R');
+        write({retentionArm}, 'R');
+        write({retentionArm}, 'R');
         const int distance = retentionDistance - static_cast<int>(slot) * 3;
         move({retentionArm}, distance);
         const auto target = tipAt(retentionArm);
@@ -1709,7 +1802,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         terminal.slots.push_back({slot, id, core::AtomType::Vitae});
         completionTransfer->retentionTargets.emplace(id, target);
         move({retentionArm}, -distance);
-        write({retentionArm}, 'r'); write({retentionArm}, 'r');
+        write({retentionArm}, 'r');
+        write({retentionArm}, 'r');
         vitaePending = false;
     };
     RowCompletionTransfer::Candidate selectedReceiver;
@@ -1725,25 +1819,34 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 const auto& obj = result.objects[i];
                 if (obj.typeName != "piston" && obj.typeName != "arm1") continue;
                 const auto held = liveCustody.Held().find(i);
-                boundary.holders.push_back({static_cast<int>(i), lengths[i], displacement[i],
-                    rotations[i], grabbing[i], held == liveCustody.Held().end() ? 0 : held->second,
-                    baseAt(static_cast<int>(i)), tipAt(static_cast<int>(i))});
+                boundary.holders.push_back(
+                    {static_cast<int>(i), lengths[i], displacement[i], rotations[i], grabbing[i],
+                     held == liveCustody.Held().end() ? 0 : held->second,
+                     baseAt(static_cast<int>(i)), tipAt(static_cast<int>(i))});
             }
             completionTransfer->boundaries.push_back(boundary);
-            { row_profile::Scope profile(row_profile::Observer); completionTransfer->partialMachine = result; }
+            {
+                row_profile::Scope profile(row_profile::Observer);
+                completionTransfer->partialMachine = result;
+            }
             if (live.atoms.empty())
                 throw std::invalid_argument("completion transfer: empty completion boundary");
-            auto product = std::find_if(live.atoms.begin(), live.atoms.end(),
-                [&](const auto& entry) {
-                    return std::none_of(live.stored.begin(), live.stored.end(), [&](const auto& slot) {
-                        return std::find(slot.second.begin(), slot.second.end(), entry.first) != slot.second.end();
-                    });
+            auto product =
+                std::find_if(live.atoms.begin(), live.atoms.end(), [&](const auto& entry) {
+                    return std::none_of(live.stored.begin(), live.stored.end(),
+                                        [&](const auto& slot) {
+                                            return std::find(slot.second.begin(), slot.second.end(),
+                                                             entry.first) != slot.second.end();
+                                        });
                 });
-            if (product == live.atoms.end()) throw std::invalid_argument("completion lacks product");
+            if (product == live.atoms.end())
+                throw std::invalid_argument("completion lacks product");
             const auto seed = product->first;
             if (IR::Fragment(live, seed).size() + live.stored.size() != live.atoms.size())
-                throw std::invalid_argument("completion transfer: disconnected completion material");
-            // Borrow history only for this synchronous proof; the projected state owns its material.
+                throw std::invalid_argument(
+                    "completion transfer: disconnected completion material");
+            // Borrow history only for this synchronous proof; the projected state owns its
+            // material.
             {
                 row_profile::Scope projectionProfile(row_profile::Projection);
                 const IR::Operation output{IR::Kind::Output, 0, {seed}};
@@ -1751,86 +1854,110 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 if (surplusRetention) {
                     auto terminal = completionTransfer->retention;
                     terminal.outputs = {static_cast<std::size_t>(completedTransfers + 1)};
-                    RequireFinitePhysicalTerminal(check, terminal, completionTransfer->retentionTargets);
+                    RequireFinitePhysicalTerminal(check, terminal,
+                                                  completionTransfer->retentionTargets);
                     liveCustody.Validate(live);
                     if (completedTransfers == 5) {
-                        auto proof = [&] { row_profile::Scope profile(row_profile::ProofCopy, completionTransfer->ledger.steps.size()); return completionTransfer->ledger; }();
+                        auto proof = [&] {
+                            row_profile::Scope profile(row_profile::ProofCopy,
+                                                       completionTransfer->ledger.steps.size());
+                            return completionTransfer->ledger;
+                        }();
                         auto tail = live;
                         proof.AppendFromTail(materialPuzzle, tail, output);
-                        (void)MakeFiniteExecutionPlan(materialPuzzle, std::move(proof), terminal, completionTransfer->mode);
+                        (void)MakeFiniteExecutionPlan(materialPuzzle, std::move(proof), terminal,
+                                                      completionTransfer->mode);
                     }
-                } else IR::RequireComplete(check, {completedTransfers + 1});
+                } else
+                    IR::RequireComplete(check, {completedTransfers + 1});
             }
             int maximumQ = std::numeric_limits<int>::min();
-            for (const auto& obj : result.objects) maximumQ = std::max(maximumQ, obj.position.q);
-            for (const auto& [id, atom] : live.atoms) maximumQ = std::max(maximumQ, atom.position.q);
-            const core::HexCoord receiverDirection = surplusRetention ? core::HexCoord{0, 1} : core::HexCoord{1, 0};
+            for (const auto& obj : result.objects)
+                maximumQ = std::max(maximumQ, obj.position.q);
+            for (const auto& [id, atom] : live.atoms)
+                maximumQ = std::max(maximumQ, atom.position.q);
+            const core::HexCoord receiverDirection =
+                surplusRetention ? core::HexCoord{0, 1} : core::HexCoord{1, 0};
             int maximumR = fullBounds().r;
-            for (const auto& [id, atom] : live.atoms) maximumR = std::max(maximumR, atom.position.r);
+            for (const auto& [id, atom] : live.atoms)
+                maximumR = std::max(maximumR, atom.position.r);
             if (receiver < 0) {
-            const auto productFragment = IR::Fragment(live, seed);
-            for (const auto& [id, atom] : live.atoms) {
-                if (std::find(productFragment.begin(), productFragment.end(), id) == productFragment.end()) continue;
-                for (int rotation = 0; rotation < 6; ++rotation) {
-                    checkDeadline();
-                    core::HexCoord reach{1, 0};
-                    for (int n = 0; n < rotation; ++n) reach = core::RotateClockwise(reach);
-                    const auto base = core::Subtract(atom.position, reach);
-                    RowCompletionTransfer::Candidate candidate{base, atom.position,
-                        {maximumQ + 2, base.r}, rotation, maximumQ + 2 - base.q, {}};
-                    if (surplusRetention) {
-                        candidate.destination = {base.q, maximumR + 2};
-                        candidate.distance = maximumR + 2 - base.r;
-                    }
-                    for (const auto& obj : result.objects)
-                        if ((obj.typeName == "piston" || obj.typeName == "arm1") && obj.position == base)
-                            candidate.rejection = "receiver base overlaps existing arm base";
-                    for (const auto& [other, material] : live.atoms)
-                        if (material.position == base)
-                            candidate.rejection = "receiver base overlaps completed material";
-                    // This base must exist throughout assembly, not appear at the boundary.
-                    for (const auto& step : completionTransfer->ledger.steps) {
-                        for (const auto& [other, material] : step.effects.atoms)
+                const auto productFragment = IR::Fragment(live, seed);
+                for (const auto& [id, atom] : live.atoms) {
+                    if (std::find(productFragment.begin(), productFragment.end(), id) ==
+                        productFragment.end())
+                        continue;
+                    for (int rotation = 0; rotation < 6; ++rotation) {
+                        checkDeadline();
+                        core::HexCoord reach{1, 0};
+                        for (int n = 0; n < rotation; ++n)
+                            reach = core::RotateClockwise(reach);
+                        const auto base = core::Subtract(atom.position, reach);
+                        RowCompletionTransfer::Candidate candidate{
+                            base,     atom.position,         {maximumQ + 2, base.r},
+                            rotation, maximumQ + 2 - base.q, {}};
+                        if (surplusRetention) {
+                            candidate.destination = {base.q, maximumR + 2};
+                            candidate.distance = maximumR + 2 - base.r;
+                        }
+                        for (const auto& obj : result.objects)
+                            if ((obj.typeName == "piston" || obj.typeName == "arm1") &&
+                                obj.position == base)
+                                candidate.rejection = "receiver base overlaps existing arm base";
+                        for (const auto& [other, material] : live.atoms)
                             if (material.position == base)
-                                candidate.rejection = "receiver base intersects earlier generated material";
+                                candidate.rejection = "receiver base overlaps completed material";
+                        // This base must exist throughout assembly, not appear at the boundary.
+                        for (const auto& step : completionTransfer->ledger.steps) {
+                            for (const auto& [other, material] : step.effects.atoms)
+                                if (material.position == base)
+                                    candidate.rejection =
+                                        "receiver base intersects earlier generated material";
+                        }
+                        if (!ReceiverRailDisjoint(result, base, candidate.distance,
+                                                  receiverDirection))
+                            candidate.rejection = "receiver rail shares an existing track cell";
+                        if (surplusRetention) {
+                            for (int offset = 1; offset <= candidate.distance; ++offset)
+                                for (const auto member : productFragment) {
+                                    auto cell = live.atoms.at(member).position;
+                                    cell = core::Add(cell, {offset * receiverDirection.q,
+                                                            offset * receiverDirection.r});
+                                    for (const auto& obj : result.objects)
+                                        if ((obj.typeName == "piston" || obj.typeName == "arm1") &&
+                                            obj.position == cell)
+                                            candidate.rejection = "receiver material sweep "
+                                                                  "intersects existing arm base";
+                                    for (const auto& [retained, target] :
+                                         completionTransfer->retentionTargets)
+                                        if (target == cell)
+                                            candidate.rejection =
+                                                "receiver material sweep intersects retained stock";
+                                }
+                        }
+                        completionTransfer->candidates.push_back(candidate);
+                        if (candidate.rejection.empty()) {
+                            selectedReceiver = candidate;
+                            break;
+                        }
                     }
-                    if (!ReceiverRailDisjoint(result, base, candidate.distance, receiverDirection))
-                        candidate.rejection = "receiver rail shares an existing track cell";
-                    if (surplusRetention) {
-                        for (int offset = 1; offset <= candidate.distance; ++offset)
-                            for (const auto member : productFragment) {
-                                auto cell = live.atoms.at(member).position;
-                                cell = core::Add(cell, {offset * receiverDirection.q, offset * receiverDirection.r});
-                                for (const auto& obj : result.objects)
-                                    if ((obj.typeName == "piston" || obj.typeName == "arm1") && obj.position == cell)
-                                        candidate.rejection = "receiver material sweep intersects existing arm base";
-                                for (const auto& [retained, target] : completionTransfer->retentionTargets)
-                                    if (target == cell)
-                                        candidate.rejection = "receiver material sweep intersects retained stock";
-                            }
-                    }
-                    completionTransfer->candidates.push_back(candidate);
-                    if (candidate.rejection.empty()) {
-                        selectedReceiver = candidate;
-                        break;
-                    }
+                    if (!completionTransfer->candidates.back().rejection.size()) break;
                 }
-                if (!completionTransfer->candidates.back().rejection.size()) break;
-            }
-            if (completionTransfer->candidates.empty() ||
-                !completionTransfer->candidates.back().rejection.empty())
-                throw IR::LayoutFailure("Unsupported: no disjoint receiver passes conservative base filter");
-            // Serialization has no creation-time field: these objects exist from cycle zero.
-            // Earlier tapes are retained unchanged; native checks their coexistence.
-            receiver = object("arm1", selectedReceiver.base, 1, selectedReceiver.rotation);
-            const int rail = object("track", selectedReceiver.base, 1, 0);
-            auto& data = result.objects[rail].bodyData;
-            data = ReceiverRailBody(selectedReceiver.distance, receiverDirection);
-            displacement.resize(result.objects.size());
-            lengths.resize(result.objects.size(), 1);
-            rotations.resize(result.objects.size());
-            grabbing.resize(result.objects.size());
-            rotations[receiver] = selectedReceiver.rotation;
+                if (completionTransfer->candidates.empty() ||
+                    !completionTransfer->candidates.back().rejection.empty())
+                    throw IR::LayoutFailure(
+                        "Unsupported: no disjoint receiver passes conservative base filter");
+                // Serialization has no creation-time field: these objects exist from cycle zero.
+                // Earlier tapes are retained unchanged; native checks their coexistence.
+                receiver = object("arm1", selectedReceiver.base, 1, selectedReceiver.rotation);
+                const int rail = object("track", selectedReceiver.base, 1, 0);
+                auto& data = result.objects[rail].bodyData;
+                data = ReceiverRailBody(selectedReceiver.distance, receiverDirection);
+                displacement.resize(result.objects.size());
+                lengths.resize(result.objects.size(), 1);
+                rotations.resize(result.objects.size());
+                grabbing.resize(result.objects.size());
+                rotations[receiver] = selectedReceiver.rotation;
             }
             const auto receiverAtom = atomAt(tipAt(receiver));
             if (!receiverAtom || !liveCustody.Held().size())
@@ -1849,33 +1976,47 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             int outputRotation = -1;
             for (int rotation = 0; rotation < 6 && outputRotation < 0; ++rotation) {
                 auto rotate = [&](core::HexCoord cell) {
-                    for (int n = 0; n < rotation; ++n) cell = core::RotateClockwise(cell);
+                    for (int n = 0; n < rotation; ++n)
+                        cell = core::RotateClockwise(cell);
                     return cell;
                 };
                 for (const auto& [id, material] : live.atoms) {
                     if (std::find(fragment.begin(), fragment.end(), id) == fragment.end()) continue;
-                    const auto origin = core::Subtract(material.position, rotate(transportedTarget.atoms.front().position));
+                    const auto origin = core::Subtract(
+                        material.position, rotate(transportedTarget.atoms.front().position));
                     bool matches = true;
-                    std::map<std::pair<int,int>, IR::AtomId> ids;
+                    std::map<std::pair<int, int>, IR::AtomId> ids;
                     for (const auto& atom : transportedTarget.atoms) {
                         const auto found = atomAt(core::Add(origin, rotate(atom.position)));
-                        if (!found || live.atoms.at(found).type != atom.type) { matches = false; break; }
+                        if (!found || live.atoms.at(found).type != atom.type) {
+                            matches = false;
+                            break;
+                        }
                         ids[{atom.position.q, atom.position.r}] = found;
                     }
-                    if (matches) for (const auto& bond : transportedTarget.bonds) {
-                        auto a = ids.at({bond.from.q,bond.from.r}), b = ids.at({bond.to.q,bond.to.r});
-                        if (b < a) std::swap(a,b);
-                        const auto found = live.bonds.find({a,b});
-                        if (found == live.bonds.end() || found->second != bond.bits) matches = false;
+                    if (matches)
+                        for (const auto& bond : transportedTarget.bonds) {
+                            auto a = ids.at({bond.from.q, bond.from.r}),
+                                 b = ids.at({bond.to.q, bond.to.r});
+                            if (b < a) std::swap(a, b);
+                            const auto found = live.bonds.find({a, b});
+                            if (found == live.bonds.end() || found->second != bond.bits)
+                                matches = false;
+                        }
+                    if (matches) {
+                        outputOrigin = origin;
+                        outputRotation = rotation;
+                        break;
                     }
-                    if (matches) { outputOrigin = origin; outputRotation = rotation; break; }
                 }
             }
             if (outputRotation < 0) throw std::invalid_argument("transport target pose mismatch");
             if (!completedTransfers) {
                 object("out-std", outputOrigin, 1, outputRotation);
-                displacement.resize(result.objects.size()); lengths.resize(result.objects.size(),1);
-                rotations.resize(result.objects.size()); grabbing.resize(result.objects.size());
+                displacement.resize(result.objects.size());
+                lengths.resize(result.objects.size(), 1);
+                rotations.resize(result.objects.size());
+                grabbing.resize(result.objects.size());
             } else {
                 const auto& output = result.objects.back();
                 if (output.position != outputOrigin || output.bodyData.at(1) != outputRotation)
@@ -1888,16 +2029,23 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 liveCustody.Validate(live);
                 row_profile::Scope projectionProfile(row_profile::Projection);
                 const IR::Operation output{IR::Kind::Output, 0, {receiverAtom}};
-                auto projected = completionTransfer->ledger.ProjectOutput(materialPuzzle, live, output);
+                auto projected =
+                    completionTransfer->ledger.ProjectOutput(materialPuzzle, live, output);
                 auto terminal = completionTransfer->retention;
                 terminal.outputs = {static_cast<std::size_t>(completedTransfers + 1)};
-                RequireFinitePhysicalTerminal(projected, terminal, completionTransfer->retentionTargets);
+                RequireFinitePhysicalTerminal(projected, terminal,
+                                              completionTransfer->retentionTargets);
                 liveCustody.Validate(projected);
                 if (completedTransfers == 5) {
-                    auto proof = [&] { row_profile::Scope profile(row_profile::ProofCopy, completionTransfer->ledger.steps.size()); return completionTransfer->ledger; }();
+                    auto proof = [&] {
+                        row_profile::Scope profile(row_profile::ProofCopy,
+                                                   completionTransfer->ledger.steps.size());
+                        return completionTransfer->ledger;
+                    }();
                     auto tail = live;
                     proof.AppendFromTail(materialPuzzle, tail, output);
-                    (void)MakeFiniteExecutionPlan(materialPuzzle, std::move(proof), terminal, completionTransfer->mode);
+                    (void)MakeFiniteExecutionPlan(materialPuzzle, std::move(proof), terminal,
+                                                  completionTransfer->mode);
                 }
             }
             record({IR::Kind::Output, 0, {receiverAtom}}, "Output");
@@ -1906,7 +2054,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 auto terminal = completionTransfer->retention;
                 terminal.outputs = {static_cast<std::size_t>(completedTransfers)};
                 RequireFinitePhysicalTerminal(live, terminal, completionTransfer->retentionTargets);
-            } else IR::RequireComplete(live, {static_cast<std::size_t>(completedTransfers)});
+            } else
+                IR::RequireComplete(live, {static_cast<std::size_t>(completedTransfers)});
             if (completionTransfer->ledger.Replay(materialPuzzle) != live)
                 throw std::invalid_argument("transport replay mismatch");
             if (row_profile::active && row_profile::active->boundaries < 6) {
@@ -1941,7 +2090,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             if (assembled[i])
                 for (int j = 0; j < i; ++j)
                     if (assembled[j]) {
-        checkDeadline();
+                        checkDeadline();
                         int dx = cells[j].q - cells[i].q, dy = cells[j].r - cells[i].r;
                         if (edge(i, dx, dy)) roots[root(i)] = root(j);
                     }
@@ -1981,22 +2130,26 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             move({intakeArm}, target - intakeIndex);
             intakeIndex = target;
             const int reach = 3 - slot.row;
-            while (lengths[intakeArm] > reach) write({intakeArm}, 'e');
-            while (lengths[intakeArm] < reach) write({intakeArm}, 'E');
+            while (lengths[intakeArm] > reach)
+                write({intakeArm}, 'e');
+            while (lengths[intakeArm] < reach)
+                write({intakeArm}, 'E');
             write({intakeArm}, 'G');
-            while (lengths[intakeArm] > 1) write({intakeArm}, 'e');
+            while (lengths[intakeArm] > 1)
+                write({intakeArm}, 'e');
             const int pickupIndex = -feedOffset - directMinColumn;
             move({intakeArm}, pickupIndex - intakeIndex);
             intakeIndex = pickupIndex;
-            while (lengths[intakeArm] < 3) write({intakeArm}, 'E');
+            while (lengths[intakeArm] < 3)
+                write({intakeArm}, 'E');
             write({intakeArm}, 'g');
-            while (lengths[intakeArm] > 1) write({intakeArm}, 'e');
+            while (lengths[intakeArm] > 1)
+                write({intakeArm}, 'e');
             markHandoffFree();
             phase(slot.input >= 0 ? "source-extraction" : "buffer-retrieval", phaseBegin, time);
             return;
         }
-        if (wide == wideFeeds.end() && displacement[feedArm])
-            feedMove(-displacement[feedArm]);
+        if (wide == wideFeeds.end() && displacement[feedArm]) feedMove(-displacement[feedArm]);
         if (wide != wideFeeds.end()) {
             if (!displacement[feedArm]) move({feedArm}, wideOnly ? 1 : 5);
             const int lift = wide->lifts.at(slot.atom);
@@ -2112,9 +2265,16 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         if (custody) {
             FragmentCustodyEvent event;
             if (slot.input >= 0) {
-                event = {custodyProduct, static_cast<std::size_t>(slot.atom), custodyBatch,
-                    p.inputs.at(slot.input).atoms.at(slot.atom).type, -1, phaseBegin, time,
-                    {}, false, last};
+                event = {custodyProduct,
+                         static_cast<std::size_t>(slot.atom),
+                         custodyBatch,
+                         p.inputs.at(slot.input).atoms.at(slot.atom).type,
+                         -1,
+                         phaseBegin,
+                         time,
+                         {},
+                         false,
+                         last};
                 if (last) ++custodyBatch;
             } else {
                 auto& occupied = custodySlots.at(slot.atom);
@@ -2141,60 +2301,60 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     };
     int storedWaste = 0;
     auto park = [&](int buffer) {
-            const int awaitBegin = time;
-            awaitFeed();
-            phase("empty-return-join", awaitBegin, time);
-            const int phaseBegin = time;
-            const auto& slot = bufferSlots.at(buffer);
-            if (displacement[feedArm]) move({feedArm}, -displacement[feedArm]);
+        const int awaitBegin = time;
+        awaitFeed();
+        phase("empty-return-join", awaitBegin, time);
+        const int phaseBegin = time;
+        const auto& slot = bufferSlots.at(buffer);
+        if (displacement[feedArm]) move({feedArm}, -displacement[feedArm]);
+        write({feedArm}, 'E');
+        write({feedArm}, 'E');
+        write({feedArm}, 'G');
+        write({feedArm}, 'e');
+        write({feedArm}, 'e');
+        for (int n = 0; n < 3; ++n)
+            write({feedArm}, 'R');
+        move({feedArm}, slot.distance - 1);
+        for (int n = 0; n < 3; ++n)
+            write({feedArm}, 'r');
+        move({feedArm}, 1);
+        for (int n = 0; n < slot.extensions; ++n)
             write({feedArm}, 'E');
-            write({feedArm}, 'E');
-            write({feedArm}, 'G');
+        write({feedArm}, 'g');
+        const int released = time;
+        if (custody) {
+            if (!heldCustody || custodySlots.at(buffer))
+                throw std::logic_error("physical buffer store occupancy conflict");
+            auto event = *heldCustody;
+            event.buffer = buffer;
+            event.stored = true;
+            event.begin = phaseBegin;
+            event.end = released;
+            event.position = {-feedOffset - (expandedFeeds ? 3 : 0) - (slot.distance - 5) / 2, 6};
+            custodySlots.at(buffer) = event;
+            custody->push_back(event);
+            heldCustody.reset();
+        }
+        phase("buffer-storage-held", phaseBegin, released);
+        for (int n = 0; n < slot.extensions; ++n)
             write({feedArm}, 'e');
-            write({feedArm}, 'e');
-            for (int n = 0; n < 3; ++n)
-                write({feedArm}, 'R');
-            move({feedArm}, slot.distance - 1);
-            for (int n = 0; n < 3; ++n)
-                write({feedArm}, 'r');
-            move({feedArm}, 1);
-            for (int n = 0; n < slot.extensions; ++n)
-                write({feedArm}, 'E');
-            write({feedArm}, 'g');
-            const int released = time;
-            if (custody) {
-                if (!heldCustody || custodySlots.at(buffer))
-                    throw std::logic_error("physical buffer store occupancy conflict");
-                auto event = *heldCustody;
-                event.buffer = buffer;
-                event.stored = true;
-                event.begin = phaseBegin;
-                event.end = released;
-                event.position = {-feedOffset - (expandedFeeds ? 3 : 0) - (slot.distance - 5) / 2, 6};
-                custodySlots.at(buffer) = event;
-                custody->push_back(event);
-                heldCustody.reset();
-            }
-            phase("buffer-storage-held", phaseBegin, released);
-            for (int n = 0; n < slot.extensions; ++n)
-                write({feedArm}, 'e');
-            move({feedArm}, -1);
-            for (int n = 0; n < 3; ++n)
-                write({feedArm}, 'R');
-            move({feedArm}, 1 - slot.distance);
-            for (int n = 0; n < 3; ++n)
-                write({feedArm}, 'r');
-            phase("empty-buffer-return", released, time);
-            if (mixedInventory) {
-                ++mixedInventory->emptyReturnTasks;
-                mixedInventory->emptyReturnCycles += time - released;
-            }
-            if (mixedInventory && mixedInventory->scheduleEmptyReturns) {
-                // The atom is in its exclusive physical buffer. Only the empty
-                // feeder returns; its next user (or tape halt) joins this task.
-                feedReady = time;
-                time = released;
-            }
+        move({feedArm}, -1);
+        for (int n = 0; n < 3; ++n)
+            write({feedArm}, 'R');
+        move({feedArm}, 1 - slot.distance);
+        for (int n = 0; n < 3; ++n)
+            write({feedArm}, 'r');
+        phase("empty-buffer-return", released, time);
+        if (mixedInventory) {
+            ++mixedInventory->emptyReturnTasks;
+            mixedInventory->emptyReturnCycles += time - released;
+        }
+        if (mixedInventory && mixedInventory->scheduleEmptyReturns) {
+            // The atom is in its exclusive physical buffer. Only the empty
+            // feeder returns; its next user (or tape halt) joins this task.
+            feedReady = time;
+            time = released;
+        }
     };
     auto discard = [&](const SupplyPlan::Step& step) {
         deliver(slotFor(step));
@@ -2235,7 +2395,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         if ((boundedWaste || finiteProducts) && product &&
             product % supply.productsPerPeriod == 0) {
             while (supplyIndex < supply.steps.size()) {
-        checkDeadline();
+                checkDeadline();
                 const auto& step = supply.steps[supplyIndex++];
                 if (step.kind != SupplyPlan::Kind::Discard)
                     throw std::logic_error("unconsumed supply demand");
@@ -2248,20 +2408,26 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             for (const auto& source : mixedInventory->stores)
                 if (source.buffer != mixedInventory->bypassSlot) discard(source);
             for (const auto& reaction : mixedInventory->reactions) {
-        checkDeadline();
+                checkDeadline();
                 for (int inlet = 0; inlet < 2; ++inlet) {
-        checkDeadline();
+                    checkDeadline();
                     const auto& source = reaction.inputs[inlet];
                     deliver(slotFor(source));
                     const int reactionBegin = time;
-                    write({conveyor}, 'E'); write({conveyor}, 'G'); write({conveyor}, 'e');
+                    write({conveyor}, 'E');
+                    write({conveyor}, 'G');
+                    write({conveyor}, 'e');
                     if (source.conversion == ElementConversion::Calcification) {
-                        write({conveyor}, 'r'); write({conveyor}, 'R');
+                        write({conveyor}, 'r');
+                        write({conveyor}, 'R');
                     }
                     const int distance = feedOffset + reactionQ + 1 - inlet;
-                    write({conveyor}, 'R'); move({conveyor}, distance);
-                    write({conveyor}, 'r'); write({conveyor}, 'E');
-                    write({conveyor}, 'g'); write({conveyor}, 'e');
+                    write({conveyor}, 'R');
+                    move({conveyor}, distance);
+                    write({conveyor}, 'r');
+                    write({conveyor}, 'E');
+                    write({conveyor}, 'g');
+                    write({conveyor}, 'e');
                     phase("reaction-inlet-held", reactionBegin, time);
                     const int emptyBegin = time;
                     move({conveyor}, -distance);
@@ -2270,23 +2436,34 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 const int reactionBegin = time;
                 int reactionResume = time;
                 write({vitaeArm, morsArm}, 'G');
-                write({vitaeArm}, 'r'); write({morsArm}, 'r');
+                write({vitaeArm}, 'r');
+                write({morsArm}, 'r');
                 for (int side = 0; side < 2; ++side) {
-        checkDeadline();
+                    checkDeadline();
                     const int collector = side == 0 ? vitaeArm : morsArm;
                     const int courier = side == 0 ? vitaeCourier : morsCourier;
-                    write({collector}, 'g'); write({collector}, 'R');
-                    write({courier}, 'G'); move({courier}, 2);
-                    write({courier}, 'g'); move({courier}, -2);
+                    write({collector}, 'g');
+                    write({collector}, 'R');
+                    write({courier}, 'G');
+                    move({courier}, 2);
+                    write({courier}, 'g');
+                    move({courier}, -2);
                     const int distance = feedOffset + reactionQ + (side == 0 ? 1 : 3);
-                    write({conveyor}, 'e'); move({conveyor}, distance);
-                    write({conveyor}, 'E'); write({conveyor}, 'G'); write({conveyor}, 'e');
+                    write({conveyor}, 'e');
+                    move({conveyor}, distance);
+                    write({conveyor}, 'E');
+                    write({conveyor}, 'G');
+                    write({conveyor}, 'e');
                     const int escape = side == 0 ? 0 : 2;
-                    move({conveyor}, -escape); write({conveyor}, 'R');
-                    move({conveyor}, escape - distance); write({conveyor}, 'r');
+                    move({conveyor}, -escape);
+                    write({conveyor}, 'R');
+                    move({conveyor}, escape - distance);
+                    write({conveyor}, 'r');
                     // Shared pickup is the same physical handoff used by source extraction.
-                    write({conveyor}, 'E'); write({conveyor}, 'E');
-                    write({conveyor}, 'g'); write({conveyor}, 'e');
+                    write({conveyor}, 'E');
+                    write({conveyor}, 'E');
+                    write({conveyor}, 'g');
+                    write({conveyor}, 'e');
                     phase("reaction-coproduct", side == 0 ? reactionBegin : reactionResume, time);
                     park(reaction.outputs[side]);
                     reactionResume = time;
@@ -2295,21 +2472,21 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         }
         std::fill(assembled.begin(), assembled.end(), false);
         for (int row = height - 1; row >= 0; --row) {
-        checkDeadline();
+            checkDeadline();
             // Row-to-row clearance for the local-intake machine: nothing is
             // emitted on the gap ticks, so each block keeps its internal phase
             // while the next block starts later.
-            if (directInput && intakeBlockGap > 0 && row < height - 1)
-                time += intakeBlockGap;
+            if (directInput && intakeBlockGap > 0 && row < height - 1) time += intakeBlockGap;
             std::vector<int> order;
             for (int i = 0; i < static_cast<int>(cells.size()); ++i)
                 if (cells[i].r == row) order.push_back(i);
-            std::sort(order.begin(), order.end(),
-                      [&](int a, int b) {
-        checkDeadline(); return cells[a].q > cells[b].q; });
+            std::sort(order.begin(), order.end(), [&](int a, int b) {
+                checkDeadline();
+                return cells[a].q > cells[b].q;
+            });
             int current = width - 1;
             for (int atom : order) {
-        checkDeadline();
+                checkDeadline();
                 while (supplyIndex < supply.steps.size() &&
                        (supply.steps[supplyIndex].kind == SupplyPlan::Kind::Discard ||
                         supply.steps[supplyIndex].kind == SupplyPlan::Kind::Store))
@@ -2317,7 +2494,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 if (supplyIndex < supply.steps.size() &&
                     supply.steps[supplyIndex].kind == SupplyPlan::Kind::Reagent &&
                     supply.steps[supplyIndex].conversion == ElementConversion::Duplication) {
-        checkDeadline();
+                    checkDeadline();
                     deliver(slotFor(supply.steps[supplyIndex++]));
                     move({mercuryArm}, catalystDistance);
                     write({mercuryArm}, 'G');
@@ -2336,39 +2513,60 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 int holderRelease = -1;
                 if (wheelSource && reactionAssembly->outputs[0].atoms[atom].type == wheelElement) {
                     SupplyPlan::Step reagent = step;
-                    reagent.input = cardinalInput; reagent.sourceAtom = 0; reagent.buffer = -1;
+                    reagent.input = cardinalInput;
+                    reagent.sourceAtom = 0;
+                    reagent.buffer = -1;
                     deliver(slotFor(reagent));
                     holderRelease = time - 3;
-                    write({conveyor}, 'E'); write({conveyor}, 'G'); write({conveyor}, 'e');
-                    write({conveyor}, 'r'); write({conveyor}, 'R');
-                    write({conveyor}, 'R'); write({conveyor}, 'R');
-                    write({conveyor}, 'r'); write({conveyor}, 'r');
+                    write({conveyor}, 'E');
+                    write({conveyor}, 'G');
+                    write({conveyor}, 'e');
+                    write({conveyor}, 'r');
+                    write({conveyor}, 'R');
+                    write({conveyor}, 'R');
+                    write({conveyor}, 'R');
+                    write({conveyor}, 'r');
+                    write({conveyor}, 'r');
                 } else if (reactionAssembly && !mixedInventory &&
-                    !(secondSource && reactionAssembly->outputs[0].atoms[atom].type == core::AtomType::Quicksilver)) {
-        checkDeadline();
-                    const bool vitae = reactionAssembly->outputs[0].atoms[atom].type == core::AtomType::Vitae;
+                           !(secondSource && reactionAssembly->outputs[0].atoms[atom].type ==
+                                                 core::AtomType::Quicksilver)) {
+                    checkDeadline();
+                    const bool vitae =
+                        reactionAssembly->outputs[0].atoms[atom].type == core::AtomType::Vitae;
                     if (!(vitae ? vitaePending : morsPending)) {
                         if (surplusRetention && vitaePending && !morsPending) retainVitae();
                         if (vitaePending || morsPending)
-                            throw std::invalid_argument("shared reaction requires more than one pending coproduct");
+                            throw std::invalid_argument(
+                                "shared reaction requires more than one pending coproduct");
                         for (int inlet = 0; inlet < 2; ++inlet) {
-        checkDeadline();
-                            const auto& source = supply.steps.at(reactionSource++ % supply.steps.size());
+                            checkDeadline();
+                            const auto& source =
+                                supply.steps.at(reactionSource++ % supply.steps.size());
                             SupplyPlan::Step reagent = source;
-                            if (secondSource) { reagent.input = cardinalInput; reagent.sourceAtom = 0; reagent.buffer = -1; }
+                            if (secondSource) {
+                                reagent.input = cardinalInput;
+                                reagent.sourceAtom = 0;
+                                reagent.buffer = -1;
+                            }
                             deliver(slotFor(reagent));
                             holderRelease = time - 3;
-                            write({conveyor}, 'E'); write({conveyor}, 'G'); write({conveyor}, 'e');
-                            write({conveyor}, 'r'); write({conveyor}, 'R');
+                            write({conveyor}, 'E');
+                            write({conveyor}, 'G');
+                            write({conveyor}, 'e');
+                            write({conveyor}, 'r');
+                            write({conveyor}, 'R');
                             const int distance = feedOffset + reactionQ + 1 - inlet;
                             write({conveyor}, 'R');
                             move({conveyor}, distance);
-                            write({conveyor}, 'r'); write({conveyor}, 'E');
-                            write({conveyor}, 'g'); write({conveyor}, 'e');
+                            write({conveyor}, 'r');
+                            write({conveyor}, 'E');
+                            write({conveyor}, 'g');
+                            write({conveyor}, 'e');
                             move({conveyor}, -distance);
                         }
                         write({vitaeArm, morsArm}, 'G');
-                        write({vitaeArm}, 'r'); write({morsArm}, 'r');
+                        write({vitaeArm}, 'r');
+                        write({morsArm}, 'r');
                         vitaePending = morsPending = true;
                     }
                     const int collector = vitae ? vitaeArm : morsArm;
@@ -2383,12 +2581,15 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                     const int distance = feedOffset + reactionQ + (vitae ? 1 : 3);
                     write({conveyor}, 'e');
                     move({conveyor}, distance);
-                    write({conveyor}, 'E'); write({conveyor}, 'G'); write({conveyor}, 'e');
+                    write({conveyor}, 'E');
+                    write({conveyor}, 'G');
+                    write({conveyor}, 'e');
                     const int escape = vitae ? 0 : 2;
                     move({conveyor}, -escape);
                     write({conveyor}, 'R');
                     move({conveyor}, escape - distance);
-                    write({conveyor}, 'r'); write({conveyor}, 'E');
+                    write({conveyor}, 'r');
+                    write({conveyor}, 'E');
                     (vitae ? vitaePending : morsPending) = false;
                 } else if (step.kind == SupplyPlan::Kind::Purify) {
                     auto purifyInput = [&](const SupplyPlan::Step& reagent, int distance) {
@@ -2443,7 +2644,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                     write({conveyor}, 'r');
                     write({conveyor}, 'r');
                 }
-                if ((!reactionAssembly || mixedInventory) && step.conversion == ElementConversion::Calcification) {
+                if ((!reactionAssembly || mixedInventory) &&
+                    step.conversion == ElementConversion::Calcification) {
                     write({conveyor}, 'r');
                     write({conveyor}, 'R');
                 }
@@ -2453,7 +2655,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                         static_cast<int>(p.inputs[step.input].atoms[step.sourceAtom].type) -
                         static_cast<int>(target.atoms[atom].type);
                     for (int level = 0; level < levels; ++level) {
-        checkDeadline();
+                        checkDeadline();
                         while (supplyIndex < supply.steps.size() &&
                                (supply.steps[supplyIndex].kind == SupplyPlan::Kind::Discard ||
                                 supply.steps[supplyIndex].kind == SupplyPlan::Kind::Store))
@@ -2478,8 +2680,9 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                                      [&](const auto& molecule) {
                                          return molecule.atoms[0].type == target.atoms[atom].type;
                                      });
-                    const int inlet = animismus ? static_cast<int>((supplyIndex - 1) % 2)
-                                                : static_cast<int>(output - sharedOutputs->outputs.begin()) * 4;
+                    const int inlet =
+                        animismus ? static_cast<int>((supplyIndex - 1) % 2)
+                                  : static_cast<int>(output - sharedOutputs->outputs.begin()) * 4;
                     const int distance = feedOffset + reactionQ + inlet;
                     move({conveyor}, distance);
                     write({conveyor}, 'E');
@@ -2488,9 +2691,18 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                     write({conveyor}, 'e');
                     move({conveyor}, -distance);
                     if (animismus) {
-                        if (emissions) emissions->push_back({0, {static_cast<std::size_t>(inlet), 0}, product,
-                            {-feedOffset, -1}, {reactionQ + inlet, 0}, 1,
-                            emissionBegin, holderRelease, emissionReady, released, time});
+                        if (emissions)
+                            emissions->push_back({0,
+                                                  {static_cast<std::size_t>(inlet), 0},
+                                                  product,
+                                                  {-feedOffset, -1},
+                                                  {reactionQ + inlet, 0},
+                                                  1,
+                                                  emissionBegin,
+                                                  holderRelease,
+                                                  emissionReady,
+                                                  released,
+                                                  time});
                         if (inlet == 1) {
                             write({vitaeArm, morsArm}, 'G');
                             write({vitaeArm}, 'r');
@@ -2522,11 +2734,19 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 }
                 if (emissions) {
                     if (!owners || componentRows || sharedOutputs)
-                        throw std::logic_error("shared factory emission requires ordinary row custody");
-                    emissions->push_back({0, owners->at(atom), product,
-                                          {-feedOffset, -1}, {0, 0}, 1,
-                                          emissionBegin, holderRelease, emissionReady,
-                                          emissionReady + feedOffset + 1, time});
+                        throw std::logic_error(
+                            "shared factory emission requires ordinary row custody");
+                    emissions->push_back({0,
+                                          owners->at(atom),
+                                          product,
+                                          {-feedOffset, -1},
+                                          {0, 0},
+                                          1,
+                                          emissionBegin,
+                                          holderRelease,
+                                          emissionReady,
+                                          emissionReady + feedOffset + 1,
+                                          time});
                 }
                 assembled[atom] = true;
                 if (!edge(atom, 1, 0)) {
@@ -2551,11 +2771,11 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                     return;
                 }
                 for (int n = 0; n < steps; ++n) {
-        checkDeadline();
+                    checkDeadline();
                     program.push_back('A');
                     for (int atom : order)
                         if (cells[atom].q == width - 1 - n && edge(atom, dx, 1)) {
-        checkDeadline();
+                            checkDeadline();
                             program.push_back('e');
                             program.push_back('E');
                         }
@@ -2564,19 +2784,19 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             scan(0, width, diagonal60);
             scan(-1, width - 1, diagonal120);
             for (const auto& contact : contacts) {
-        checkDeadline();
+                checkDeadline();
                 int travelled = static_cast<int>(std::count(program.begin(), program.end(), 'A'));
                 while (travelled < contact.distance) {
-        checkDeadline();
+                    checkDeadline();
                     program.push_back('A');
                     ++travelled;
                 }
                 for (int n = 0; n < width; ++n) {
-        checkDeadline();
+                    checkDeadline();
                     if (n) program.push_back('A');
                     for (int atom : order)
                         if (cells[atom].q == width - 1 - n) {
-        checkDeadline();
+                            checkDeadline();
                             const auto from = target.atoms[atom].position;
                             const auto to = core::Add(from, {contact.dx, contact.dy});
                             int bits = 0;
@@ -2584,10 +2804,11 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                                 if ((bond.from == from && bond.to == to) ||
                                     (bond.to == from && bond.from == to))
                                     bits = bond.bits;
-                            const auto source =
-                                std::find_if(labels->atoms.begin(), labels->atoms.end(),
-                                             [&](const auto& a) {
-        checkDeadline(); return a.position == from; });
+                            const auto source = std::find_if(
+                                labels->atoms.begin(), labels->atoms.end(), [&](const auto& a) {
+                                    checkDeadline();
+                                    return a.position == from;
+                                });
                             const bool firePair =
                                 source != labels->atoms.end() &&
                                 source->type == core::AtomType::Fire &&
@@ -2607,7 +2828,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 program.pop_back();
             int distance = static_cast<int>(std::count(program.begin(), program.end(), 'A'));
             if (row == height - 1) {
-        checkDeadline();
+                checkDeadline();
                 reset(active);
                 auto grabs = representatives(row);
                 write(grabs, 'e');
@@ -2644,7 +2865,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 }
                 reset(active);
                 if (row > 0) {
-        checkDeadline();
+                    checkDeadline();
                     if (assemblyClocks) {
                         upperTime = std::max(upperTime, time);
                         upperWrite(upper, 'g');
@@ -2666,8 +2887,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                         write(upper, 'e');
                         write(representatives(row), 'G');
                     }
-                    if (!assemblyClocks)
-                        move(upper, -distance);
+                    if (!assemblyClocks) move(upper, -distance);
                     finish();
                 }
             }
@@ -2677,7 +2897,8 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         if (directInput) {
             move({intakeArm}, -intakeIndex);
             intakeIndex = 0;
-            while (lengths[intakeArm] > 1) write({intakeArm}, 'e');
+            while (lengths[intakeArm] > 1)
+                write({intakeArm}, 'e');
             // Optional inter-period clearance for the row arms. Nothing is
             // emitted here, so the next period simply starts later and every
             // arm keeps its relative phase inside its own block.
@@ -2713,12 +2934,18 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     result.metrics.cycles = static_cast<std::int32_t>(cycles);
     checkDeadline();
     if (completionTransfer) {
-        { row_profile::Scope profile(row_profile::Observer); completionTransfer->partialMachine = result; }
-        { row_profile::Scope profile(row_profile::Gate);
-        completionTransfer->verification = completionTransfer->nativeGate(result, deadline); }
+        {
+            row_profile::Scope profile(row_profile::Observer);
+            completionTransfer->partialMachine = result;
+        }
+        {
+            row_profile::Scope profile(row_profile::Gate);
+            completionTransfer->verification = completionTransfer->nativeGate(result, deadline);
+        }
         const auto& report = completionTransfer->verification;
         if (!report.Passed() || report.authority != io::VerificationAuthority::LegacyGate) {
-            completionTransfer->failure = "native gate rejected complete row transfer: " + report.detail;
+            completionTransfer->failure =
+                "native gate rejected complete row transfer: " + report.detail;
             throw IR::LayoutFailure(completionTransfer->failure);
         }
         checkDeadline();
@@ -2731,35 +2958,39 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         publishedMixed->emptyReturnTasks = stagedMixed.emptyReturnTasks;
         publishedMixed->emptyReturnCycles = stagedMixed.emptyReturnCycles;
     }
-    if (publishedCustody) publishedCustody->insert(publishedCustody->end(), stagedCustody.begin(), stagedCustody.end());
-    if (publishedEmissions) publishedEmissions->insert(publishedEmissions->end(), stagedEmissions.begin(), stagedEmissions.end());
-    if (publishedEnds) publishedEnds->insert(publishedEnds->end(), stagedEnds.begin(), stagedEnds.end());
+    if (publishedCustody)
+        publishedCustody->insert(publishedCustody->end(), stagedCustody.begin(),
+                                 stagedCustody.end());
+    if (publishedEmissions)
+        publishedEmissions->insert(publishedEmissions->end(), stagedEmissions.begin(),
+                                   stagedEmissions.end());
+    if (publishedEnds)
+        publishedEnds->insert(publishedEnds->end(), stagedEnds.begin(), stagedEnds.end());
     return result;
 }
 
 io::SolutionData CompileRows(
-    const io::PuzzleData& p, const AssemblyPlan& plan,
-    const io::PuzzleData* sharedOutputs, const io::Molecule* labels,
-    const std::vector<core::HexCoord>* productOrigins, bool postCalcification,
-    std::vector<int>* productEnds, bool singleProduct,
-    std::size_t finiteProducts, const SupplyPlan* supplied,
-    const io::PuzzleData* validationPuzzle, int feedSpacing,
-    bool retimeEmptyResets, bool boundEscapeStation,
-    bool closeFeedBank, bool componentRows,
-    std::vector<SharedFactoryEmission>* emissions,
+    const io::PuzzleData& p, const AssemblyPlan& plan, const io::PuzzleData* sharedOutputs,
+    const io::Molecule* labels, const std::vector<core::HexCoord>* productOrigins,
+    bool postCalcification, std::vector<int>* productEnds, bool singleProduct,
+    std::size_t finiteProducts, const SupplyPlan* supplied, const io::PuzzleData* validationPuzzle,
+    int feedSpacing, bool retimeEmptyResets, bool boundEscapeStation, bool closeFeedBank,
+    bool componentRows, std::vector<SharedFactoryEmission>* emissions,
     const std::vector<ProductAtomRef>* owners, bool animismus,
-    const io::PuzzleData* reactionAssembly,
-    const MixedInventoryProgram* mixedInventory,
+    const io::PuzzleData* reactionAssembly, const MixedInventoryProgram* mixedInventory,
     std::chrono::steady_clock::time_point deadline,
     const std::function<std::chrono::steady_clock::time_point()>& clock,
     std::vector<FragmentCustodyEvent>* custody, RowCompletionTransfer* completionTransfer) {
-    return CompileRowsWithRetimingPolicy(p,plan,sharedOutputs,labels,productOrigins,postCalcification,
-        productEnds,singleProduct,finiteProducts,supplied,validationPuzzle,feedSpacing,retimeEmptyResets,
-        boundEscapeStation,closeFeedBank,componentRows,emissions,owners,animismus,reactionAssembly,
-        mixedInventory,deadline,clock,custody,completionTransfer,true,false,false,-1);
+    return CompileRowsWithRetimingPolicy(
+        p, plan, sharedOutputs, labels, productOrigins, postCalcification, productEnds,
+        singleProduct, finiteProducts, supplied, validationPuzzle, feedSpacing, retimeEmptyResets,
+        boundEscapeStation, closeFeedBank, componentRows, emissions, owners, animismus,
+        reactionAssembly, mixedInventory, deadline, clock, custody, completionTransfer, true, false,
+        false, -1);
 }
 
-static io::SolutionData CompileScheduledRowOnce(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
+static io::SolutionData CompileScheduledRowOnce(const io::PuzzleData& puzzle,
+                                                const AssemblyPlan& plan,
                                                 std::chrono::steady_clock::time_point deadline,
                                                 bool parallelClocks, int compactGapOverride) {
     // Diagnostic switch: the empty-reset retiming pass picks its overlap from
@@ -2770,9 +3001,10 @@ static io::SolutionData CompileScheduledRowOnce(const io::PuzzleData& puzzle, co
         const char* flag = std::getenv("OPUSOPTIMA_ROW_NO_RETIME");
         return !(flag && std::string_view(flag) == "on");
     }();
-    return CompileRowsWithRetimingPolicy(puzzle,plan,nullptr,nullptr,nullptr,true,nullptr,false,0,
-        nullptr,nullptr,3,retimeEmptyResets,false,false,false,nullptr,nullptr,false,nullptr,nullptr,deadline,{},
-        nullptr,nullptr,false,true,parallelClocks,compactGapOverride);
+    return CompileRowsWithRetimingPolicy(
+        puzzle, plan, nullptr, nullptr, nullptr, true, nullptr, false, 0, nullptr, nullptr, 3,
+        retimeEmptyResets, false, false, false, nullptr, nullptr, false, nullptr, nullptr, deadline,
+        {}, nullptr, nullptr, false, true, parallelClocks, compactGapOverride);
 }
 
 // The clocked companion is a second full compile. Keep it inside the same
@@ -2791,11 +3023,12 @@ static bool ScheduledRowClockWithinBudget(const io::PuzzleData& puzzle) {
 }
 
 io::SolutionData CompileScheduledRowAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
-                                            std::chrono::steady_clock::time_point deadline) {
+                                             std::chrono::steady_clock::time_point deadline) {
     return CompileScheduledRowOnce(puzzle, plan, deadline, false, -1);
 }
 
-io::SolutionData CompileScheduledRowIntakeAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
+io::SolutionData CompileScheduledRowIntakeAssembly(const io::PuzzleData& puzzle,
+                                                   const AssemblyPlan& plan,
                                                    std::chrono::steady_clock::time_point deadline) {
     // A separate candidate: it never replaces the shared-feeder machine, so a
     // native rejection here cannot cost the portfolio its proven row machine.
@@ -2836,8 +3069,8 @@ ScheduleAudit AuditMachineSchedule(const io::SolutionData& machine) {
         opusoptima::solvers::ProgramFragment fragment;
         fragment.arm = object.typeName + "#" + std::to_string(i);
         for (const auto& instruction : object.instructions)
-            fragment.instructions.push_back({instruction.action,
-                                             static_cast<std::int64_t>(instruction.parameter)});
+            fragment.instructions.push_back(
+                {instruction.action, static_cast<std::int64_t>(instruction.parameter)});
         // Anchor the fragment at the tape's own first tick: the merge may only
         // shorten the gap before a fragment, never move an emitted action.
         fragment.anchor = object.instructions.empty()
@@ -2866,9 +3099,10 @@ ScheduleAudit AuditMachineSchedule(const io::SolutionData& machine) {
     return audit;
 }
 
-io::SolutionData CompileScheduledRowFeederAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
-                                                  std::chrono::steady_clock::time_point deadline,
-                                                  int gapOverride) {
+io::SolutionData CompileScheduledRowFeederAssembly(const io::PuzzleData& puzzle,
+                                                   const AssemblyPlan& plan,
+                                                   std::chrono::steady_clock::time_point deadline,
+                                                   int gapOverride) {
     const int saved = g_intakeMode;
     g_intakeMode = -1;
     try {
@@ -2881,10 +3115,9 @@ io::SolutionData CompileScheduledRowFeederAssembly(const io::PuzzleData& puzzle,
     }
 }
 
-io::SolutionData CompileScheduledRowFeederClockAssembly(const io::PuzzleData& puzzle,
-                                                        const AssemblyPlan& plan,
-                                                        std::chrono::steady_clock::time_point deadline,
-                                                        int gapOverride) {
+io::SolutionData CompileScheduledRowFeederClockAssembly(
+    const io::PuzzleData& puzzle, const AssemblyPlan& plan,
+    std::chrono::steady_clock::time_point deadline, int gapOverride) {
     const int saved = g_intakeMode;
     g_intakeMode = -1;
     try {
@@ -2897,16 +3130,19 @@ io::SolutionData CompileScheduledRowFeederClockAssembly(const io::PuzzleData& pu
     }
 }
 
-bool ScheduledRowIntakeApplied() { return g_intakeApplied; }
+bool ScheduledRowIntakeApplied() {
+    return g_intakeApplied;
+}
 
-io::SolutionData CompileScheduledRowClockAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
+io::SolutionData CompileScheduledRowClockAssembly(const io::PuzzleData& puzzle,
+                                                  const AssemblyPlan& plan,
                                                   std::chrono::steady_clock::time_point deadline) {
     return CompileScheduledRowOnce(puzzle, plan, deadline, true, -1);
 }
 
-ScheduledRowCandidates CompileScheduledRowCandidates(const io::PuzzleData& puzzle,
-                                                     const AssemblyPlan& plan,
-                                                     std::chrono::steady_clock::time_point deadline) {
+ScheduledRowCandidates CompileScheduledRowCandidates(
+    const io::PuzzleData& puzzle, const AssemblyPlan& plan,
+    std::chrono::steady_clock::time_point deadline) {
     ScheduledRowCandidates result;
     const auto start = std::chrono::steady_clock::now();
     result.compact = CompileScheduledRowOnce(puzzle, plan, deadline, false, -1);
@@ -2914,27 +3150,28 @@ ScheduledRowCandidates CompileScheduledRowCandidates(const io::PuzzleData& puzzl
     const auto compactEnd = std::chrono::steady_clock::now();
     const auto compactCost = compactEnd - start;
     if (std::getenv("OPUSOPTIMA_DEBUG_INTAKE"))
-        std::fprintf(stderr, "[intake] compactCost=%lldms\n",
-                     static_cast<long long>(
-                         std::chrono::duration_cast<std::chrono::milliseconds>(compactCost).count()));
+        std::fprintf(
+            stderr, "[intake] compactCost=%lldms\n",
+            static_cast<long long>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(compactCost).count()));
     // Reserve the same amount again for every optional compile; otherwise the
     // caller cannot submit the compact parent before its deadline.
     if (ScheduledRowClockWithinBudget(puzzle)) {
-        auto hasBudget = [&] {
-            return std::chrono::steady_clock::now() + compactCost < deadline;
-        };
+        auto hasBudget = [&] { return std::chrono::steady_clock::now() + compactCost < deadline; };
         if (hasBudget()) {
-            try { result.compactGap0 = CompileScheduledRowOnce(puzzle, plan, deadline, false, 0); }
-            catch (const std::exception&) { result.compactGap0.reset(); }
+            try {
+                result.compactGap0 = CompileScheduledRowOnce(puzzle, plan, deadline, false, 0);
+            } catch (const std::exception&) {
+                result.compactGap0.reset();
+            }
         }
         // The shared-feeder companion has a different tape set than the intake
         // machine, so both are built up front; the portfolio then compares their
         // slots instead of spending a late compile that may miss the deadline.
         // Only small rows can afford the extra machine: on large ones the intake
         // clocked machine is skipped entirely and the proven feeder is used.
-        const bool roomForCompanion =
-            compactCost < std::chrono::milliseconds(500) &&
-            std::chrono::steady_clock::now() + 2 * compactCost < deadline;
+        const bool roomForCompanion = compactCost < std::chrono::milliseconds(500) &&
+                                      std::chrono::steady_clock::now() + 2 * compactCost < deadline;
         const char* gapFlag = std::getenv("OPUSOPTIMA_ROW_GAP_PORTFOLIO");
         const bool gapEnabled = !gapFlag || std::string_view(gapFlag) != "off";
         const char* clockFlag = std::getenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO");
@@ -2943,13 +3180,15 @@ ScheduledRowCandidates CompileScheduledRowCandidates(const io::PuzzleData& puzzl
             try {
                 result.compactFeeder =
                     CompileScheduledRowFeederAssembly(puzzle, plan, deadline, gapEnabled ? 0 : -1);
-            } catch (const std::exception&) { result.compactFeeder.reset(); }
+            } catch (const std::exception&) {
+                result.compactFeeder.reset();
+            }
         }
         if (hasBudget()) {
             try {
                 result.clocked = (result.compactUsesIntake && !roomForCompanion)
-                                     ? CompileScheduledRowFeederClockAssembly(puzzle, plan, deadline,
-                                                                              clockEnabled ? 0 : -1)
+                                     ? CompileScheduledRowFeederClockAssembly(
+                                           puzzle, plan, deadline, clockEnabled ? 0 : -1)
                                      : CompileScheduledRowOnce(puzzle, plan, deadline, true, -1);
                 result.hasClocked = !result.clocked.objects.empty();
                 result.clockedUsesIntake = g_intakeApplied;
@@ -2959,12 +3198,19 @@ ScheduledRowCandidates CompileScheduledRowCandidates(const io::PuzzleData& puzzl
             }
         }
         if (hasBudget()) {
-            try { result.clockedGap0 = CompileScheduledRowOnce(puzzle, plan, deadline, true, 0); }
-            catch (const std::exception&) { result.clockedGap0.reset(); }
+            try {
+                result.clockedGap0 = CompileScheduledRowOnce(puzzle, plan, deadline, true, 0);
+            } catch (const std::exception&) {
+                result.clockedGap0.reset();
+            }
         }
         if (result.clockedUsesIntake && roomForCompanion && hasBudget()) {
-            try { result.clockedFeeder = CompileScheduledRowFeederClockAssembly(puzzle, plan, deadline, 0); }
-            catch (const std::exception&) { result.clockedFeeder.reset(); }
+            try {
+                result.clockedFeeder =
+                    CompileScheduledRowFeederClockAssembly(puzzle, plan, deadline, 0);
+            } catch (const std::exception&) {
+                result.clockedFeeder.reset();
+            }
         }
     }
     return result;
@@ -2974,21 +3220,22 @@ bool SupportsFiniteWheelSecondSource(const io::PuzzleData& p) {
     using T = core::AtomType;
     const char* retention = std::getenv("OPUSOPTIMA_FINITE_RETENTION");
     if (!retention || std::string(retention) != "1") return false;
-    constexpr auto required = AssemblyPlanner::RequiredPermissions |
-        (1ULL << 2) | (1ULL << 3) | (1ULL << 12) |
-        (1ULL << 13) | (1ULL << 16) | (1ULL << 28);
-    if (p.version != 3 || p.productionInfo || p.outputMultiplier != 1 ||
-        p.inputs.size() != 2 || p.outputs.size() != 1 ||
-        p.outputs[0].atoms.empty() || p.outputs[0].atoms.size() > 16 ||
+    constexpr auto required = AssemblyPlanner::RequiredPermissions | (1ULL << 2) | (1ULL << 3) |
+                              (1ULL << 12) | (1ULL << 13) | (1ULL << 16) | (1ULL << 28);
+    if (p.version != 3 || p.productionInfo || p.outputMultiplier != 1 || p.inputs.size() != 2 ||
+        p.outputs.size() != 1 || p.outputs[0].atoms.empty() || p.outputs[0].atoms.size() > 16 ||
         (p.permissionBits & required) != required)
         return false;
     auto cardinal = [](T type) { return type >= T::Air && type <= T::Water; };
     int cardinalSources = 0, mercurySources = 0;
     for (const auto& input : p.inputs) {
         if (input.atoms.size() != 1 || !input.bonds.empty()) return false;
-        if (cardinal(input.atoms[0].type)) ++cardinalSources;
-        else if (input.atoms[0].type == T::Quicksilver) ++mercurySources;
-        else return false;
+        if (cardinal(input.atoms[0].type))
+            ++cardinalSources;
+        else if (input.atoms[0].type == T::Quicksilver)
+            ++mercurySources;
+        else
+            return false;
     }
     if (cardinalSources != 1 || mercurySources != 1) return false;
     int vitae = 0, mors = 0, mercury = 0, derived = 0;
@@ -2998,10 +3245,14 @@ bool SupportsFiniteWheelSecondSource(const io::PuzzleData& p) {
             if (wheelElement != T::Salt && wheelElement != atom.type) return false;
             wheelElement = atom.type;
             ++derived;
-        } else if (atom.type == T::Vitae) ++vitae;
-        else if (atom.type == T::Mors) ++mors;
-        else if (atom.type == T::Quicksilver) ++mercury;
-        else return false;
+        } else if (atom.type == T::Vitae)
+            ++vitae;
+        else if (atom.type == T::Mors)
+            ++mors;
+        else if (atom.type == T::Quicksilver)
+            ++mercury;
+        else
+            return false;
     }
     for (const auto& bond : p.outputs[0].bonds)
         if (bond.bits != 1) return false;
@@ -3009,8 +3260,7 @@ bool SupportsFiniteWheelSecondSource(const io::PuzzleData& p) {
 }
 
 io::SolutionData CompileFiniteWheelSecondSource(
-    const io::PuzzleData& actual,
-    std::chrono::steady_clock::time_point deadline,
+    const io::PuzzleData& actual, std::chrono::steady_clock::time_point deadline,
     const std::function<io::VerificationReport(
         const io::SolutionData&, std::chrono::steady_clock::time_point)>& nativeGate) {
     if (!SupportsFiniteWheelSecondSource(actual))
@@ -3026,9 +3276,9 @@ io::SolutionData CompileFiniteWheelSecondSource(
     transfer.mode = io::VerificationMode::LegacyGate;
     transfer.nativeGate = nativeGate;
     const auto plan = AssemblyPlanner::Plan(proxy, false, deadline);
-    auto result = CompileRows(proxy, plan, nullptr, nullptr, nullptr, true,
-        nullptr, false, 6, nullptr, nullptr, 3, false, false, false, false,
-        nullptr, nullptr, false, &actual, nullptr, deadline, {}, nullptr, &transfer);
+    auto result = CompileRows(proxy, plan, nullptr, nullptr, nullptr, true, nullptr, false, 6,
+                              nullptr, nullptr, 3, false, false, false, false, nullptr, nullptr,
+                              false, &actual, nullptr, deadline, {}, nullptr, &transfer);
     result.metrics = transfer.verification.metrics;
     return result;
 }
@@ -3087,9 +3337,10 @@ io::SolutionData CompileRowAssembly(const io::PuzzleData& puzzle, const Assembly
 
 io::SolutionData CompileRowAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
                                     std::chrono::steady_clock::time_point deadline) {
-    return CompileRowsWithRetimingPolicy(puzzle,plan,nullptr,nullptr,nullptr,true,nullptr,false,
-        0,nullptr,nullptr,3,false,false,false,false,nullptr,nullptr,false,nullptr,nullptr,
-        deadline,{},nullptr,nullptr,true,false,false,-1);
+    return CompileRowsWithRetimingPolicy(puzzle, plan, nullptr, nullptr, nullptr, true, nullptr,
+                                         false, 0, nullptr, nullptr, 3, false, false, false, false,
+                                         nullptr, nullptr, false, nullptr, nullptr, deadline, {},
+                                         nullptr, nullptr, true, false, false, -1);
 }
 
 bool SupportsComponentRowAssembly(const io::PuzzleData& puzzle) {
@@ -3099,47 +3350,55 @@ bool SupportsComponentRowAssembly(const io::PuzzleData& puzzle) {
         (puzzle.permissionBits & (1ULL << 17)) || puzzle.outputs[0].atoms.empty() ||
         std::any_of(puzzle.inputs.begin(), puzzle.inputs.end(), [](const auto& input) {
             return input.atoms.size() != 1 || !input.bonds.empty();
-        })) return false;
+        }))
+        return false;
     const auto& target = puzzle.outputs[0];
     int minQ = target.atoms[0].position.q, maxQ = minQ;
     int minR = target.atoms[0].position.r, maxR = minR;
     for (const auto& atom : target.atoms) {
-        minQ = std::min(minQ, atom.position.q); maxQ = std::max(maxQ, atom.position.q);
-        minR = std::min(minR, atom.position.r); maxR = std::max(maxR, atom.position.r);
-        if (std::none_of(puzzle.inputs.begin(), puzzle.inputs.end(), [&](const auto& input) {
-                return input.atoms[0].type == atom.type;
-            })) return false;
+        minQ = std::min(minQ, atom.position.q);
+        maxQ = std::max(maxQ, atom.position.q);
+        minR = std::min(minR, atom.position.r);
+        maxR = std::max(maxR, atom.position.r);
+        if (std::none_of(puzzle.inputs.begin(), puzzle.inputs.end(),
+                         [&](const auto& input) { return input.atoms[0].type == atom.type; }))
+            return false;
     }
     const int width = maxQ - minQ + 1, height = maxR - minR + 1;
     if (width < 2 || width > 8 || height > 2 ||
-        target.atoms.size() != static_cast<std::size_t>(width * height)) return false;
-    if (std::any_of(target.bonds.begin(), target.bonds.end(), [](const auto& bond) {
-            return bond.bits != 1;
-        })) return false;
+        target.atoms.size() != static_cast<std::size_t>(width * height))
+        return false;
+    if (std::any_of(target.bonds.begin(), target.bonds.end(),
+                    [](const auto& bond) { return bond.bits != 1; }))
+        return false;
     for (const auto& atom : target.atoms) {
         if (atom.position.q == maxQ) continue;
         const core::HexCoord neighbor{atom.position.q + 1, atom.position.r};
         if (std::none_of(target.bonds.begin(), target.bonds.end(), [&](const auto& bond) {
                 return (bond.from == atom.position && bond.to == neighbor) ||
                        (bond.to == atom.position && bond.from == neighbor);
-            })) return false;
+            }))
+            return false;
     }
     return true;
 }
 
-io::SolutionData CompileComponentRowAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan) {
+io::SolutionData CompileComponentRowAssembly(const io::PuzzleData& puzzle,
+                                             const AssemblyPlan& plan) {
     if (!SupportsComponentRowAssembly(puzzle))
         throw std::invalid_argument("outside registered component-row domain");
     return CompileRows(puzzle, plan, nullptr, nullptr, nullptr, true, nullptr, false, 0, nullptr,
                        nullptr, 3, false, false, false, true);
 }
 
-io::SolutionData CompileCloseFeedRowAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan) {
+io::SolutionData CompileCloseFeedRowAssembly(const io::PuzzleData& puzzle,
+                                             const AssemblyPlan& plan) {
     return CompileRows(puzzle, plan, nullptr, nullptr, nullptr, true, nullptr, false, 0, nullptr,
                        nullptr, 3, false, true, true);
 }
 
-io::SolutionData CompileStructuredRowAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan) {
+io::SolutionData CompileStructuredRowAssembly(const io::PuzzleData& puzzle,
+                                              const AssemblyPlan& plan) {
     return CompileRows(puzzle, plan, nullptr, nullptr, nullptr, true, nullptr, false, 0, nullptr,
                        nullptr, 3, false, true);
 }
@@ -3152,48 +3411,50 @@ io::SolutionData CompileRetimedRowAssembly(const io::PuzzleData& puzzle, const A
 io::SolutionData CompileRowAssemblySingleProduct(const io::PuzzleData& puzzle,
                                                  const AssemblyPlan& plan) {
     return CompileRowAssemblySingleProduct(puzzle, plan,
-        std::chrono::steady_clock::time_point::max());
+                                           std::chrono::steady_clock::time_point::max());
 }
 
 io::SolutionData CompileRowAssemblySingleProduct(const io::PuzzleData& puzzle,
-    const AssemblyPlan& plan, std::chrono::steady_clock::time_point deadline) {
-    return CompileRows(puzzle,plan,nullptr,nullptr,nullptr,true,nullptr,true,
-        0,nullptr,nullptr,3,false,false,false,false,nullptr,nullptr,false,nullptr,nullptr,
-        deadline,{},nullptr,nullptr);
+                                                 const AssemblyPlan& plan,
+                                                 std::chrono::steady_clock::time_point deadline) {
+    return CompileRows(puzzle, plan, nullptr, nullptr, nullptr, true, nullptr, true, 0, nullptr,
+                       nullptr, 3, false, false, false, false, nullptr, nullptr, false, nullptr,
+                       nullptr, deadline, {}, nullptr, nullptr);
 }
 
 io::SolutionData CompileRowAssemblyBatch(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
                                          std::vector<int>& productEnds) {
     return CompileRowAssemblyBatch(puzzle, plan, productEnds,
-        std::chrono::steady_clock::time_point::max());
+                                   std::chrono::steady_clock::time_point::max());
 }
 
 io::SolutionData CompileRowAssemblyBatch(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
-    std::vector<int>& productEnds, std::chrono::steady_clock::time_point deadline) {
+                                         std::vector<int>& productEnds,
+                                         std::chrono::steady_clock::time_point deadline) {
     productEnds.clear();
-    return CompileRows(puzzle,plan,nullptr,nullptr,nullptr,true,&productEnds,false,
-        0,nullptr,nullptr,3,false,false,false,false,nullptr,nullptr,false,nullptr,nullptr,
-        deadline,{},nullptr,nullptr);
+    return CompileRows(puzzle, plan, nullptr, nullptr, nullptr, true, &productEnds, false, 0,
+                       nullptr, nullptr, 3, false, false, false, false, nullptr, nullptr, false,
+                       nullptr, nullptr, deadline, {}, nullptr, nullptr);
 }
 
 io::SolutionData CompileRowAssemblyFiniteBatch(const io::PuzzleData& puzzle,
                                                const AssemblyPlan& plan,
                                                std::vector<int>& productEnds,
                                                std::size_t products) {
-    return CompileRowAssemblyFiniteBatch(puzzle,plan,productEnds,products,
-                                          std::chrono::steady_clock::time_point::max());
+    return CompileRowAssemblyFiniteBatch(puzzle, plan, productEnds, products,
+                                         std::chrono::steady_clock::time_point::max());
 }
 
 io::SolutionData CompileRowAssemblyFiniteBatch(const io::PuzzleData& puzzle,
                                                const AssemblyPlan& plan,
-                                               std::vector<int>& productEnds,
-                                               std::size_t products,
+                                               std::vector<int>& productEnds, std::size_t products,
                                                std::chrono::steady_clock::time_point deadline) {
     if (!products) throw std::invalid_argument("finite feed requires a positive product count");
     productEnds.clear();
-    return CompileRowsWithRetimingPolicy(puzzle,plan,nullptr,nullptr,nullptr,true,&productEnds,false,
-        products,nullptr,nullptr,3,false,false,false,false,nullptr,nullptr,false,nullptr,nullptr,
-        deadline,{},nullptr,nullptr,true,false,false,-1);
+    return CompileRowsWithRetimingPolicy(
+        puzzle, plan, nullptr, nullptr, nullptr, true, &productEnds, false, products, nullptr,
+        nullptr, 3, false, false, false, false, nullptr, nullptr, false, nullptr, nullptr, deadline,
+        {}, nullptr, nullptr, true, false, false, -1);
 }
 
 io::SolutionData CompileTriplexRowAssembly(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
@@ -3209,8 +3470,8 @@ io::SolutionData CompileTriplexRowAssembly(const io::PuzzleData& puzzle, const A
                                            std::chrono::steady_clock::time_point deadline) {
     if (feedSpacing < 3) throw std::invalid_argument("feed spacing must be at least three cells");
     return CompileRows(puzzle, plan, nullptr, &labels, nullptr, postCalcification, nullptr, false,
-                       0, nullptr, nullptr, feedSpacing, false, false, false, false,
-                       nullptr, nullptr, false, nullptr, nullptr, deadline, {}, nullptr, nullptr);
+                       0, nullptr, nullptr, feedSpacing, false, false, false, false, nullptr,
+                       nullptr, false, nullptr, nullptr, deadline, {}, nullptr, nullptr);
 }
 
 SharedAssemblyTarget BuildSharedAssemblyTarget(const io::PuzzleData& puzzle) {
@@ -3262,12 +3523,12 @@ SharedAssemblyTarget BuildSharedAssemblyTarget(const io::PuzzleData& puzzle) {
 SharedFactoryBatch CompileSharedAnimismusBatch(const io::PuzzleData& puzzle) {
     using K = ExecutionIR::Kind;
     using T = core::AtomType;
-    const auto required = (1ULL << 2) | (1ULL << 3) | (1ULL << 9) |
-                          (1ULL << 12) | (1ULL << 16);
+    const auto required = (1ULL << 2) | (1ULL << 3) | (1ULL << 9) | (1ULL << 12) | (1ULL << 16);
     if (puzzle.productionInfo || puzzle.outputMultiplier != 1 || puzzle.inputs.size() != 1 ||
         !SupportsMolecularSupplySource(puzzle.inputs[0]) || puzzle.outputs.size() != 2 ||
         (puzzle.permissionBits & required) != required)
-        throw std::invalid_argument("closed animismus requires permitted cardinal diatom and two products");
+        throw std::invalid_argument(
+            "closed animismus requires permitted cardinal diatom and two products");
     std::set<T> products;
     for (const auto& output : puzzle.outputs) {
         if (output.atoms.size() != 1 || !output.bonds.empty())
@@ -3277,7 +3538,8 @@ SharedFactoryBatch CompileSharedAnimismusBatch(const io::PuzzleData& puzzle) {
     if (products != std::set<T>{T::Vitae, T::Mors})
         throw std::invalid_argument("closed animismus requires both distinct coproduct demands");
     auto proxy = puzzle;
-    for (auto& output : proxy.outputs) output.atoms[0].type = T::Salt;
+    for (auto& output : proxy.outputs)
+        output.atoms[0].type = T::Salt;
     const auto shared = BuildSharedAssemblyTarget(proxy);
     const auto plan = AssemblyPlanner::Plan(shared.puzzle, true);
     const auto supply = AssemblyPlanner::PlanSupply(shared.puzzle, true);
@@ -3289,9 +3551,9 @@ SharedFactoryBatch CompileSharedAnimismusBatch(const io::PuzzleData& puzzle) {
             step.conversion != ElementConversion::Calcification)
             throw std::invalid_argument("closed animismus forbids synthetic or buffered feed");
     SharedFactoryBatch result;
-    result.solution = CompileRows(shared.puzzle, plan, &puzzle, nullptr, nullptr,
-        true, nullptr, false, 6, &supply, nullptr, 3, false, false, false, false,
-        &result.emissions, nullptr, true);
+    result.solution = CompileRows(shared.puzzle, plan, &puzzle, nullptr, nullptr, true, nullptr,
+                                  false, 6, &supply, nullptr, 3, false, false, false, false,
+                                  &result.emissions, nullptr, true);
     result.solution.puzzleName = puzzle.name;
     result.solution.solutionName = "Experimental closed shared Animismus";
     auto state = ExecutionIR::Initial(puzzle);
@@ -3315,8 +3577,14 @@ SharedFactoryBatch CompileSharedAnimismusBatch(const io::PuzzleData& puzzle) {
         result.ledger.AppendFromTail(puzzle, state, {K::Animismus, 0, salts});
         for (std::size_t output = 0; output < 2; ++output) {
             const auto id = puzzle.outputs[output].atoms[0].type == T::Vitae ? vitae : vitae + 1;
-            result.ledger.AppendFromTail(puzzle, state, {K::Relocate, 0, {id}, 0, 0,
-                core::Subtract(puzzle.outputs[output].atoms[0].position, state.atoms.at(id).position)});
+            result.ledger.AppendFromTail(puzzle, state,
+                                         {K::Relocate,
+                                          0,
+                                          {id},
+                                          0,
+                                          0,
+                                          core::Subtract(puzzle.outputs[output].atoms[0].position,
+                                                         state.atoms.at(id).position)});
             result.ledger.AppendFromTail(puzzle, state, {K::Output, output, {id}});
         }
     }
@@ -3327,15 +3595,16 @@ SharedFactoryBatch CompileSharedAnimismusBatch(const io::PuzzleData& puzzle) {
 SharedFactoryBatch CompileSharedAnimismusAssembly(const io::PuzzleData& puzzle) {
     using T = core::AtomType;
     using K = ExecutionIR::Kind;
-    const auto required = (1ULL << 2) | (1ULL << 3) | (1ULL << 9) |
-                          (1ULL << 12) | (1ULL << 16);
+    const auto required = (1ULL << 2) | (1ULL << 3) | (1ULL << 9) | (1ULL << 12) | (1ULL << 16);
     if (puzzle.productionInfo || puzzle.outputMultiplier != 1 || puzzle.inputs.size() != 1 ||
         !SupportsMolecularSupplySource(puzzle.inputs[0]) || puzzle.outputs.size() != 2 ||
         (puzzle.permissionBits & required) != required)
-        throw std::invalid_argument("shared assembly requires permitted cardinal diatom and two products");
+        throw std::invalid_argument(
+            "shared assembly requires permitted cardinal diatom and two products");
     int balance = 0;
     for (const auto& output : puzzle.outputs) {
-        if (output.atoms.size() < 2) throw std::invalid_argument("shared assembly requires multiatom consumers");
+        if (output.atoms.size() < 2)
+            throw std::invalid_argument("shared assembly requires multiatom consumers");
         for (const auto& atom : output.atoms) {
             if (atom.type != T::Vitae && atom.type != T::Mors)
                 throw std::invalid_argument("shared assembly has unsupported retained chemistry");
@@ -3345,7 +3614,8 @@ SharedFactoryBatch CompileSharedAnimismusAssembly(const io::PuzzleData& puzzle) 
     if (balance) throw std::invalid_argument("shared assembly requires balanced complete demand");
     auto saltPuzzle = puzzle;
     for (auto& output : saltPuzzle.outputs)
-        for (auto& atom : output.atoms) atom.type = T::Salt;
+        for (auto& atom : output.atoms)
+            atom.type = T::Salt;
     auto actual = BuildSharedAssemblyTarget(saltPuzzle);
     auto proxy = actual.puzzle;
     for (std::size_t atom = 0; atom < actual.atoms.size(); ++atom) {
@@ -3354,15 +3624,16 @@ SharedFactoryBatch CompileSharedAnimismusAssembly(const io::PuzzleData& puzzle) 
     }
     const auto plan = AssemblyPlanner::Plan(proxy, true);
     const auto supply = AssemblyPlanner::PlanSupply(proxy, true);
-    if (supply.productsPerPeriod != 1) throw std::invalid_argument("shared assembly requires closed supply period");
+    if (supply.productsPerPeriod != 1)
+        throw std::invalid_argument("shared assembly requires closed supply period");
     for (const auto& step : supply.steps)
         if (step.kind != SupplyPlan::Kind::Take || step.input != 0 || step.buffer != -1 ||
             step.conversion != ElementConversion::Calcification)
             throw std::invalid_argument("shared assembly forbids synthetic or surplus source");
     SharedFactoryBatch result;
-    result.solution = CompileRows(proxy, plan, nullptr, nullptr, &actual.origins,
-        true, nullptr, false, 6, &supply, nullptr, 3, false, false, false, false,
-        &result.emissions, &actual.atoms, false, &actual.puzzle);
+    result.solution = CompileRows(proxy, plan, nullptr, nullptr, &actual.origins, true, nullptr,
+                                  false, 6, &supply, nullptr, 3, false, false, false, false,
+                                  &result.emissions, &actual.atoms, false, &actual.puzzle);
     result.solution.puzzleName = puzzle.name;
     result.solution.solutionName = "Experimental complete shared Animismus assembly";
     auto state = ExecutionIR::Initial(puzzle);
@@ -3388,9 +3659,11 @@ SharedFactoryBatch CompileSharedAnimismusAssembly(const io::PuzzleData& puzzle) 
                     const auto& source = supply.steps.at(sourceCursor++ % supply.steps.size());
                     precursors[inlet] = first + source.sourceAtom;
                     salts.push_back(state.nextId);
-                    result.ledger.AppendFromTail(puzzle, state, {K::Calcify, 0, {first + source.sourceAtom}});
+                    result.ledger.AppendFromTail(puzzle, state,
+                                                 {K::Calcify, 0, {first + source.sourceAtom}});
                 }
-                pendingV = state.nextId; pendingM = pendingV + 1;
+                pendingV = state.nextId;
+                pendingM = pendingV + 1;
                 result.ledger.AppendFromTail(puzzle, state, {K::Animismus, 0, salts});
                 ++batch;
             }
@@ -3404,8 +3677,14 @@ SharedFactoryBatch CompileSharedAnimismusAssembly(const io::PuzzleData& puzzle) 
             emission.sourceRemainder = (pendingV && pendingM) ? 1 : 0;
             owned[ref.output][ref.atom] = pending;
             const auto target = puzzle.outputs[ref.output].atoms[ref.atom].position;
-            result.ledger.AppendFromTail(puzzle, state, {K::Relocate, 0, {pending}, 0, 0,
-                core::Subtract(target, state.atoms.at(pending).position)});
+            result.ledger.AppendFromTail(
+                puzzle, state,
+                {K::Relocate,
+                 0,
+                 {pending},
+                 0,
+                 0,
+                 core::Subtract(target, state.atoms.at(pending).position)});
             pending = 0;
         }
         for (std::size_t output = 0; output < 2; ++output) {
@@ -3416,8 +3695,8 @@ SharedFactoryBatch CompileSharedAnimismusAssembly(const io::PuzzleData& puzzle) 
                 throw std::logic_error("unknown shared consumer bond endpoint");
             };
             for (const auto& bond : molecule.bonds)
-                result.ledger.AppendFromTail(puzzle, state,
-                    {K::Bond, 0, {idAt(bond.from), idAt(bond.to)}, bond.bits});
+                result.ledger.AppendFromTail(
+                    puzzle, state, {K::Bond, 0, {idAt(bond.from), idAt(bond.to)}, bond.bits});
             result.ledger.AppendFromTail(puzzle, state, {K::Output, output, {owned[output].at(0)}});
         }
     }
@@ -3425,16 +3704,18 @@ SharedFactoryBatch CompileSharedAnimismusAssembly(const io::PuzzleData& puzzle) 
     return result;
 }
 
-SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, bool scheduleEmptyReturns, bool compactBuffers, bool batchConsumer, bool nearCache) {
+SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle,
+                                                 bool scheduleEmptyReturns, bool compactBuffers,
+                                                 bool batchConsumer, bool nearCache) {
     using T = core::AtomType;
     using K = ExecutionIR::Kind;
-    const auto required = (1ULL << 2) | (1ULL << 3) | (1ULL << 9) |
-                          (1ULL << 12) | (1ULL << 16);
+    const auto required = (1ULL << 2) | (1ULL << 3) | (1ULL << 9) | (1ULL << 12) | (1ULL << 16);
     if (puzzle.productionInfo || puzzle.outputMultiplier != 1 || puzzle.inputs.size() != 2 ||
         (puzzle.permissionBits & required) != required)
         throw std::invalid_argument("mixed inventory requires two permitted finite sources");
-    auto cardinal = [](T t) { return t == T::Salt || t == T::Earth || t == T::Water ||
-                                    t == T::Air || t == T::Fire; };
+    auto cardinal = [](T t) {
+        return t == T::Salt || t == T::Earth || t == T::Water || t == T::Air || t == T::Fire;
+    };
     if (puzzle.outputs.size() != 2)
         throw std::invalid_argument("mixed inventory requires two finite outputs");
     for (const auto& input : puzzle.inputs)
@@ -3460,7 +3741,8 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
     std::array<int, 2> counts{};
     bool found = false;
     int total = 0;
-    for (const auto& [type, count] : demand) total += count;
+    for (const auto& [type, count] : demand)
+        total += count;
     for (int sum = 1; sum <= total && !found; ++sum)
         for (int a = 0; a <= sum && !found; ++a) {
             std::map<T, int> available;
@@ -3469,17 +3751,23 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
                     available[atom.type] += input == 0 ? a : sum - a;
             int supplied = 0;
             bool enough = true;
-            for (const auto& [type, count] : available) supplied += count;
+            for (const auto& [type, count] : available)
+                supplied += count;
             for (const auto& [type, count] : demand)
                 if (type != T::Vitae && type != T::Mors && available[type] < count) enough = false;
-            if (enough && supplied == total) { counts = {a, sum - a}; found = true; }
+            if (enough && supplied == total) {
+                counts = {a, sum - a};
+                found = true;
+            }
         }
     if (!found) {
         const auto recipe = ChemicalPlanner::Plan(puzzle, 1, false);
-        if (recipe.inputBatches.size() != 2 || recipe.animismus != static_cast<std::size_t>(demand[T::Vitae]) ||
-            recipe.projections || recipe.duplications || recipe.purifications ||
-            recipe.unifications || recipe.dispersions ||
-            std::any_of(recipe.surplus.begin(), recipe.surplus.end(), [](auto n) { return n != 0; }))
+        if (recipe.inputBatches.size() != 2 ||
+            recipe.animismus != static_cast<std::size_t>(demand[T::Vitae]) || recipe.projections ||
+            recipe.duplications || recipe.purifications || recipe.unifications ||
+            recipe.dispersions ||
+            std::any_of(recipe.surplus.begin(), recipe.surplus.end(),
+                        [](auto n) { return n != 0; }))
             throw std::invalid_argument("exact recipe requires unsupported mixed chemistry");
         std::size_t supplied = 0;
         for (int input = 0; input < 2; ++input) {
@@ -3494,7 +3782,8 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
     }
     auto saltPuzzle = puzzle;
     for (auto& output : saltPuzzle.outputs)
-        for (auto& atom : output.atoms) atom.type = T::Salt;
+        for (auto& atom : output.atoms)
+            atom.type = T::Salt;
     auto shared = BuildSharedAssemblyTarget(saltPuzzle);
     const auto plan = AssemblyPlanner::Plan(shared.puzzle, true);
     MixedInventoryProgram program;
@@ -3505,7 +3794,8 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         for (int batch = 0; batch < counts[input]; ++batch)
             for (std::size_t atom = 0; atom < puzzle.inputs[input].atoms.size(); ++atom) {
                 program.stores.push_back({SupplyPlan::Kind::Store, static_cast<std::size_t>(input),
-                    atom, 0, ElementConversion::None, static_cast<int>(slots.size())});
+                                          atom, 0, ElementConversion::None,
+                                          static_cast<int>(slots.size())});
                 slots.push_back(puzzle.inputs[input].atoms[atom].type);
             }
     std::vector<int> assigned(shared.atoms.size(), -1);
@@ -3516,7 +3806,9 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         if (type == T::Vitae || type == T::Mors) continue;
         for (int slot = 0; slot < static_cast<int>(slots.size()); ++slot)
             if (!used.count(slot) && slots[slot] == type) {
-                assigned[atom] = slot; used.insert(slot); break;
+                assigned[atom] = slot;
+                used.insert(slot);
+                break;
             }
     }
     std::vector<ElementConversion> conversions(assigned.size(), ElementConversion::None);
@@ -3527,11 +3819,13 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         if (type == T::Salt)
             for (int slot = 0; slot < static_cast<int>(slots.size()); ++slot)
                 if (!used.count(slot) && cardinal(slots[slot])) {
-                    assigned[atom] = slot; used.insert(slot);
+                    assigned[atom] = slot;
+                    used.insert(slot);
                     conversions[atom] = ElementConversion::Calcification;
                     break;
                 }
-        if (assigned[atom] < 0) throw std::invalid_argument("exact mixed ordinary allocation unsupported");
+        if (assigned[atom] < 0)
+            throw std::invalid_argument("exact mixed ordinary allocation unsupported");
     }
     std::vector<int> precursor;
     for (int slot = 0; slot < static_cast<int>(slots.size()); ++slot)
@@ -3551,9 +3845,13 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         MixedReaction reaction;
         for (int side = 0; side < 2; ++side) {
             const int source = precursor.at(i + side);
-            reaction.inputs[side] = {SupplyPlan::Kind::Take, 0, 0, 0,
-                slots[source] == T::Salt ? ElementConversion::None : ElementConversion::Calcification,
-                source};
+            reaction.inputs[side] = {SupplyPlan::Kind::Take,
+                                     0,
+                                     0,
+                                     0,
+                                     slots[source] == T::Salt ? ElementConversion::None
+                                                              : ElementConversion::Calcification,
+                                     source};
             reaction.outputs[side] = static_cast<int>(slots.size());
             slots.push_back(side == 0 ? T::Vitae : T::Mors);
         }
@@ -3568,9 +3866,12 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         if (assigned[atom] >= 0) continue;
         const auto ref = shared.atoms[atom];
         const auto type = puzzle.outputs[ref.output].atoms[ref.atom].type;
-        for (int slot = static_cast<int>(program.stores.size()); slot < static_cast<int>(slots.size()); ++slot)
+        for (int slot = static_cast<int>(program.stores.size());
+             slot < static_cast<int>(slots.size()); ++slot)
             if (!used.count(slot) && slots[slot] == type) {
-                assigned[atom] = slot; used.insert(slot); break;
+                assigned[atom] = slot;
+                used.insert(slot);
+                break;
             }
         if (assigned[atom] < 0) throw std::logic_error("mixed coproduct allocation");
     }
@@ -3585,7 +3886,7 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
     supply.productsPerPeriod = 1;
     for (int atom : order)
         supply.steps.push_back({SupplyPlan::Kind::Take, 0, 0, static_cast<std::size_t>(atom),
-                               conversions[atom], assigned[atom]});
+                                conversions[atom], assigned[atom]});
     if (nearCache) {
         if (!compactBuffers)
             throw std::invalid_argument("near inventory cache requires compact buffers");
@@ -3594,8 +3895,10 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         auto store = [&](int logical) {
             auto free = std::find(owner.begin(), owner.end(), -1);
             const int physical = static_cast<int>(free - owner.begin());
-            if (free == owner.end()) owner.push_back(logical);
-            else *free = logical;
+            if (free == owner.end())
+                owner.push_back(logical);
+            else
+                *free = logical;
             if (program.cacheSlots.at(logical) != -1)
                 throw std::logic_error("duplicate inventory lifetime");
             program.cacheSlots[logical] = physical;
@@ -3611,9 +3914,11 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         for (const auto& reaction : program.reactions) {
             for (const auto& source : reaction.inputs)
                 if (source.buffer != program.bypassSlot) take(source.buffer);
-            for (int output : reaction.outputs) store(output);
+            for (int output : reaction.outputs)
+                store(output);
         }
-        for (const auto& step : supply.steps) take(step.buffer);
+        for (const auto& step : supply.steps)
+            take(step.buffer);
         if (std::any_of(owner.begin(), owner.end(), [](int id) { return id != -1; }))
             throw std::logic_error("inventory cache not drained");
         program.cacheCapacity = static_cast<int>(owner.size());
@@ -3621,9 +3926,10 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
             throw std::invalid_argument("near inventory cache capacity exceeds bounded scope");
     }
     SharedFactoryBatch result;
-    result.solution = CompileRows(shared.puzzle, plan, nullptr, nullptr, &shared.origins,
-        true, nullptr, false, 6, &supply, nullptr, 3, false, false, false, false,
-        &result.emissions, &shared.atoms, false, &shared.puzzle, &program);
+    result.solution =
+        CompileRows(shared.puzzle, plan, nullptr, nullptr, &shared.origins, true, nullptr, false, 6,
+                    &supply, nullptr, 3, false, false, false, false, &result.emissions,
+                    &shared.atoms, false, &shared.puzzle, &program);
     result.phases = program.phases;
     result.emptyReturnTasks = program.emptyReturnTasks;
     result.emptyReturnCycles = program.emptyReturnCycles;
@@ -3637,7 +3943,8 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         for (int input = 0; input < 2; ++input)
             for (int batch = 0; batch < counts[input]; ++batch) {
                 const auto first = state.nextId;
-                result.ledger.AppendFromTail(puzzle, state, {K::Acquire, static_cast<std::size_t>(input)});
+                result.ledger.AppendFromTail(puzzle, state,
+                                             {K::Acquire, static_cast<std::size_t>(input)});
                 const auto& source = puzzle.inputs[input];
                 auto idAt = [&](core::HexCoord c) {
                     for (std::size_t i = 0; i < source.atoms.size(); ++i)
@@ -3645,8 +3952,8 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
                     throw std::logic_error("source endpoint");
                 };
                 for (const auto& bond : source.bonds)
-                    result.ledger.AppendFromTail(puzzle, state, {K::Unbond, 0,
-                        {idAt(bond.from), idAt(bond.to)}, bond.bits});
+                    result.ledger.AppendFromTail(
+                        puzzle, state, {K::Unbond, 0, {idAt(bond.from), idAt(bond.to)}, bond.bits});
                 for (std::size_t atom = 0; atom < source.atoms.size(); ++atom, ++slot) {
                     ids[slot] = first + atom;
                     provenance[slot].sourceIdentity = first + atom;
@@ -3654,16 +3961,16 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
                     provenance[slot].sourceAtom = atom;
                     provenance[slot].sourceBatch = product * counts[input] + batch;
                     if (slot != program.bypassSlot)
-                        result.ledger.AppendFromTail(puzzle, state, {K::Store,
-                            static_cast<std::size_t>(slot), {ids[slot]}});
+                        result.ledger.AppendFromTail(
+                            puzzle, state, {K::Store, static_cast<std::size_t>(slot), {ids[slot]}});
                 }
             }
         for (const auto& reaction : program.reactions) {
             std::vector<ExecutionIR::AtomId> salts;
             for (const auto& source : reaction.inputs) {
                 if (source.buffer != program.bypassSlot)
-                    result.ledger.AppendFromTail(puzzle, state, {K::Retrieve,
-                        static_cast<std::size_t>(source.buffer)});
+                    result.ledger.AppendFromTail(
+                        puzzle, state, {K::Retrieve, static_cast<std::size_t>(source.buffer)});
                 auto id = ids[source.buffer];
                 if (source.conversion == ElementConversion::Calcification) {
                     const auto next = state.nextId;
@@ -3677,8 +3984,9 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
             for (int side = 0; side < 2; ++side) {
                 ids[reaction.outputs[side]] = next + side;
                 provenance[reaction.outputs[side]].reactionInputs = {salts[0], salts[1]};
-                result.ledger.AppendFromTail(puzzle, state, {K::Store,
-                    static_cast<std::size_t>(reaction.outputs[side]), {next + side}});
+                result.ledger.AppendFromTail(
+                    puzzle, state,
+                    {K::Store, static_cast<std::size_t>(reaction.outputs[side]), {next + side}});
             }
         }
         std::vector<std::vector<ExecutionIR::AtomId>> owned(puzzle.outputs.size());
@@ -3687,19 +3995,26 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
         for (int atom : order) {
             const auto ref = shared.atoms[atom];
             auto id = ids[assigned[atom]];
-            result.ledger.AppendFromTail(puzzle, state, {K::Retrieve,
-                static_cast<std::size_t>(assigned[atom])});
+            result.ledger.AppendFromTail(puzzle, state,
+                                         {K::Retrieve, static_cast<std::size_t>(assigned[atom])});
             if (conversions[atom] == ElementConversion::Calcification) {
                 result.ledger.AppendFromTail(puzzle, state, {K::Calcify, 0, {id}});
                 id = state.nextId - 1;
             }
             owned[ref.output][ref.atom] = id;
-            result.ledger.AppendFromTail(puzzle, state, {K::Relocate, 0, {id}, 0, 0,
-                core::Subtract(puzzle.outputs[ref.output].atoms[ref.atom].position,
-                               state.atoms.at(id).position)});
+            result.ledger.AppendFromTail(
+                puzzle, state,
+                {K::Relocate,
+                 0,
+                 {id},
+                 0,
+                 0,
+                 core::Subtract(puzzle.outputs[ref.output].atoms[ref.atom].position,
+                                state.atoms.at(id).position)});
             for (auto& emission : result.emissions)
                 if (emission.product == product && emission.consumer == ref) {
-                    emission.atom = id; emission.type = state.atoms.at(id).type;
+                    emission.atom = id;
+                    emission.type = state.atoms.at(id).type;
                     const auto& source = provenance[assigned[atom]];
                     emission.sourceIdentity = source.sourceIdentity;
                     emission.sourceInput = source.sourceInput;
@@ -3716,8 +4031,8 @@ SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData& puzzle, b
                 throw std::logic_error("target endpoint");
             };
             for (const auto& bond : molecule.bonds)
-                result.ledger.AppendFromTail(puzzle, state, {K::Bond, 0,
-                    {idAt(bond.from), idAt(bond.to)}, bond.bits});
+                result.ledger.AppendFromTail(
+                    puzzle, state, {K::Bond, 0, {idAt(bond.from), idAt(bond.to)}, bond.bits});
             result.ledger.AppendFromTail(puzzle, state, {K::Output, output, {owned[output][0]}});
         }
     }
@@ -3756,9 +4071,9 @@ SharedFactoryBatch CompileSharedFactoryBatch(const io::PuzzleData& puzzle) {
              step.conversion != ElementConversion::Calcification))
             throw std::invalid_argument("shared factory supports Direct/Calcification only");
     SharedFactoryBatch result;
-    result.solution = CompileRows(shared.puzzle, plan, nullptr, nullptr, &shared.origins,
-                                  true, nullptr, false, 6, &supply, nullptr, 3,
-                                  false, false, false, false, &result.emissions, &shared.atoms);
+    result.solution = CompileRows(shared.puzzle, plan, nullptr, nullptr, &shared.origins, true,
+                                  nullptr, false, 6, &supply, nullptr, 3, false, false, false,
+                                  false, &result.emissions, &shared.atoms);
     result.solution.solutionName = "Experimental finite shared singleton factory";
     auto state = ExecutionIR::Initial(puzzle);
     std::vector<std::vector<ExecutionIR::AtomId>> owned(2);
@@ -3781,7 +4096,8 @@ SharedFactoryBatch CompileSharedFactoryBatch(const io::PuzzleData& puzzle) {
             auto& slot = owned.at(emission.consumer.output).at(emission.consumer.atom);
             if (slot) throw std::logic_error("duplicate shared consumption");
             slot = id;
-            const auto target = puzzle.outputs[emission.consumer.output].atoms[emission.consumer.atom].position;
+            const auto target =
+                puzzle.outputs[emission.consumer.output].atoms[emission.consumer.atom].position;
             const auto delta = core::Subtract(target, state.atoms.at(id).position);
             result.ledger.AppendFromTail(puzzle, state, {K::Relocate, 0, {id}, 0, 0, delta});
         }
@@ -3793,8 +4109,8 @@ SharedFactoryBatch CompileSharedFactoryBatch(const io::PuzzleData& puzzle) {
                         if (molecule.atoms[atom].position == position) return owned[output][atom];
                     throw std::logic_error("unknown consumer bond endpoint");
                 };
-                result.ledger.AppendFromTail(puzzle, state,
-                    {K::Bond, 0, {idAt(bond.from), idAt(bond.to)}, bond.bits});
+                result.ledger.AppendFromTail(
+                    puzzle, state, {K::Bond, 0, {idAt(bond.from), idAt(bond.to)}, bond.bits});
             }
             result.ledger.AppendFromTail(puzzle, state, {K::Output, output, {owned[output].at(0)}});
         }
@@ -3807,12 +4123,11 @@ SharedFactoryBatch CompileSharedFactoryBatch(const io::PuzzleData& puzzle) {
 }
 
 bool SupportsMolecularSupplySource(const io::Molecule& source) {
-    if (source.atoms.size() != 2 || source.bonds.size() != 1 ||
-        source.bonds[0].bits != 1 || source.atoms[0].type == source.atoms[1].type)
+    if (source.atoms.size() != 2 || source.bonds.size() != 1 || source.bonds[0].bits != 1 ||
+        source.atoms[0].type == source.atoms[1].type)
         return false;
     for (const auto& atom : source.atoms)
-        if (atom.type < core::AtomType::Air || atom.type > core::AtomType::Water)
-            return false;
+        if (atom.type < core::AtomType::Air || atom.type > core::AtomType::Water) return false;
     const auto& bond = source.bonds[0];
     const auto a = source.atoms[0].position, b = source.atoms[1].position;
     const auto delta = core::Subtract(a, b);
@@ -3832,8 +4147,10 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
     using T = core::AtomType;
     constexpr auto required = (1ULL << 2) | (1ULL << 3) | (1ULL << 9);
     if (puzzle.productionInfo || puzzle.outputMultiplier != 1 || puzzle.inputs.size() != 1 ||
-        puzzle.outputs.empty() || puzzle.outputs.size() > 2 || (puzzle.permissionBits & required) != required)
-        throw std::invalid_argument("fragment supply requires one permitted finite molecular source");
+        puzzle.outputs.empty() || puzzle.outputs.size() > 2 ||
+        (puzzle.permissionBits & required) != required)
+        throw std::invalid_argument(
+            "fragment supply requires one permitted finite molecular source");
     const auto& source = puzzle.inputs[0];
     if (source.atoms.size() < 2 || source.atoms.size() > 16 ||
         source.bonds.size() + 1 != source.atoms.size())
@@ -3841,13 +4158,16 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
     auto key = [](core::HexCoord cell) { return std::pair{cell.q, cell.r}; };
     std::set<std::pair<int, int>> positions;
     for (const auto& atom : source.atoms)
-        if (atom.type < T::Salt || atom.type == T::Repeat || static_cast<int>(atom.type) > 16 || !positions.insert(key(atom.position)).second)
-            throw std::invalid_argument("fragment supply requires distinct ordinary material cells");
+        if (atom.type < T::Salt || atom.type == T::Repeat || static_cast<int>(atom.type) > 16 ||
+            !positions.insert(key(atom.position)).second)
+            throw std::invalid_argument(
+                "fragment supply requires distinct ordinary material cells");
     std::set<std::pair<int, int>> reached{key(source.atoms[0].position)};
     std::set<std::pair<std::pair<int, int>, std::pair<int, int>>> edges;
     for (const auto& bond : source.bonds) {
         const auto delta = core::Subtract(bond.from, bond.to);
-        if (bond.bits != 1 || !positions.contains(key(bond.from)) || !positions.contains(key(bond.to)) ||
+        if (bond.bits != 1 || !positions.contains(key(bond.from)) ||
+            !positions.contains(key(bond.to)) ||
             std::max({std::abs(delta.q), std::abs(delta.r), std::abs(delta.q + delta.r)}) != 1 ||
             !edges.insert(std::minmax(key(bond.from), key(bond.to))).second)
             throw std::invalid_argument("fragment supply requires adjacent ordinary source bonds");
@@ -3863,7 +4183,8 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
     for (const auto& output : puzzle.outputs) {
         demand += output.atoms.size();
         for (const auto& bond : output.bonds)
-            if (bond.bits != 1) throw std::invalid_argument("fragment supply requires ordinary products");
+            if (bond.bits != 1)
+                throw std::invalid_argument("fragment supply requires ordinary products");
     }
     if (!demand || demand > 32 || demand % source.atoms.size())
         throw std::invalid_argument("fragment supply must exhaust the real source");
@@ -3888,8 +4209,8 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
     for (const auto& step : supply.steps) {
         checkDeadline();
         if ((step.kind != SupplyPlan::Kind::Take && step.kind != SupplyPlan::Kind::Store) ||
-            step.input != 0 || step.sourceAtom >= source.atoms.size() ||
-            step.buffer < -1 || step.buffer > 0 ||
+            step.input != 0 || step.sourceAtom >= source.atoms.size() || step.buffer < -1 ||
+            step.buffer > 0 ||
             (step.conversion != ElementConversion::None &&
              step.conversion != ElementConversion::Calcification))
             throw std::invalid_argument("fragment supply outside one-slot physical custody domain");
@@ -3915,9 +4236,10 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
         throw std::invalid_argument("fragment physical slot or source residual");
     checkDeadline();
     SharedFactoryBatch result;
-    result.solution = CompileRows(shared.puzzle, plan, nullptr, nullptr, &shared.origins,
-        true, nullptr, false, 6, &supply, nullptr, 3, false, false, false, false,
-        &result.emissions, &shared.atoms, false, nullptr, nullptr, deadline, clock, &result.custody);
+    result.solution =
+        CompileRows(shared.puzzle, plan, nullptr, nullptr, &shared.origins, true, nullptr, false, 6,
+                    &supply, nullptr, 3, false, false, false, false, &result.emissions,
+                    &shared.atoms, false, nullptr, nullptr, deadline, clock, &result.custody);
     result.solution.solutionName = "Experimental renewable fragment transport";
     if (result.emissions.size() != 6 * demand) throw std::logic_error("missing fragment emissions");
     auto state = ExecutionIR::Initial(puzzle);
@@ -3928,15 +4250,22 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
             first = state.nextId;
             result.ledger.AppendFromTail(puzzle, state, {K::Acquire, 0});
             auto sourceIndex = [&](core::HexCoord cell) {
-                return static_cast<std::size_t>(std::find_if(source.atoms.begin(), source.atoms.end(),
-                    [&](const auto& atom) { return atom.position == cell; }) - source.atoms.begin());
-        };
-        for (const auto& bond : source.bonds)
-            result.ledger.AppendFromTail(puzzle, state,
-                {K::Unbond, 0, {first + sourceIndex(bond.from), first + sourceIndex(bond.to)}, 1});
+                return static_cast<std::size_t>(
+                    std::find_if(source.atoms.begin(), source.atoms.end(),
+                                 [&](const auto& atom) { return atom.position == cell; }) -
+                    source.atoms.begin());
+            };
+            for (const auto& bond : source.bonds)
+                result.ledger.AppendFromTail(
+                    puzzle, state,
+                    {K::Unbond,
+                     0,
+                     {first + sourceIndex(bond.from), first + sourceIndex(bond.to)},
+                     1});
         };
         std::vector<std::vector<ExecutionIR::AtomId>> delivered;
-        for (const auto& output : puzzle.outputs) delivered.emplace_back(output.atoms.size());
+        for (const auto& output : puzzle.outputs)
+            delivered.emplace_back(output.atoms.size());
         std::map<int, std::pair<ExecutionIR::AtomId, std::size_t>> stock;
         std::size_t extracted = 0, i = 0;
         for (const auto& step : supply.steps) {
@@ -3945,7 +4274,8 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
             std::size_t batchIndex{};
             if (step.kind == SupplyPlan::Kind::Take && step.buffer >= 0) {
                 std::tie(id, batchIndex) = stock.at(step.buffer);
-                result.ledger.AppendFromTail(puzzle, state, {K::Retrieve, static_cast<std::size_t>(step.buffer)});
+                result.ledger.AppendFromTail(puzzle, state,
+                                             {K::Retrieve, static_cast<std::size_t>(step.buffer)});
                 stock.erase(step.buffer);
             } else {
                 if (extracted % source.atoms.size() == 0) acquire();
@@ -3954,19 +4284,21 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
                 ++extracted;
                 if (step.kind == SupplyPlan::Kind::Store) {
                     stock.emplace(step.buffer, std::pair{id, batchIndex});
-                    result.ledger.AppendFromTail(puzzle, state,
-                        {K::Store, static_cast<std::size_t>(step.buffer), {id}});
+                    result.ledger.AppendFromTail(
+                        puzzle, state, {K::Store, static_cast<std::size_t>(step.buffer), {id}});
                     continue;
                 }
             }
             auto& emission = result.emissions[product * demand + i];
-            if (emission.consumer != shared.atoms.at(step.targetAtom) || emission.product != product)
+            if (emission.consumer != shared.atoms.at(step.targetAtom) ||
+                emission.product != product)
                 throw std::logic_error("fragment emission consumer mismatch");
             emission.sourceIdentity = id;
             emission.sourceInput = 0;
             emission.sourceAtom = step.sourceAtom;
             emission.sourceBatch = batchIndex;
-            emission.sourceRemainder = source.atoms.size() - ((extracted - 1) % source.atoms.size()) - 1;
+            emission.sourceRemainder =
+                source.atoms.size() - ((extracted - 1) % source.atoms.size()) - 1;
             if (step.conversion == ElementConversion::Calcification) {
                 const auto next = state.nextId;
                 result.ledger.AppendFromTail(puzzle, state, {K::Calcify, 0, {id}});
@@ -3977,48 +4309,60 @@ SharedFactoryBatch CompileRenewableFragmentTransport(
             const auto& target = puzzle.outputs.at(ref.output).atoms.at(ref.atom);
             emission.type = state.atoms.at(id).type;
             if (emission.type != target.type) throw std::logic_error("fragment material mismatch");
-            result.ledger.AppendFromTail(puzzle, state, {K::Relocate, 0, {id}, 0, 0,
-                core::Subtract(target.position, state.atoms.at(id).position)});
+            result.ledger.AppendFromTail(
+                puzzle, state,
+                {K::Relocate,
+                 0,
+                 {id},
+                 0,
+                 0,
+                 core::Subtract(target.position, state.atoms.at(id).position)});
             delivered[ref.output][ref.atom] = id;
             if (emission.beginCycle > emission.holderReleaseCycle ||
                 emission.holderReleaseCycle >= emission.readyCycle ||
                 emission.readyCycle >= emission.releaseCycle ||
                 emission.releaseCycle >= emission.reservationEnd ||
-                (product * demand + i && emission.beginCycle <
-                    result.emissions[product * demand + i - 1].reservationEnd))
+                (product * demand + i &&
+                 emission.beginCycle < result.emissions[product * demand + i - 1].reservationEnd))
                 throw std::logic_error("fragment custody overlap");
             ++i;
         }
         for (std::size_t output = 0; output < puzzle.outputs.size(); ++output) {
             const auto& molecule = puzzle.outputs[output];
             auto idAt = [&](core::HexCoord cell) {
-                const auto it = std::find_if(molecule.atoms.begin(), molecule.atoms.end(),
-                    [&](const auto& atom) { return atom.position == cell; });
-                if (it == molecule.atoms.end()) throw std::logic_error("fragment target bond missing");
+                const auto it =
+                    std::find_if(molecule.atoms.begin(), molecule.atoms.end(),
+                                 [&](const auto& atom) { return atom.position == cell; });
+                if (it == molecule.atoms.end())
+                    throw std::logic_error("fragment target bond missing");
                 return delivered[output][it - molecule.atoms.begin()];
             };
             for (const auto& bond : molecule.bonds)
                 result.ledger.AppendFromTail(puzzle, state,
-                    {K::Bond, 0, {idAt(bond.from), idAt(bond.to)}, 1});
-            result.ledger.AppendFromTail(puzzle, state, {K::Output, output, {delivered[output][0]}});
+                                             {K::Bond, 0, {idAt(bond.from), idAt(bond.to)}, 1});
+            result.ledger.AppendFromTail(puzzle, state,
+                                         {K::Output, output, {delivered[output][0]}});
         }
     }
     checkDeadline();
     ExecutionIR::RequireComplete(result.ledger.Replay(puzzle),
-        std::vector<std::size_t>(puzzle.outputs.size(), 6));
+                                 std::vector<std::size_t>(puzzle.outputs.size(), 6));
     return result;
 }
 
 SharedFactoryBatch CompileMolecularFragmentSupplyBatch(const io::PuzzleData& puzzle) {
     if (puzzle.inputs.size() != 1 || puzzle.outputs.size() != 2 ||
         puzzle.inputs[0].atoms.size() > 3)
-        throw std::invalid_argument("fragment supply requires a two/three atom source and two outputs");
+        throw std::invalid_argument(
+            "fragment supply requires a two/three atom source and two outputs");
     const auto& source = puzzle.inputs[0];
     std::size_t demand = 0;
-    for (const auto& output : puzzle.outputs) demand += output.atoms.size();
-    if (demand != source.atoms.size() || std::any_of(source.atoms.begin(), source.atoms.end(),
-            [](const auto& atom) { return atom.type < core::AtomType::Salt ||
-                                        atom.type > core::AtomType::Water; }))
+    for (const auto& output : puzzle.outputs)
+        demand += output.atoms.size();
+    if (demand != source.atoms.size() ||
+        std::any_of(source.atoms.begin(), source.atoms.end(), [](const auto& atom) {
+            return atom.type < core::AtomType::Salt || atom.type > core::AtomType::Water;
+        }))
         throw std::invalid_argument("legacy fragment supply requires one Salt/cardinal batch");
     return CompileRenewableFragmentTransport(puzzle);
 }
@@ -4047,9 +4391,9 @@ SharedFactoryBatch CompileMolecularSupplyBatch(const io::PuzzleData& puzzle) {
              step.conversion != ElementConversion::Calcification))
             throw std::invalid_argument("molecular supply requires direct endpoint custody");
     SharedFactoryBatch result;
-    result.solution = CompileRows(shared.puzzle, plan, nullptr, nullptr, &shared.origins,
-                                  true, nullptr, false, 6, &supply, nullptr, 3,
-                                  false, false, false, false, &result.emissions, &shared.atoms);
+    result.solution = CompileRows(shared.puzzle, plan, nullptr, nullptr, &shared.origins, true,
+                                  nullptr, false, 6, &supply, nullptr, 3, false, false, false,
+                                  false, &result.emissions, &shared.atoms);
     result.solution.solutionName = "Experimental shared molecular extraction";
     auto state = ExecutionIR::Initial(puzzle);
     if (result.emissions.size() != 12) throw std::logic_error("missing molecular emissions");
@@ -4060,7 +4404,8 @@ SharedFactoryBatch CompileMolecularSupplyBatch(const io::PuzzleData& puzzle) {
         for (std::size_t i = 0; i < 2; ++i) {
             auto& emission = result.emissions[product * 2 + i];
             const auto& step = supply.steps[i];
-            if (emission.product != product || emission.consumer != shared.atoms.at(step.targetAtom))
+            if (emission.product != product ||
+                emission.consumer != shared.atoms.at(step.targetAtom))
                 throw std::logic_error("molecular emission source order mismatch");
             auto id = first + step.sourceAtom;
             emission.sourceIdentity = id;
@@ -4075,14 +4420,17 @@ SharedFactoryBatch CompileMolecularSupplyBatch(const io::PuzzleData& puzzle) {
             }
             emission.atom = id;
             const auto target = puzzle.outputs.at(emission.consumer.output).atoms[0].position;
-            result.ledger.AppendFromTail(puzzle, state,
+            result.ledger.AppendFromTail(
+                puzzle, state,
                 {K::Relocate, 0, {id}, 0, 0, core::Subtract(target, state.atoms.at(id).position)});
-            result.ledger.AppendFromTail(puzzle, state, {K::Output, emission.consumer.output, {id}});
+            result.ledger.AppendFromTail(puzzle, state,
+                                         {K::Output, emission.consumer.output, {id}});
             if (emission.beginCycle > emission.holderReleaseCycle ||
                 emission.holderReleaseCycle >= emission.readyCycle ||
                 emission.readyCycle >= emission.releaseCycle ||
                 emission.releaseCycle >= emission.reservationEnd ||
-                (product * 2 + i && emission.beginCycle < result.emissions[product * 2 + i - 1].reservationEnd))
+                (product * 2 + i &&
+                 emission.beginCycle < result.emissions[product * 2 + i - 1].reservationEnd))
                 throw std::logic_error("molecular custody reservation overlap");
         }
     }
@@ -4090,8 +4438,8 @@ SharedFactoryBatch CompileMolecularSupplyBatch(const io::PuzzleData& puzzle) {
     return result;
 }
 
-MolecularRecipeSupply CompileMolecularRecipeSupply(
-    const io::PuzzleData& recipe, std::size_t input, const std::vector<ProductAtomRef>& consumers) {
+MolecularRecipeSupply CompileMolecularRecipeSupply(const io::PuzzleData& recipe, std::size_t input,
+                                                   const std::vector<ProductAtomRef>& consumers) {
     if (consumers.size() != 2 || consumers[0].output == consumers[1].output)
         throw std::invalid_argument("molecular recipe supply requires two distinct output demands");
     auto extraction = recipe;
@@ -4103,12 +4451,14 @@ MolecularRecipeSupply CompileMolecularRecipeSupply(
     }
     extraction.outputMultiplier = 1;
     auto batch = CompileMolecularSupplyBatch(extraction);
-    for (auto& emission : batch.emissions) emission.sourceInput = input;
+    for (auto& emission : batch.emissions)
+        emission.sourceInput = input;
     ExecutionIR reservations;
     auto state = ExecutionIR::Initial(recipe);
     const auto first = state.nextId;
     reservations.AppendFromTail(recipe, state, {ExecutionIR::Kind::Acquire, input});
-    reservations.AppendFromTail(recipe, state, {ExecutionIR::Kind::Unbond, 0, {first, first + 1}, 1});
+    reservations.AppendFromTail(recipe, state,
+                                {ExecutionIR::Kind::Unbond, 0, {first, first + 1}, 1});
     for (std::size_t i = 0; i < 2; ++i) {
         const auto& emission = batch.emissions[i];
         auto id = first + emission.sourceAtom;
@@ -4119,9 +4469,16 @@ MolecularRecipeSupply CompileMolecularRecipeSupply(
             reservations.AppendFromTail(recipe, state, {ExecutionIR::Kind::Calcify, 0, {id}});
             id = converted;
         }
-        reservations.AppendFromTail(recipe, state, {ExecutionIR::Kind::Relocate, 0, {id}, 0, 0,
-            core::Subtract(core::HexCoord{static_cast<int>(i) * 4, 10}, state.atoms.at(id).position)});
-        reservations.AppendFromTail(recipe, state, {ExecutionIR::Kind::Store, emission.consumer.output, {id}});
+        reservations.AppendFromTail(recipe, state,
+                                    {ExecutionIR::Kind::Relocate,
+                                     0,
+                                     {id},
+                                     0,
+                                     0,
+                                     core::Subtract(core::HexCoord{static_cast<int>(i) * 4, 10},
+                                                    state.atoms.at(id).position)});
+        reservations.AppendFromTail(recipe, state,
+                                    {ExecutionIR::Kind::Store, emission.consumer.output, {id}});
     }
     (void)reservations.Replay(recipe);
     return {std::move(batch), consumers, std::move(reservations), input};

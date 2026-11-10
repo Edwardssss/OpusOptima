@@ -1,13 +1,12 @@
-#include "CalcifyAnimismusAdmission.hpp"
-#include <cstdlib>
 #include "AssemblySolver.hpp"
-#include "ClosedMetalInventory.hpp"
-#include "BinaryWriter.hpp"
-#include "CandidateArchive.hpp"
 #include "AutomaticSupply.hpp"
+#include "BinaryWriter.hpp"
+#include "CalcifyAnimismusAdmission.hpp"
+#include "CandidateArchive.hpp"
 #include "ChemicalPlanner.hpp"
-#include "Disassembly.hpp"
+#include "ClosedMetalInventory.hpp"
 #include "DemandDrivenChain.hpp"
+#include "Disassembly.hpp"
 #include "FixedArmInventory.hpp"
 #include "FixedArmJoin.hpp"
 #include "LifeDeath.hpp"
@@ -33,6 +32,7 @@
 #include "SerialArmExecution.hpp"
 #include "TracklessPairChemistry.hpp"
 #include "WheelAssembly.hpp"
+#include <cstdlib>
 
 #include <algorithm>
 #include <chrono>
@@ -225,9 +225,10 @@ AssemblyPlan AssemblyPlanner::Plan(const io::PuzzleData& puzzle, bool forest,
     return plan;
 }
 
-void AssemblyPlanner::Validate(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
-                               bool forest, std::chrono::steady_clock::time_point deadline) {
-    if (plan != Plan(puzzle, forest, deadline)) Reject("assembly plan failed canonical replay validation");
+void AssemblyPlanner::Validate(const io::PuzzleData& puzzle, const AssemblyPlan& plan, bool forest,
+                               std::chrono::steady_clock::time_point deadline) {
+    if (plan != Plan(puzzle, forest, deadline))
+        Reject("assembly plan failed canonical replay validation");
 }
 
 io::SolutionData CompileSpecialized(const io::PuzzleData& puzzle, const AssemblyPlan& plan) {
@@ -611,9 +612,11 @@ io::SolutionData AssemblySolver::SolveVerified(const io::PuzzleData& puzzle,
         &verify, feedback);
 }
 io::SolutionData AssemblySolver::CollectVerified(const io::PuzzleData& puzzle,
-                                                  const CandidateSink& sink,
-                                                  std::size_t maxAccepted) {
-    CandidateVerification verify = [&](const auto& candidate) { return sink(candidate, "assembly"); };
+                                                 const CandidateSink& sink,
+                                                 std::size_t maxAccepted) {
+    CandidateVerification verify = [&](const auto& candidate) {
+        return sink(candidate, "assembly");
+    };
     return SolveCandidates(puzzle, {}, &verify, {}, &sink, std::max(std::size_t{1}, maxAccepted));
 }
 io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
@@ -660,7 +663,9 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         for (const auto& prior : seen) {
             if (prior.first == bytes) {
                 ++duplicates;
-                GetLoggerOrFallback("solver")->info("Assembly branch={} event=deduplicated accepted={}", stage, prior.second.Passed());
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch={} event=deduplicated accepted={}", stage,
+                    prior.second.Passed());
                 return requireNative(prior.second);
             }
         }
@@ -683,10 +688,11 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     improves = true;
                 }
             }
-            if (improves && acceptedCap < maxAccepted + kMaxExtraSlotAdmissions)
-                ++acceptedCap;
+            if (improves && acceptedCap < maxAccepted + kMaxExtraSlotAdmissions) ++acceptedCap;
         }
-        GetLoggerOrFallback("solver")->info("Assembly branch={} event=gate accepted={} submission={}", stage, report.Passed(), submissions);
+        GetLoggerOrFallback("solver")->info(
+            "Assembly branch={} event=gate accepted={} submission={}", stage, report.Passed(),
+            submissions);
         seen.emplace_back(std::move(bytes), report);
         return report;
     };
@@ -709,17 +715,18 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             if (gateReport && !gateReport->Passed()) {
                 rejections.push_back(std::string(wheelStage) + ": " + detail);
                 if (feedback)
-                    feedback({
-                        gateReport->status == io::VerificationStatus::Unavailable
-                            ? AssemblyFailure::Category::VerificationUnavailable
-                        : gateReport->status == io::VerificationStatus::Error
-                            ? AssemblyFailure::Category::InfrastructureError
-                            : AssemblyFailure::Category::IndependentVerifier,
-                        wheelStage, detail, gateReport, std::nullopt});
-            } else planningFailure(wheelStage, detail);
+                    feedback({gateReport->status == io::VerificationStatus::Unavailable
+                                  ? AssemblyFailure::Category::VerificationUnavailable
+                              : gateReport->status == io::VerificationStatus::Error
+                                  ? AssemblyFailure::Category::InfrastructureError
+                                  : AssemblyFailure::Category::IndependentVerifier,
+                              wheelStage, detail, gateReport, std::nullopt});
+            } else
+                planningFailure(wheelStage, detail);
         };
         try {
-            return CompileFiniteWheelSecondSource(puzzle, outerDeadline,
+            return CompileFiniteWheelSecondSource(
+                puzzle, outerDeadline,
                 [&](const io::SolutionData& candidate, auto suppliedDeadline) {
                     try {
                         if (suppliedDeadline != outerDeadline)
@@ -748,20 +755,23 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         // Baseline gets its original first-feasible route. Only then spend at most
         // three construction attempts; no late family can erase that first result.
         bool ordinaryPortfolio = maxAccepted > 1 && !puzzle.productionInfo &&
-            puzzle.outputs.size() == 1 && !HasRepeatingOutput(puzzle.outputs[0]);
+                                 puzzle.outputs.size() == 1 &&
+                                 !HasRepeatingOutput(puzzle.outputs[0]);
         const auto canConstruct = [&] {
             return constructionAttempts < MaxPortfolioConstructions &&
                    submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted &&
                    std::chrono::steady_clock::now() < Deadline();
         };
-        if (nativeAdmission && wheelSecondSourceEligible &&
-            !wheelSecondSourceAttempted && canConstruct()) {
+        if (nativeAdmission && wheelSecondSourceEligible && !wheelSecondSourceAttempted &&
+            canConstruct()) {
             ++constructionAttempts;
             (void)tryWheelSecondSource();
         }
         std::optional<StaticEmbeddingSuppressionReason> staticEmbeddingSuppression;
         const char* staticReactionFlag = std::getenv("OPUSOPTIMA_STATIC_REACTION");
-        if (nativeAdmission && (!staticReactionFlag || std::string_view(staticReactionFlag) != "off") && canConstruct()) {
+        if (nativeAdmission &&
+            (!staticReactionFlag || std::string_view(staticReactionFlag) != "off") &&
+            canConstruct()) {
             try {
                 const auto compiled = CompileStaticReactionWithFamily(puzzle, Deadline());
                 ++constructionAttempts;
@@ -777,66 +787,84 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     stage = "portfolio-static-reaction-ordinary-pair";
                     break;
                 }
-                if (std::chrono::steady_clock::now() < Deadline() && submissions < MaxCandidateSubmissions) {
+                if (std::chrono::steady_clock::now() < Deadline() &&
+                    submissions < MaxCandidateSubmissions) {
                     const auto report = verifyAt(stage, compiled.solution);
-                    staticEmbeddingSuppression = StaticEmbeddingSuppressionAfterReaction(
-                        puzzle, compiled.family, report);
+                    staticEmbeddingSuppression =
+                        StaticEmbeddingSuppressionAfterReaction(puzzle, compiled.family, report);
                 }
             } catch (const std::invalid_argument& error) {
-                GetLoggerOrFallback("solver")->info("Assembly branch=portfolio-static-reaction event=unsupported detail={}", error.what());
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch=portfolio-static-reaction event=unsupported detail={}",
+                    error.what());
             }
         }
         const char* staticEmbeddingFlag = std::getenv("OPUSOPTIMA_STATIC_EMBEDDING");
         if (nativeAdmission && !staticEmbeddingAttempted &&
-            (!staticEmbeddingFlag || std::string_view(staticEmbeddingFlag) != "off") && canConstruct() &&
-            staticEmbeddingSuppression) {
+            (!staticEmbeddingFlag || std::string_view(staticEmbeddingFlag) != "off") &&
+            canConstruct() && staticEmbeddingSuppression) {
             GetLoggerOrFallback("solver")->info(
-                "Assembly branch=portfolio-static-embedding event=suppressed reason=accepted-singleton-purification construction={}",
+                "Assembly branch=portfolio-static-embedding event=suppressed "
+                "reason=accepted-singleton-purification construction={}",
                 constructionAttempts);
         }
         if (nativeAdmission && !staticEmbeddingAttempted && !staticEmbeddingSuppression &&
-            (!staticEmbeddingFlag || std::string_view(staticEmbeddingFlag) != "off") && canConstruct()) {
+            (!staticEmbeddingFlag || std::string_view(staticEmbeddingFlag) != "off") &&
+            canConstruct()) {
             staticEmbeddingAttempted = true;
             ++constructionAttempts;
             const char* sharedFeedFlag = std::getenv("OPUSOPTIMA_SHARED_FEED_RESOURCE");
-            const bool sharedFeed = sharedFeedFlag && std::string_view(sharedFeedFlag) == "on" &&
+            const bool sharedFeed =
+                sharedFeedFlag && std::string_view(sharedFeedFlag) == "on" &&
                 firstAcceptedStage == "life-death" && !puzzle.outputs.empty() &&
                 puzzle.outputs.size() <= 2 &&
-                std::any_of(puzzle.inputs.begin(),puzzle.inputs.end(),
-                    [](const auto& input) { return input.atoms.size() > 1; }) &&
+                std::any_of(puzzle.inputs.begin(), puzzle.inputs.end(),
+                            [](const auto& input) { return input.atoms.size() > 1; }) &&
                 StaticEmbeddingMissingLifeFeed(puzzle);
-            const char* stage = sharedFeed ? "portfolio-shared-life-death" : "portfolio-static-embedding";
+            const char* stage =
+                sharedFeed ? "portfolio-shared-life-death" : "portfolio-static-embedding";
             try {
-                const auto station = sharedFeed ? CompileSharedLifeDeath(puzzle,Deadline()) :
-                                                  CompileStaticEmbedding(puzzle, Deadline());
-                if (std::chrono::steady_clock::now() < Deadline() && submissions < MaxCandidateSubmissions)
+                const auto station = sharedFeed ? CompileSharedLifeDeath(puzzle, Deadline())
+                                                : CompileStaticEmbedding(puzzle, Deadline());
+                if (std::chrono::steady_clock::now() < Deadline() &&
+                    submissions < MaxCandidateSubmissions)
                     verifyAt(stage, station);
             } catch (const std::invalid_argument& error) {
-                GetLoggerOrFallback("solver")->info("Assembly branch={} event=unsupported detail={}",stage,error.what());
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch={} event=unsupported detail={}", stage, error.what());
             }
         }
 #ifdef OPUSOPTIMA_REFERENCE_WORKER_PATH
         const char* rigidCarrierFlag = std::getenv("OPUSOPTIMA_RIGID_CARRIER");
-        if (nativeAdmission && (!rigidCarrierFlag ||
-            std::string_view(rigidCarrierFlag) != "off") && canConstruct()) {
+        if (nativeAdmission && (!rigidCarrierFlag || std::string_view(rigidCarrierFlag) != "off") &&
+            canConstruct()) {
             const auto preflight = PreflightRigidCarrier(puzzle, Deadline());
             GetLoggerOrFallback("solver")->info(
-                "Assembly branch=portfolio-rigid-carrier event=preflight status={} reason={} construction={} submissions={}",
-                preflight.status == RigidCarrierPreflight::Status::Unsupported ? "Unsupported" : "Unknown",
+                "Assembly branch=portfolio-rigid-carrier event=preflight status={} reason={} "
+                "construction={} submissions={}",
+                preflight.status == RigidCarrierPreflight::Status::Unsupported ? "Unsupported"
+                                                                               : "Unknown",
                 preflight.reason ? RigidCarrierReasonName(*preflight.reason) : "unknown",
                 constructionAttempts, submissions);
             if (preflight.status == RigidCarrierPreflight::Status::Unknown) {
                 ++constructionAttempts;
-                GetLoggerOrFallback("solver")->info("Assembly branch=portfolio-rigid-carrier event=attempt construction={}", constructionAttempts);
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch=portfolio-rigid-carrier event=attempt construction={}",
+                    constructionAttempts);
                 try {
                     const auto carrier = CompileRigidCarrierWithFamily(puzzle, Deadline());
-                    const char* stage = carrier.family == RigidCarrierFamily::StaticCopy ?
-                        "portfolio-static-input-copy" : carrier.family == RigidCarrierFamily::StaticPartition ?
-                        "portfolio-static-molecule-partition" : "portfolio-rigid-carrier";
-                    if (std::chrono::steady_clock::now() < Deadline() && submissions < MaxCandidateSubmissions)
+                    const char* stage = carrier.family == RigidCarrierFamily::StaticCopy
+                                            ? "portfolio-static-input-copy"
+                                        : carrier.family == RigidCarrierFamily::StaticPartition
+                                            ? "portfolio-static-molecule-partition"
+                                            : "portfolio-rigid-carrier";
+                    if (std::chrono::steady_clock::now() < Deadline() &&
+                        submissions < MaxCandidateSubmissions)
                         verifyAt(stage, carrier.solution);
                 } catch (const std::invalid_argument& error) {
-                    GetLoggerOrFallback("solver")->info("Assembly branch=portfolio-rigid-carrier event=unsupported detail={}", error.what());
+                    GetLoggerOrFallback("solver")->info(
+                        "Assembly branch=portfolio-rigid-carrier event=unsupported detail={}",
+                        error.what());
                 }
             }
         }
@@ -853,7 +881,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     verifyAt("portfolio-singleton-purification-chain", chain);
             } catch (const std::invalid_argument& error) {
                 GetLoggerOrFallback("solver")->info(
-                    "Assembly branch=portfolio-singleton-purification-chain event=unsupported detail={}",
+                    "Assembly branch=portfolio-singleton-purification-chain event=unsupported "
+                    "detail={}",
                     error.what());
             }
         }
@@ -862,15 +891,17 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         if (nativeAdmission && maxAccepted > 1 && canConstruct()) {
             const bool wheel = (!radialWheelFlag || std::string_view(radialWheelFlag) == "on") &&
                                SupportsRadialWheelAssembly(puzzle);
-            const bool projection = !wheel &&
+            const bool projection =
+                !wheel &&
                 (!radialProjectionFlag || std::string_view(radialProjectionFlag) == "on") &&
                 SupportsRadialProjectionAssembly(puzzle);
             if (wheel || projection) {
-                const char* stage = projection ? "portfolio-radial-projection" : "portfolio-radial-wheel";
+                const char* stage =
+                    projection ? "portfolio-radial-projection" : "portfolio-radial-wheel";
                 ++constructionAttempts;
                 try {
-                    const auto radial = projection ? CompileRadialProjectionAssembly(puzzle) :
-                                                     CompileRadialWheelAssembly(puzzle);
+                    const auto radial = projection ? CompileRadialProjectionAssembly(puzzle)
+                                                   : CompileRadialWheelAssembly(puzzle);
                     if (std::chrono::steady_clock::now() < Deadline() &&
                         submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted)
                         verifyAt(stage, radial);
@@ -882,38 +913,51 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         }
         const char* compactSpareFlag = std::getenv("OPUSOPTIMA_COMPACT_SPARE");
         const bool compactSpare = maxAccepted > 1 && compactSpareFlag &&
-            std::string_view(compactSpareFlag) == "on" && SupportsCompactSpareChemistry(puzzle);
+                                  std::string_view(compactSpareFlag) == "on" &&
+                                  SupportsCompactSpareChemistry(puzzle);
         if (compactSpare && canConstruct()) {
             ++constructionAttempts;
             try {
                 const auto compact = CompileCompactSpareChemistry(puzzle);
-                if (std::chrono::steady_clock::now() < Deadline() && submissions < MaxCandidateSubmissions)
+                if (std::chrono::steady_clock::now() < Deadline() &&
+                    submissions < MaxCandidateSubmissions)
                     verifyAt("portfolio-compact-reaction-outlet", compact);
             } catch (const std::invalid_argument& error) {
-                GetLoggerOrFallback("solver")->info("Assembly branch=portfolio-compact-reaction-outlet event=unsupported detail={}", error.what());
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch=portfolio-compact-reaction-outlet event=unsupported detail={}",
+                    error.what());
             }
         }
-        if (!compactSpare && sharedAssemblyEnabled_ && maxAccepted > 1 && puzzle.outputs.size() == 2 && canConstruct()) {
-            ++constructionAttempts;
-            try {
-                const auto shared = puzzle.inputs.size() == 2
-                    ? CompileMixedInventoryAssembly(puzzle, sharedSchedulingEnabled_, sharedBufferRelayEnabled_)
-                    : CompileSharedAnimismusAssembly(puzzle);
-                if (std::chrono::steady_clock::now() < Deadline() && submissions < MaxCandidateSubmissions)
-                    verifyAt("portfolio-shared-animismus-assembly", shared.solution);
-            } catch (const std::invalid_argument& error) {
-                GetLoggerOrFallback("solver")->info("Assembly branch=portfolio-shared-animismus-assembly event=unsupported detail={}", error.what());
-            }
-        }
-        if (sharedAssemblyEnabled_ && sharedBatchConsumerEnabled_ && !sharedNearCacheEnabled_ && puzzle.inputs.size() == 2 &&
+        if (!compactSpare && sharedAssemblyEnabled_ && maxAccepted > 1 &&
             puzzle.outputs.size() == 2 && canConstruct()) {
             ++constructionAttempts;
             try {
-                const auto batch = CompileMixedInventoryAssembly(
-                    puzzle, sharedSchedulingEnabled_, sharedBufferRelayEnabled_, true);
+                const auto shared =
+                    puzzle.inputs.size() == 2
+                        ? CompileMixedInventoryAssembly(puzzle, sharedSchedulingEnabled_,
+                                                        sharedBufferRelayEnabled_)
+                        : CompileSharedAnimismusAssembly(puzzle);
+                if (std::chrono::steady_clock::now() < Deadline() &&
+                    submissions < MaxCandidateSubmissions)
+                    verifyAt("portfolio-shared-animismus-assembly", shared.solution);
+            } catch (const std::invalid_argument& error) {
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch=portfolio-shared-animismus-assembly event=unsupported "
+                    "detail={}",
+                    error.what());
+            }
+        }
+        if (sharedAssemblyEnabled_ && sharedBatchConsumerEnabled_ && !sharedNearCacheEnabled_ &&
+            puzzle.inputs.size() == 2 && puzzle.outputs.size() == 2 && canConstruct()) {
+            ++constructionAttempts;
+            try {
+                const auto batch = CompileMixedInventoryAssembly(puzzle, sharedSchedulingEnabled_,
+                                                                 sharedBufferRelayEnabled_, true);
                 if (canConstruct()) verifyAt("portfolio-shared-batch-consumer", batch.solution);
             } catch (const std::invalid_argument& error) {
-                GetLoggerOrFallback("solver")->info("Assembly branch=portfolio-shared-batch-consumer event=unsupported detail={}", error.what());
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch=portfolio-shared-batch-consumer event=unsupported detail={}",
+                    error.what());
             }
         }
         if (sharedAssemblyEnabled_ && sharedNearCacheEnabled_ && puzzle.inputs.size() == 2 &&
@@ -921,26 +965,31 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             ++constructionAttempts;
             try {
                 const auto cache = CompileMixedInventoryAssembly(puzzle, sharedSchedulingEnabled_,
-                    sharedBufferRelayEnabled_, sharedBatchConsumerEnabled_, true);
+                                                                 sharedBufferRelayEnabled_,
+                                                                 sharedBatchConsumerEnabled_, true);
                 if (std::chrono::steady_clock::now() < Deadline() &&
                     submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted)
                     verifyAt("portfolio-shared-near-cache", cache.solution);
             } catch (const std::invalid_argument& error) {
-                GetLoggerOrFallback("solver")->info("Assembly branch=portfolio-shared-near-cache event=unsupported detail={}", error.what());
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch=portfolio-shared-near-cache event=unsupported detail={}",
+                    error.what());
             }
         }
         if (ordinaryPortfolio && std::chrono::steady_clock::now() < Deadline()) {
             try {
-                const auto plan = AssemblyPlanner::Plan(puzzle,false,Deadline());
-                const auto& atoms=puzzle.outputs[0].atoms;
-                const auto width=std::minmax_element(atoms.begin(),atoms.end(),
-                    [](const auto& a,const auto& b) { return a.position.q<b.position.q; });
-                const char* retiming=std::getenv("OPUSOPTIMA_ROW_RETIMING");
-                const auto rowPermissions=(1ULL<<2)|(1ULL<<3);
-                const bool scheduleRows=nativeAdmission && !atoms.empty() &&
-                    (!retiming || std::string_view(retiming)!="off") &&
-                    (puzzle.permissionBits&rowPermissions)==rowPermissions &&
-                    width.second->position.q>width.first->position.q;
+                const auto plan = AssemblyPlanner::Plan(puzzle, false, Deadline());
+                const auto& atoms = puzzle.outputs[0].atoms;
+                const auto width = std::minmax_element(
+                    atoms.begin(), atoms.end(),
+                    [](const auto& a, const auto& b) { return a.position.q < b.position.q; });
+                const char* retiming = std::getenv("OPUSOPTIMA_ROW_RETIMING");
+                const auto rowPermissions = (1ULL << 2) | (1ULL << 3);
+                const bool scheduleRows =
+                    nativeAdmission && !atoms.empty() &&
+                    (!retiming || std::string_view(retiming) != "off") &&
+                    (puzzle.permissionBits & rowPermissions) == rowPermissions &&
+                    width.second->position.q > width.first->position.q;
                 const char* clockPortfolio = std::getenv("OPUSOPTIMA_ROW_CLOCK_PORTFOLIO");
                 const bool clockPortfolioEnabled =
                     !clockPortfolio || std::string_view(clockPortfolio) != "off";
@@ -948,30 +997,37 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 const bool gapPortfolioEnabled =
                     !gapPortfolio || std::string_view(gapPortfolio) != "off";
                 const char* clockLocal = std::getenv("OPUSOPTIMA_ROW_CLOCK_LOCAL");
-                const bool clockLocalEnabled =
-                    !clockLocal || std::string_view(clockLocal) != "off";
+                const bool clockLocalEnabled = !clockLocal || std::string_view(clockLocal) != "off";
                 for (int variant = 0; variant < 3 && canConstruct(); ++variant) {
                     if (std::chrono::steady_clock::now() >= Deadline()) break;
                     const char* componentMode = std::getenv("OPUSOPTIMA_ROW_COMPONENT");
-                    const bool component = variant == 2 &&
+                    const bool component =
+                        variant == 2 &&
                         (componentMode && std::string_view(componentMode) == "on") &&
                         SupportsComponentRowAssembly(puzzle);
                     const char* sharedMode = std::getenv("OPUSOPTIMA_SHARED_WORKSTATION");
-                    const bool shared = variant == 1 && sharedMode && std::string_view(sharedMode) == "on";
+                    const bool shared =
+                        variant == 1 && sharedMode && std::string_view(sharedMode) == "on";
                     const bool relay = variant == 0 && compactRelayEnabled_;
-                    const bool scheduled=variant==0 && !relay && scheduleRows;
-                    const char* family = relay ? "portfolio-compact-chemistry-relay" : shared ? "portfolio-serial-bond-station" : component ? "portfolio-row-component" : scheduled ? "portfolio-row-retimed" : variant == 0 ? "portfolio-row-compact" :
-                                         variant == 1 ? "portfolio-shared-workstation" :
-                                                        "portfolio-row-clearance";
+                    const bool scheduled = variant == 0 && !relay && scheduleRows;
+                    const char* family = relay          ? "portfolio-compact-chemistry-relay"
+                                         : shared       ? "portfolio-serial-bond-station"
+                                         : component    ? "portfolio-row-component"
+                                         : scheduled    ? "portfolio-row-retimed"
+                                         : variant == 0 ? "portfolio-row-compact"
+                                         : variant == 1 ? "portfolio-shared-workstation"
+                                                        : "portfolio-row-clearance";
                     GetLoggerOrFallback("solver")->info("Assembly branch={} event=reached", family);
-                    if (variant != 1 &&
-                        (puzzle.permissionBits & ((1ULL << 2) | (1ULL << 3))) !=
-                            ((1ULL << 2) | (1ULL << 3))) {
-                        GetLoggerOrFallback("solver")->info("Assembly branch={} event=permission-skip", family);
+                    if (variant != 1 && (puzzle.permissionBits & ((1ULL << 2) | (1ULL << 3))) !=
+                                            ((1ULL << 2) | (1ULL << 3))) {
+                        GetLoggerOrFallback("solver")->info(
+                            "Assembly branch={} event=permission-skip", family);
                         continue;
                     }
                     ++constructionAttempts;
-                    GetLoggerOrFallback("solver")->info("Assembly branch={} event=attempt construction={}", family, constructionAttempts);
+                    GetLoggerOrFallback("solver")->info(
+                        "Assembly branch={} event=attempt construction={}", family,
+                        constructionAttempts);
                     std::optional<io::SolutionData> alternative;
                     std::optional<io::SolutionData> compactFallback;
                     std::optional<io::SolutionData> compactFeeder;
@@ -982,15 +1038,18 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     bool clockedUsesIntake = false;
                     try {
                         if (variant == 1 &&
-                            (std::any_of(puzzle.inputs.begin(), puzzle.inputs.end(),
-                                         [](const auto& input) { return input.atoms.size() != 1; }) ||
+                            (std::any_of(
+                                 puzzle.inputs.begin(), puzzle.inputs.end(),
+                                 [](const auto& input) { return input.atoms.size() != 1; }) ||
                              [&] {
                                  for (std::size_t i = 0; i < plan.inputForAtom.size(); ++i)
                                      if (puzzle.inputs[plan.inputForAtom[i]].atoms[0].type !=
-                                         puzzle.outputs[0].atoms[i].type) return true;
+                                         puzzle.outputs[0].atoms[i].type)
+                                         return true;
                                  return false;
                              }())) {
-                            GetLoggerOrFallback("solver")->info("Assembly branch={} event=unsupported", family);
+                            GetLoggerOrFallback("solver")->info(
+                                "Assembly branch={} event=unsupported", family);
                             continue;
                         }
                         if (relay) {
@@ -1018,7 +1077,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                                 if (clockPortfolioEnabled) {
                                     if (pair.clockedGap0) {
                                         clockedAlternative = std::move(*pair.clockedGap0);
-                                        if (pair.hasClocked) clockedFallback = std::move(pair.clocked);
+                                        if (pair.hasClocked)
+                                            clockedFallback = std::move(pair.clocked);
                                     } else if (pair.hasClocked) {
                                         clockedAlternative = std::move(pair.clocked);
                                     }
@@ -1030,8 +1090,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                             alternative = CompileRowAssembly(puzzle, plan, variant == 0 ? 3 : 4);
                         }
                     } catch (const std::invalid_argument& error) {
-                        GetLoggerOrFallback("solver")->info("Assembly branch={} event=unsupported detail={}", family,
-                                                             error.what());
+                        GetLoggerOrFallback("solver")->info(
+                            "Assembly branch={} event=unsupported detail={}", family, error.what());
                     }
                     if (alternative && std::chrono::steady_clock::now() < Deadline() &&
                         submissions < MaxCandidateSubmissions) {
@@ -1050,8 +1110,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                                 auto feeder = std::move(*compactFeeder);
                                 compactFeeder.reset();
                                 const auto feederReport = verifyAt("portfolio-row-feeder", feeder);
-                                if (!feederReport.Passed() && compactFallback && gapPortfolioEnabled &&
-                                    acceptedCount < acceptedCap &&
+                                if (!feederReport.Passed() && compactFallback &&
+                                    gapPortfolioEnabled && acceptedCount < acceptedCap &&
                                     std::chrono::steady_clock::now() < Deadline() &&
                                     submissions < MaxCandidateSubmissions) {
                                     auto retry = std::move(*compactFallback);
@@ -1060,7 +1120,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                                 }
                             } catch (const std::invalid_argument& error) {
                                 GetLoggerOrFallback("solver")->info(
-                                    "Assembly branch=portfolio-row-feeder event=unsupported detail={}",
+                                    "Assembly branch=portfolio-row-feeder event=unsupported "
+                                    "detail={}",
                                     error.what());
                             }
                         }
@@ -1116,15 +1177,15 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                                     verifyAt("portfolio-row-clocked-feeder-raw", *rawFeeder);
                             } catch (const std::invalid_argument& error) {
                                 GetLoggerOrFallback("solver")->info(
-                                    "Assembly branch=portfolio-row-clocked-feeder event=unsupported detail={}",
+                                    "Assembly branch=portfolio-row-clocked-feeder "
+                                    "event=unsupported detail={}",
                                     error.what());
                             }
                         }
                     }
                 }
                 const auto* structure = std::getenv("OPUSOPTIMA_ROW_STRUCTURE");
-                if ((!structure || std::string(structure) != "off") &&
-                    canConstruct()) {
+                if ((!structure || std::string(structure) != "off") && canConstruct()) {
                     ++constructionAttempts;
                     try {
                         auto child = CompileStructuredRowAssembly(puzzle, plan);
@@ -1134,8 +1195,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     }
                 }
                 const auto* critical = std::getenv("OPUSOPTIMA_ROW_CRITICALPATH");
-                if ((!critical || std::string_view(critical) != "off") &&
-                    canConstruct()) {
+                if ((!critical || std::string_view(critical) != "off") && canConstruct()) {
                     ++constructionAttempts;
                     try {
                         auto child = CompileCloseFeedRowAssembly(puzzle, plan);
@@ -1149,8 +1209,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             }
         }
         GetLoggerOrFallback("solver")->info(
-            "Assembly portfolio: submitted={} accepted={} deduplicated={} constructions={} construction_limit={}",
-            submissions, acceptedCount, duplicates, constructionAttempts, MaxPortfolioConstructions);
+            "Assembly portfolio: submitted={} accepted={} deduplicated={} constructions={} "
+            "construction_limit={}",
+            submissions, acceptedCount, duplicates, constructionAttempts,
+            MaxPortfolioConstructions);
         // Other output modes have no post-first structural portfolio. Continuing
         // their fallback chain can compile expensive candidates after publication.
         return true;
@@ -1164,7 +1226,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         else if (feedback)
             feedback({report.status == io::VerificationStatus::Unavailable
                           ? AssemblyFailure::Category::VerificationUnavailable
-                          : report.status == io::VerificationStatus::Error
+                      : report.status == io::VerificationStatus::Error
                           ? AssemblyFailure::Category::InfrastructureError
                           : AssemblyFailure::Category::IndependentVerifier,
                       stage, report.detail, report, std::nullopt});
@@ -1284,27 +1346,30 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         for (const auto& [edge, bits] : bonds)
             material.AppendFromTail(puzzle, state, {IR::Kind::Unbond, 0, {edge.a, edge.b}, bits});
         for (std::size_t port = 0; port < puzzle.outputs.size(); ++port) {
-            const auto atom = std::find_if(state.atoms.begin(), state.atoms.end(), [&](const auto& entry) {
-                return entry.second.type == puzzle.outputs[port].atoms.front().type;
-            });
+            const auto atom =
+                std::find_if(state.atoms.begin(), state.atoms.end(), [&](const auto& entry) {
+                    return entry.second.type == puzzle.outputs[port].atoms.front().type;
+                });
             if (atom == state.atoms.end()) throw IR::Error("whole feed receiver identity mismatch");
             material.AppendFromTail(puzzle, state, {IR::Kind::Output, port, {atom->first}});
         }
         IR::RequireComplete(state, std::vector<std::size_t>(puzzle.outputs.size(), 1));
-        const auto deadline = std::min(Deadline(), std::chrono::steady_clock::now() + std::chrono::seconds(3));
+        const auto deadline =
+            std::min(Deadline(), std::chrono::steady_clock::now() + std::chrono::seconds(3));
         std::string dockingDetail;
-        auto machine = CompileAcceptedWholeFeedDocking(puzzle, material,
-            [&](const auto& candidate) { return acceptStage(stage, candidate); },
+        auto machine = CompileAcceptedWholeFeedDocking(
+            puzzle, material, [&](const auto& candidate) { return acceptStage(stage, candidate); },
             [&](const auto& detail) { dockingDetail += detail + '\n'; }, deadline,
             [&] {
                 if (constructionAttempts >= MaxPortfolioConstructions ||
                     std::chrono::steady_clock::now() >= deadline ||
-                    (sink && (submissions >= MaxCandidateSubmissions || acceptedCount >= maxAccepted)))
+                    (sink &&
+                     (submissions >= MaxCandidateSubmissions || acceptedCount >= maxAccepted)))
                     return false;
                 ++constructionAttempts;
                 GetLoggerOrFallback("solver")->info(
-                    "Assembly branch={} event=construction count={} limit={}",
-                    stage, constructionAttempts, MaxPortfolioConstructions);
+                    "Assembly branch={} event=construction count={} limit={}", stage,
+                    constructionAttempts, MaxPortfolioConstructions);
                 return true;
             });
         if (machine && keep(acceptedSolution(std::move(*machine)))) return *firstAccepted;
@@ -1342,8 +1407,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     throw;
                 }
             });
-            if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+            if (result) {
+                auto measured = acceptedSolution(std::move(*result));
+                if (keep(measured)) return *firstAccepted;
+            }
             planningFailure("production-coproducts",
                             "bounded shared-feed destination plans exhausted or rejected");
         } catch (const std::invalid_argument& error) {
@@ -1379,8 +1446,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     productionMaterialFailure("production-joint-dispersion", failure,
                                               dispersionAcceptanceError);
                 });
-            if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+            if (result) {
+                auto measured = acceptedSolution(std::move(*result));
+                if (keep(measured)) return *firstAccepted;
+            }
         } catch (const std::invalid_argument& error) {
             if (dispersionAcceptanceError) std::rethrow_exception(dispersionAcceptanceError);
             planningFailure("production-joint-dispersion", error.what());
@@ -1401,8 +1470,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     productionMaterialFailure("production-joint-catalyst", failure,
                                               duplicationAcceptanceError);
                 });
-            if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+            if (result) {
+                auto measured = acceptedSolution(std::move(*result));
+                if (keep(measured)) return *firstAccepted;
+            }
         } catch (const std::invalid_argument& error) {
             if (duplicationAcceptanceError) std::rethrow_exception(duplicationAcceptanceError);
             planningFailure("production-joint-catalyst", error.what());
@@ -1418,8 +1489,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     throw;
                 }
             });
-            if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+            if (result) {
+                auto measured = acceptedSolution(std::move(*result));
+                if (keep(measured)) return *firstAccepted;
+            }
             streamsExhausted = true;
         } catch (const std::invalid_argument& error) {
             if (streamAcceptanceError) std::rethrow_exception(streamAcceptanceError);
@@ -1439,8 +1512,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     throw;
                 }
             });
-            if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+            if (result) {
+                auto measured = acceptedSolution(std::move(*result));
+                if (keep(measured)) return *firstAccepted;
+            }
             transportExhausted = true;
         } catch (const std::invalid_argument& error) {
             if (transportAcceptanceError) std::rethrow_exception(transportAcceptanceError);
@@ -1460,8 +1535,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     throw;
                 }
             });
-            if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+            if (result) {
+                auto measured = acceptedSolution(std::move(*result));
+                if (keep(measured)) return *firstAccepted;
+            }
             routeExhausted = true;
         } catch (const std::invalid_argument& error) {
             if (routeAcceptanceError) std::rethrow_exception(routeAcceptanceError);
@@ -1484,8 +1561,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                         throw;
                     }
                 });
-            if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+            if (result) {
+                auto measured = acceptedSolution(std::move(*result));
+                if (keep(measured)) return *firstAccepted;
+            }
             chemistryExhausted = true;
         } catch (const std::invalid_argument& error) {
             if (chemistryAcceptanceError) std::rethrow_exception(chemistryAcceptanceError);
@@ -1498,7 +1577,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         bool inventoryExhausted = false;
         try {
             auto result = inventory(acceptanceError);
-            if (result) if (keep(*result)) return *firstAccepted;
+            if (result)
+                if (keep(*result)) return *firstAccepted;
             inventoryExhausted = true;
         } catch (const std::invalid_argument& error) {
             if (acceptanceError) std::rethrow_exception(acceptanceError);
@@ -1526,7 +1606,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     bool supplyExhausted = false;
     try {
         auto result = inventory(supplyAcceptanceError);
-        if (result) if (keep(*result)) return *firstAccepted;
+        if (result)
+            if (keep(*result)) return *firstAccepted;
         supplyExhausted = true;
     } catch (const std::invalid_argument& error) {
         if (supplyAcceptanceError) std::rethrow_exception(supplyAcceptanceError);
@@ -1540,10 +1621,11 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         std::chrono::steady_clock::now() < Deadline() &&
         (!sink || (submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted))) {
         ++constructionAttempts;
-        GetLoggerOrFallback("solver")->info("Assembly branch={} event=construction count={} limit={}",
-            metalStage,constructionAttempts,MaxPortfolioConstructions);
-        if (auto result = attemptAccepted(metalStage,[&](const auto& p,const auto& gate) {
-                return CompileAcceptedClosedWideMetalInventory(p,gate,Deadline());
+        GetLoggerOrFallback("solver")->info(
+            "Assembly branch={} event=construction count={} limit={}", metalStage,
+            constructionAttempts, MaxPortfolioConstructions);
+        if (auto result = attemptAccepted(metalStage, [&](const auto& p, const auto& gate) {
+                return CompileAcceptedClosedWideMetalInventory(p, gate, Deadline());
             }))
             if (keep(*result)) return *firstAccepted;
     }
@@ -1558,8 +1640,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     throw;
                 }
             });
-        if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+        if (result) {
+            auto measured = acceptedSolution(std::move(*result));
+            if (keep(measured)) return *firstAccepted;
+        }
     } catch (const std::invalid_argument& error) {
         if (fixedAcceptanceError) std::rethrow_exception(fixedAcceptanceError);
         planningFailure("fixed-arm-inventory", error.what());
@@ -1575,8 +1659,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 throw;
             }
         });
-        if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+        if (result) {
+            auto measured = acceptedSolution(std::move(*result));
+            if (keep(measured)) return *firstAccepted;
+        }
         fragmentExhausted = true;
     } catch (const std::invalid_argument& error) {
         if (fragmentAcceptanceError) std::rethrow_exception(fragmentAcceptanceError);
@@ -1660,14 +1746,15 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             if (keep(*result)) return *firstAccepted;
     }
     const bool wheelCalcifiedSalt =
-        std::all_of(puzzle.inputs.begin(), puzzle.inputs.end(), [](const auto& input) {
-            return input.atoms.size() == 1 && input.bonds.empty();
-        }) &&
-        std::any_of(puzzle.outputs.begin(), puzzle.outputs.end(), [](const auto& output) {
-            return std::any_of(output.atoms.begin(), output.atoms.end(), [](const auto& atom) {
-                return atom.type == core::AtomType::Salt;
-            });
-        }) &&
+        std::all_of(
+            puzzle.inputs.begin(), puzzle.inputs.end(),
+            [](const auto& input) { return input.atoms.size() == 1 && input.bonds.empty(); }) &&
+        std::any_of(puzzle.outputs.begin(), puzzle.outputs.end(),
+                    [](const auto& output) {
+                        return std::any_of(
+                            output.atoms.begin(), output.atoms.end(),
+                            [](const auto& atom) { return atom.type == core::AtomType::Salt; });
+                    }) &&
         std::none_of(puzzle.inputs.begin(), puzzle.inputs.end(), [](const auto& input) {
             return input.atoms.size() == 1 && input.bonds.empty() &&
                    input.atoms[0].type == core::AtomType::Salt;
@@ -1781,8 +1868,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 throw;
             }
         });
-        if (result) { auto measured = acceptedSolution(std::move(*result));
-            if (keep(measured)) return *firstAccepted; }
+        if (result) {
+            auto measured = acceptedSolution(std::move(*result));
+            if (keep(measured)) return *firstAccepted;
+        }
     } catch (const std::invalid_argument& error) {
         if (fixedJoinAcceptanceError) std::rethrow_exception(fixedJoinAcceptanceError);
         planningFailure("fixed-arm-join", error.what());
@@ -1795,8 +1884,9 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         (!sink || (submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted))) {
         staticEmbeddingAttempted = true;
         ++constructionAttempts;
-        GetLoggerOrFallback("solver")->info("Assembly branch=fallback-static-embedding event=construction count={} limit={}",
-            constructionAttempts,MaxPortfolioConstructions);
+        GetLoggerOrFallback("solver")->info(
+            "Assembly branch=fallback-static-embedding event=construction count={} limit={}",
+            constructionAttempts, MaxPortfolioConstructions);
         if (auto result = attempt("fallback-static-embedding", [&] {
                 auto station = CompileStaticEmbedding(puzzle, Deadline());
                 if (std::chrono::steady_clock::now() >= Deadline())
@@ -1810,96 +1900,111 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     const auto* productPortAccess = std::getenv("OPUSOPTIMA_PRODUCT_PORT_ACCESS");
     const auto* closedLifeFlag = std::getenv("OPUSOPTIMA_CLOSED_CARDINAL_LIFE");
     const bool closedLife = (!closedLifeFlag || std::string_view(closedLifeFlag) == "on") &&
-        SupportsClosedCardinalLife(puzzle);
+                            SupportsClosedCardinalLife(puzzle);
     // With the precursor experiment disabled, cardinal-only sources cannot seed
     // life in legacy material search: Animismus requires Salt, and calcification only
     // supplies a Salt target. Earlier compiler families keep their first chances.
     const auto loweringPolicy = closedLife ? SupplyMaterialLoweringPolicy::ClosedCardinalLife
-        : productPortAccess && std::string_view(productPortAccess) == "1" &&
-        SupportsOrdinarySourceCutLowering(puzzle)
-        ? SupplyMaterialLoweringPolicy::CutOrdinarySources
-        : SupplyMaterialLoweringPolicy::PreserveCompatible;
-    materialLimits.deadline = std::min(Deadline(), std::chrono::steady_clock::now() +
-                                                      std::chrono::seconds(3));
+                                : productPortAccess && std::string_view(productPortAccess) == "1" &&
+                                        SupportsOrdinarySourceCutLowering(puzzle)
+                                    ? SupplyMaterialLoweringPolicy::CutOrdinarySources
+                                    : SupplyMaterialLoweringPolicy::PreserveCompatible;
+    materialLimits.deadline =
+        std::min(Deadline(), std::chrono::steady_clock::now() + std::chrono::seconds(3));
     std::optional<io::SolutionData> materialMachine;
     const auto material = SearchMaterialExecutionWithPolicy(
         puzzle, loweringPolicy, materialLimits, [&](const auto& plan) {
-        const bool wheel = SupportsClosedSingletonWheelPlanning(puzzle) &&
-            std::any_of(plan.material.steps.begin(), plan.material.steps.end(),
-                [](const auto& step) { return step.operation.wheelCatalyst.has_value(); });
-        const bool ordinaryPortAccess =
-            loweringPolicy != SupplyMaterialLoweringPolicy::PreserveCompatible;
-        if ((wheel || ordinaryPortAccess) && !verify) return false;
-        materialMachine = CompileAcceptedSerialArmExecutionWithPolicy(
-            puzzle, plan, loweringPolicy,
-            [&](const auto& candidate) {
-                const bool precursor =
-                    std::any_of(plan.tasks.begin(), plan.tasks.end(), [](const auto& task) {
-                        return task.kind == ExecutionIR::Kind::Calcify;
-                    }) && std::any_of(plan.tasks.begin(), plan.tasks.end(), [](const auto& task) {
-                        return task.kind == ExecutionIR::Kind::Animismus;
-                    });
-                const bool accepted = acceptStage(ordinaryPortAccess ? "shared-plan-ordinary-port-access"
-                    : wheel ? "shared-plan-wheel"
-                    : precursor ? "shared-plan-calcify-animismus"
-                                : "shared-plan-serial-arms", candidate);
-                if (accepted && !firstAccepted) {
-                    firstAccepted = candidate;
-                    if (acceptedReport) firstAccepted->metrics = acceptedReport->metrics;
-                }
-                return accepted;
-            }, {}, materialLimits.deadline,
-            [&](SerialArmFailure failure, const std::string& detail) {
-                rejections.push_back("shared-plan-serial-arms: " + detail);
-                const auto category = failure == SerialArmFailure::Unsupported
-                    ? AssemblyFailure::Category::Unsupported
-                    : failure == SerialArmFailure::BudgetExhausted
-                    ? AssemblyFailure::Category::BudgetExhausted
-                    : failure == SerialArmFailure::LayoutCollision
-                    ? AssemblyFailure::Category::LayoutCollision
-                    : AssemblyFailure::Category::MaterialMechanicalFailure;
-                if (feedback) feedback({category, "shared-plan-serial-arms", detail,
-                                        std::nullopt, std::nullopt});
-            }, sink ? std::function<void(const io::SolutionData&, const io::SolutionData&)>{
-                [&](const auto& parent, const auto& child) {
-                const auto parentReport = acceptedReport;
-                auto measuredParent = parent;
-                if (parentReport) measuredParent.metrics = parentReport->metrics;
-                if (!firstAccepted) firstAccepted = measuredParent;
-                if (submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted &&
-                    std::chrono::steady_clock::now() < materialLimits.deadline) {
-                    try {
-                        auto canonical = parent;
-                        canonical.solutionName.clear();
-                        canonical.metrics = {};
-                        const auto strategy =
-                            (ordinaryPortAccess ? "shared-plan-ordinary-port-access:parent="
-                             : wheel ? "shared-plan-wheel:parent="
-                             : child.solutionName == "Shared-plan retained ordinary fragments"
-                                 ? "shared-plan-retained-fragments:parent="
-                                 : "shared-plan-scalar-relay-pipeline:parent=") +
-                            io::CandidateSha256(io::BinaryWriter::WriteSolution(canonical));
-                        verifyAt(strategy.c_str(), child);
-                    } catch (const std::runtime_error&) {
-                        // Optional scheduling never invalidates the already gated parent.
+            const bool wheel = SupportsClosedSingletonWheelPlanning(puzzle) &&
+                               std::any_of(plan.material.steps.begin(), plan.material.steps.end(),
+                                           [](const auto& step) {
+                                               return step.operation.wheelCatalyst.has_value();
+                                           });
+            const bool ordinaryPortAccess =
+                loweringPolicy != SupplyMaterialLoweringPolicy::PreserveCompatible;
+            if ((wheel || ordinaryPortAccess) && !verify) return false;
+            materialMachine = CompileAcceptedSerialArmExecutionWithPolicy(
+                puzzle, plan, loweringPolicy,
+                [&](const auto& candidate) {
+                    const bool precursor =
+                        std::any_of(plan.tasks.begin(), plan.tasks.end(),
+                                    [](const auto& task) {
+                                        return task.kind == ExecutionIR::Kind::Calcify;
+                                    }) &&
+                        std::any_of(plan.tasks.begin(), plan.tasks.end(), [](const auto& task) {
+                            return task.kind == ExecutionIR::Kind::Animismus;
+                        });
+                    const bool accepted =
+                        acceptStage(ordinaryPortAccess ? "shared-plan-ordinary-port-access"
+                                    : wheel            ? "shared-plan-wheel"
+                                    : precursor        ? "shared-plan-calcify-animismus"
+                                                       : "shared-plan-serial-arms",
+                                    candidate);
+                    if (accepted && !firstAccepted) {
+                        firstAccepted = candidate;
+                        if (acceptedReport) firstAccepted->metrics = acceptedReport->metrics;
                     }
-                }
-                acceptedReport = parentReport;
-            }} : std::function<void(const io::SolutionData&, const io::SolutionData&)>{});
-        return materialMachine.has_value();
-    });
-    if (materialMachine) { auto measured = acceptedSolution(std::move(*materialMachine));
-        if (keep(measured)) return *firstAccepted; }
+                    return accepted;
+                },
+                {}, materialLimits.deadline,
+                [&](SerialArmFailure failure, const std::string& detail) {
+                    rejections.push_back("shared-plan-serial-arms: " + detail);
+                    const auto category =
+                        failure == SerialArmFailure::Unsupported
+                            ? AssemblyFailure::Category::Unsupported
+                        : failure == SerialArmFailure::BudgetExhausted
+                            ? AssemblyFailure::Category::BudgetExhausted
+                        : failure == SerialArmFailure::LayoutCollision
+                            ? AssemblyFailure::Category::LayoutCollision
+                            : AssemblyFailure::Category::MaterialMechanicalFailure;
+                    if (feedback)
+                        feedback({category, "shared-plan-serial-arms", detail, std::nullopt,
+                                  std::nullopt});
+                },
+                sink ? std::function<void(const io::SolutionData&,
+                                          const io::SolutionData&)>{[&](const auto& parent,
+                                                                        const auto& child) {
+                    const auto parentReport = acceptedReport;
+                    auto measuredParent = parent;
+                    if (parentReport) measuredParent.metrics = parentReport->metrics;
+                    if (!firstAccepted) firstAccepted = measuredParent;
+                    if (submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted &&
+                        std::chrono::steady_clock::now() < materialLimits.deadline) {
+                        try {
+                            auto canonical = parent;
+                            canonical.solutionName.clear();
+                            canonical.metrics = {};
+                            const auto strategy =
+                                (ordinaryPortAccess ? "shared-plan-ordinary-port-access:parent="
+                                 : wheel            ? "shared-plan-wheel:parent="
+                                 : child.solutionName == "Shared-plan retained ordinary fragments"
+                                     ? "shared-plan-retained-fragments:parent="
+                                     : "shared-plan-scalar-relay-pipeline:parent=") +
+                                io::CandidateSha256(io::BinaryWriter::WriteSolution(canonical));
+                            verifyAt(strategy.c_str(), child);
+                        } catch (const std::runtime_error&) {
+                            // Optional scheduling never invalidates the already gated parent.
+                        }
+                    }
+                    acceptedReport = parentReport;
+                }}
+                     : std::function<void(const io::SolutionData&, const io::SolutionData&)>{});
+            return materialMachine.has_value();
+        });
+    if (materialMachine) {
+        auto measured = acceptedSolution(std::move(*materialMachine));
+        if (keep(measured)) return *firstAccepted;
+    }
     const auto materialDetail = material.detail + "; expanded=" + std::to_string(material.states) +
-        "; candidate-histories=" + std::to_string(material.candidates);
+                                "; candidate-histories=" + std::to_string(material.candidates);
     rejections.push_back("mechanism-independent-material: " + materialDetail);
-    if (feedback) feedback({material.status == MaterialPlanningStatus::Unsupported
-        ? AssemblyFailure::Category::Unsupported
-        : material.status == MaterialPlanningStatus::BudgetExhausted ||
-          material.status == MaterialPlanningStatus::Exhausted
-        ? AssemblyFailure::Category::BudgetExhausted
-        : AssemblyFailure::Category::SearchExhausted,
-        "mechanism-independent-material", materialDetail, std::nullopt, std::nullopt});
+    if (feedback)
+        feedback({material.status == MaterialPlanningStatus::Unsupported
+                      ? AssemblyFailure::Category::Unsupported
+                  : material.status == MaterialPlanningStatus::BudgetExhausted ||
+                          material.status == MaterialPlanningStatus::Exhausted
+                      ? AssemblyFailure::Category::BudgetExhausted
+                      : AssemblyFailure::Category::SearchExhausted,
+                  "mechanism-independent-material", materialDetail, std::nullopt, std::nullopt});
     std::string message = "assembly strategies exhausted";
     for (const auto& rejection : rejections)
         message += "\n  " + rejection;

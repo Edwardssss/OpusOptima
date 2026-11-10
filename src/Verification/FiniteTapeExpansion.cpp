@@ -7,7 +7,8 @@
 #include <stdexcept>
 #include <string_view>
 
-namespace opusoptima::verification { namespace {
+namespace opusoptima::verification {
+namespace {
 using Error = TapeExpansionError;
 [[noreturn]] void Fail(Error code, std::optional<std::size_t> ordinal = {},
                        std::optional<std::int64_t> slot = {}) {
@@ -15,21 +16,43 @@ using Error = TapeExpansionError;
 }
 int Permission(char action) {
     switch (action) {
-    case 'G': return 23;
-    case 'g': case 'R': case 'r': return 22;
-    case 'P': case 'p': return 26;
-    case 'O': case 'C': return 25;
-    case 'X': return 24;
-    case ' ': case 'B': return -1;
-    default: return -2;
+    case 'G':
+        return 23;
+    case 'g':
+    case 'R':
+    case 'r':
+        return 22;
+    case 'P':
+    case 'p':
+        return 26;
+    case 'O':
+    case 'C':
+        return 25;
+    case 'X':
+        return 24;
+    case ' ':
+    case 'B':
+        return -1;
+    default:
+        return -2;
     }
 }
 bool KnownPart(std::string_view name) {
-    constexpr std::string_view names[]{
-        "input", "out-std", "pipe", "bonder", "unbonder", "bonder-speed",
-        "bonder-prisma", "glyph-calcification", "glyph-duplication", "glyph-projection",
-        "glyph-purification", "glyph-life-and-death", "glyph-disposal",
-        "glyph-unification", "glyph-dispersion"};
+    constexpr std::string_view names[]{"input",
+                                       "out-std",
+                                       "pipe",
+                                       "bonder",
+                                       "unbonder",
+                                       "bonder-speed",
+                                       "bonder-prisma",
+                                       "glyph-calcification",
+                                       "glyph-duplication",
+                                       "glyph-projection",
+                                       "glyph-purification",
+                                       "glyph-life-and-death",
+                                       "glyph-disposal",
+                                       "glyph-unification",
+                                       "glyph-dispersion"};
     return std::find(std::begin(names), std::end(names), name) != std::end(names);
 }
 struct Slot {
@@ -38,7 +61,7 @@ struct Slot {
     TapeOrigin origin;
 };
 ExpandedFiniteTape Expand(const io::PuzzleData& puzzle, const io::SolutionData& solution,
-    std::optional<std::chrono::steady_clock::time_point> deadline) {
+                          std::optional<std::chrono::steady_clock::time_point> deadline) {
     const auto budget = [&] {
         if (deadline && std::chrono::steady_clock::now() > *deadline)
             Fail(Error::ResourceUnavailable);
@@ -74,19 +97,19 @@ ExpandedFiniteTape Expand(const io::PuzzleData& puzzle, const io::SolutionData& 
                 if (atom.type == core::AtomType::Repeat) Fail(Error::OutsideDomain);
     const auto& raw = solution.objects[out.armObject].instructions;
     const auto bound = static_cast<std::int64_t>(finiteOrdinaryProfile.maxTapePosition);
-    const bool copy = std::any_of(raw.begin(), raw.end(), [](auto inst) { return inst.action == 'C'; });
+    const bool copy =
+        std::any_of(raw.begin(), raw.end(), [](auto inst) { return inst.action == 'C'; });
     if (copy && std::any_of(raw.begin(), raw.end(), [](auto inst) { return inst.parameter < 0; }))
         Fail(Error::OutsideDomain);
     if (solution.objects.size() > finiteOrdinaryProfile.maxParts || raw.size() > 2 * bound + 1)
         Fail(Error::BoundExceeded);
     for (std::size_t i = 0; i < raw.size(); ++i)
-        if (raw[i].parameter < -bound || raw[i].parameter > bound)
-            Fail(Error::BoundExceeded, i);
+        if (raw[i].parameter < -bound || raw[i].parameter > bound) Fail(Error::BoundExceeded, i);
     std::vector<std::size_t> order(raw.size());
-    for (std::size_t i = 0; i < raw.size(); ++i) order[i] = i;
-    std::sort(order.begin(), order.end(), [&](auto a, auto b) {
-        return raw[a].parameter < raw[b].parameter;
-    });
+    for (std::size_t i = 0; i < raw.size(); ++i)
+        order[i] = i;
+    std::sort(order.begin(), order.end(),
+              [&](auto a, auto b) { return raw[a].parameter < raw[b].parameter; });
     for (std::size_t j = 1; j < order.size(); ++j)
         if (raw[order[j - 1]].parameter == raw[order[j]].parameter)
             Fail(Error::Malformed, order[j]);
@@ -96,7 +119,8 @@ ExpandedFiniteTape Expand(const io::PuzzleData& puzzle, const io::SolutionData& 
             Fail(Error::OutsideDomain, ordinal);
     };
     if (!(puzzle.permissionBits & 1)) Fail(Error::OutsideDomain);
-    for (auto ordinal : order) permitted(raw[ordinal].action, ordinal);
+    for (auto ordinal : order)
+        permitted(raw[ordinal].action, ordinal);
     out.rawEntries = static_cast<std::int64_t>(raw.size());
     budget();
     if (raw.empty()) return out;
@@ -131,7 +155,7 @@ ExpandedFiniteTape Expand(const io::PuzzleData& puzzle, const io::SolutionData& 
             checkEnd(lastRepeat, count, ordinal);
             // Freeze once per run: overlapping destinations never become a source.
             const std::vector<Slot> source(tape.begin() + lastRepeat,
-                                            tape.begin() + lastRepeat + count);
+                                           tape.begin() + lastRepeat + count);
             for (const auto& slot : source) {
                 budget();
                 if (slot.action == 'B') Fail(Error::OutsideDomain, ordinal, n);
@@ -163,16 +187,36 @@ ExpandedFiniteTape Expand(const io::PuzzleData& puzzle, const io::SolutionData& 
                 budget();
                 checkEnd(k, 1, ordinal);
                 switch (tape[k].action) {
-                case 'G': grab = true; break;
-                case 'g': grab = false; break;
-                case 'r': ++rotation; break;
-                case 'R': --rotation; break;
-                case 'P': case 'p': case 'B': case 'O': case ' ': break;
-                default: Fail(Error::UnknownState, ordinal, k);
+                case 'G':
+                    grab = true;
+                    break;
+                case 'g':
+                    grab = false;
+                    break;
+                case 'r':
+                    ++rotation;
+                    break;
+                case 'R':
+                    --rotation;
+                    break;
+                case 'P':
+                case 'p':
+                case 'B':
+                case 'O':
+                case ' ':
+                    break;
+                default:
+                    Fail(Error::UnknownState, ordinal, k);
                 }
             }
-            while (rotation > 3) { budget(); rotation -= 6; }
-            while (rotation < -3) { budget(); rotation += 6; }
+            while (rotation > 3) {
+                budget();
+                rotation -= 6;
+            }
+            while (rotation < -3) {
+                budget();
+                rotation += 6;
+            }
             origin.kind = TapeOrigin::Kind::Reset;
             std::uint8_t step = 0;
             const auto emit = [&](char action) {
@@ -181,8 +225,14 @@ ExpandedFiniteTape Expand(const io::PuzzleData& puzzle, const io::SolutionData& 
                 ++n;
             };
             if (grab) emit('g');
-            while (rotation > 0) { emit('R'); --rotation; }
-            while (rotation < 0) { emit('r'); ++rotation; }
+            while (rotation > 0) {
+                emit('R');
+                --rotation;
+            }
+            while (rotation < 0) {
+                emit('r');
+                ++rotation;
+            }
             if (!step) emit(' ');
             resetFrom = lastEnd = n;
             length = std::max(length, n);
@@ -207,15 +257,16 @@ ExpandedFiniteTape Expand(const io::PuzzleData& puzzle, const io::SolutionData& 
         const auto& slot = tape[k];
         out.slots.push_back({slot.action, static_cast<std::int32_t>(start + k)});
         out.origins.push_back(slot.origin);
-        if (slot.action == 'G' || slot.action == 'g' || slot.action == 'r' ||
-            slot.action == 'R' || slot.action == 'P' || slot.action == 'p')
+        if (slot.action == 'G' || slot.action == 'g' || slot.action == 'r' || slot.action == 'R' ||
+            slot.action == 'P' || slot.action == 'p')
             ++out.staticInstructions;
     }
     budget();
     return out;
 }
 } // namespace
-TapeExpansionResult ExpandFiniteArm1Tape(const io::PuzzleData& puzzle, const io::SolutionData& solution,
+TapeExpansionResult ExpandFiniteArm1Tape(
+    const io::PuzzleData& puzzle, const io::SolutionData& solution,
     std::optional<std::chrono::steady_clock::time_point> deadline) {
     try {
         return Expand(puzzle, solution, deadline);

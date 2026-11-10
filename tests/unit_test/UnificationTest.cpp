@@ -1,11 +1,11 @@
 #include "Unification.hpp"
 #include "AssemblySolver.hpp"
 #include "BinaryWriter.hpp"
+#include "RepoRoot.hpp"
 #include "SolutionVerifier.hpp"
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <stdexcept>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;
@@ -28,20 +28,21 @@ void ExpectDeadlineEquivalent(Legacy legacy, Timed timed) {
 void ExpectFiniteDeadlineEquivalent(const io::PuzzleData& puzzle, int products) {
     std::vector<int> expectedEnds;
     const auto expected = solvers::CompileUnificationFiniteBatch(puzzle, expectedEnds, products);
-    ExpectDeadlineEquivalent([&] { return expected; }, [&](auto deadline) {
-        std::vector<int> ends{123};
-        auto result = solvers::CompileUnificationFiniteBatch(puzzle, ends, products, deadline);
-        EXPECT_EQ(ends, expectedEnds);
-        return result;
-    });
+    ExpectDeadlineEquivalent([&] { return expected; },
+                             [&](auto deadline) {
+                                 std::vector<int> ends{123};
+                                 auto result = solvers::CompileUnificationFiniteBatch(
+                                     puzzle, ends, products, deadline);
+                                 EXPECT_EQ(ends, expectedEnds);
+                                 return result;
+                             });
 }
 TEST(UnificationTest, RejectsUnsupportedShapesAndMissingPermissions) {
     const auto original =
         io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal4/P071.puzzle");
-    ExpectDeadlineEquivalent([&] { return solvers::CompileUnification(original); },
-                             [&](auto deadline) {
-                                 return solvers::CompileUnification(original, deadline);
-                             });
+    ExpectDeadlineEquivalent(
+        [&] { return solvers::CompileUnification(original); },
+        [&](auto deadline) { return solvers::CompileUnification(original, deadline); });
     for (int bit : {0, 2, 3, 9, 13, 18, 22, 23, 28}) {
         auto puzzle = original;
         puzzle.permissionBits &= ~(1ULL << bit);
@@ -81,10 +82,9 @@ TEST(UnificationTest, RejectsUnsupportedShapesAndMissingPermissions) {
 TEST(UnificationTest, BulkRequiresNormalizationAndCannotBeASingleBatch) {
     auto puzzle = io::BinaryParser::ParsePuzzleFile(
         root / "asset/puzzle/edge-cases/OM2025_6_Bulk_Transmutation.puzzle");
-    ExpectDeadlineEquivalent([&] { return solvers::CompileUnification(puzzle); },
-                             [&](auto deadline) {
-                                 return solvers::CompileUnification(puzzle, deadline);
-                             });
+    ExpectDeadlineEquivalent(
+        [&] { return solvers::CompileUnification(puzzle); },
+        [&](auto deadline) { return solvers::CompileUnification(puzzle, deadline); });
     ExpectFiniteDeadlineEquivalent(puzzle, 1);
     ExpectFiniteDeadlineEquivalent(puzzle, 2);
     EXPECT_THROW(solvers::CompileUnificationBatch(puzzle), std::invalid_argument);
@@ -105,16 +105,14 @@ TEST(UnificationTest, BatchSelectsCompatibleWholeInputsAndPreservesIndices) {
             ++inputs;
         }
     EXPECT_EQ(inputs, 2);
-    ExpectDeadlineEquivalent([&] { return solvers::CompileUnificationBatch(puzzle); },
-                             [&](auto deadline) {
-                                 return solvers::CompileUnificationBatch(puzzle, deadline);
-                             });
+    ExpectDeadlineEquivalent(
+        [&] { return solvers::CompileUnificationBatch(puzzle); },
+        [&](auto deadline) { return solvers::CompileUnificationBatch(puzzle, deadline); });
     ExpectFiniteDeadlineEquivalent(puzzle, 1);
     puzzle.inputs[1] = {{{core::AtomType::Salt, {0, 0}}}, {}};
-    ExpectDeadlineEquivalent([&] { return solvers::CompileSaltQuintessenceBatch(puzzle, 1); },
-                             [&](auto deadline) {
-                                 return solvers::CompileSaltQuintessenceBatch(puzzle, 1, deadline);
-                             });
+    ExpectDeadlineEquivalent(
+        [&] { return solvers::CompileSaltQuintessenceBatch(puzzle, 1); },
+        [&](auto deadline) { return solvers::CompileSaltQuintessenceBatch(puzzle, 1, deadline); });
     puzzle.inputs.erase(puzzle.inputs.begin() + 1);
     EXPECT_THROW(solvers::CompileUnificationBatch(puzzle), std::invalid_argument);
 }

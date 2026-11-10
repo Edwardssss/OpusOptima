@@ -23,12 +23,18 @@ struct Node {
     std::size_t monomer{};
 };
 using Graph = std::map<Cell, Node>;
-Cell cell(core::HexCoord p) { return {p.q, p.r}; }
-Cell add(Cell p, Cell q) { return {p.first + q.first, p.second + q.second}; }
+Cell cell(core::HexCoord p) {
+    return {p.q, p.r};
+}
+Cell add(Cell p, Cell q) {
+    return {p.first + q.first, p.second + q.second};
+}
 Cell shift(Cell p, Cell d, std::int64_t i) {
     return {p.first + i * d.first, p.second + i * d.second};
 }
-RepeatingGraphCell reported(Cell p) { return {p.first, p.second}; }
+RepeatingGraphCell reported(Cell p) {
+    return {p.first, p.second};
+}
 [[noreturn]] void malformed(const char* detail) {
     throw FiniteRepeatingGraphFailure{RepeatingGraphFailureCode::Malformed, detail};
 }
@@ -82,7 +88,8 @@ FiniteRepeatingGraphResult check(const FiniteRepeatingGraphRequest& request) {
     // Bounds precede allocations and all structural/domain inspection.
     if (raw.atoms.size() > finiteOrdinaryProfile.maxMoleculeAtoms ||
         material.atoms.size() > limit || raw.bonds.size() > 3 * raw.atoms.size() ||
-        material.bonds.size() > 3 * material.atoms.size()) outside("graph resource bound");
+        material.bonds.size() > 3 * material.atoms.size())
+        outside("graph resource bound");
     if (raw.atoms.size() > Graph{}.max_size() || material.atoms.size() > Graph{}.max_size())
         outside("container representability bound");
     std::size_t realCount = 0;
@@ -115,7 +122,11 @@ FiniteRepeatingGraphResult check(const FiniteRepeatingGraphRequest& request) {
     std::int64_t width = 0;
     for (const auto& candidate : directions) {
         const auto w = candidate.first ? d.first / candidate.first : d.second / candidate.second;
-        if (w > 0 && shift({}, candidate, w) == d) { e = candidate; width = w; break; }
+        if (w > 0 && shift({}, candidate, w) == d) {
+            e = candidate;
+            width = w;
+            break;
+        }
     }
     if (!width) outside("non-axis displacement");
     const auto uv = [e](Cell p) -> Cell {
@@ -146,8 +157,10 @@ FiniteRepeatingGraphResult check(const FiniteRepeatingGraphRequest& request) {
     for (const auto& [p, a] : periodic)
         for (const auto& [q, b] : periodic)
             for (auto t : directions) {
-                (void)a; (void)b;
-                const auto delta = uv({p.first + t.first - q.first, p.second + t.second - q.second});
+                (void)a;
+                (void)b;
+                const auto delta =
+                    uv({p.first + t.first - q.first, p.second + t.second - q.second});
                 if (!delta.second && delta.first % width == 0 &&
                     (delta.first / width < -1 || delta.first / width > 1))
                     outside("nonadjacent periodic neighbor");
@@ -205,21 +218,23 @@ FiniteRepeatingGraphResult check(const FiniteRepeatingGraphRequest& request) {
         const auto ignored = [&](Cell p) {
             const auto [u, v] = uv(p);
             const auto row = rows.find(v);
-            return row != rows.end() && (u < row->second.first ||
-                u > row->second.second + static_cast<std::int64_t>(k - 1) * width);
+            return row != rows.end() &&
+                   (u < row->second.first ||
+                    u > row->second.second + static_cast<std::int64_t>(k - 1) * width);
         };
         const auto difference = [&](RepeatingGraphDifferenceKind kind, Cell p,
                                     std::optional<core::AtomType> want,
                                     std::optional<core::AtomType> have) {
-            return FiniteRepeatingGraphChecked{k - 1,
-                RepeatingGraphDifference{kind, k, reported(p), {}, want, have}};
+            return FiniteRepeatingGraphChecked{
+                k - 1, RepeatingGraphDifference{kind, k, reported(p), {}, want, have}};
         };
         for (const auto& [p, node] : expected)
             if (node.monomer < k && !actual.contains(p))
                 return difference(RepeatingGraphDifferenceKind::MissingAtom, p, node.type, {});
         for (const auto& [p, node] : expected)
             if (node.monomer < k && actual.at(p).type != node.type)
-                return difference(RepeatingGraphDifferenceKind::AtomType, p, node.type, actual.at(p).type);
+                return difference(RepeatingGraphDifferenceKind::AtomType, p, node.type,
+                                  actual.at(p).type);
         for (const auto& [p, node] : expected) {
             if (node.monomer >= k) continue;
             for (std::size_t t = 0; t < 6; ++t) {
@@ -230,7 +245,9 @@ FiniteRepeatingGraphResult check(const FiniteRepeatingGraphRequest& request) {
                     auto result = difference(RepeatingGraphDifferenceKind::BondMask, p, {}, {});
                     auto& diff = *result.firstDifference;
                     diff.neighbor = reported(neighbor);
-                    diff.expectedBits = node.bits[t]; diff.actualBits = bits; diff.allowedBits = allowed;
+                    diff.expectedBits = node.bits[t];
+                    diff.actualBits = bits;
+                    diff.allowedBits = allowed;
                     return result;
                 }
             }
@@ -245,13 +262,16 @@ FiniteRepeatingGraphResult check(const FiniteRepeatingGraphRequest& request) {
 }
 } // namespace
 FiniteRepeatingGraphResult CheckFiniteRepeatingGraph(const FiniteRepeatingGraphRequest& request) {
-    try { return check(request); }
-    catch (FiniteRepeatingGraphFailure& failure) { return std::move(failure); }
-    catch (const std::bad_alloc&) {
-        return FiniteRepeatingGraphFailure{RepeatingGraphFailureCode::ResourceUnavailable, "bad_alloc"};
-    }
-    catch (const std::length_error&) {
-        return FiniteRepeatingGraphFailure{RepeatingGraphFailureCode::ResourceUnavailable, "length_error"};
+    try {
+        return check(request);
+    } catch (FiniteRepeatingGraphFailure& failure) {
+        return std::move(failure);
+    } catch (const std::bad_alloc&) {
+        return FiniteRepeatingGraphFailure{RepeatingGraphFailureCode::ResourceUnavailable,
+                                           "bad_alloc"};
+    } catch (const std::length_error&) {
+        return FiniteRepeatingGraphFailure{RepeatingGraphFailureCode::ResourceUnavailable,
+                                           "length_error"};
     }
 }
 } // namespace opusoptima::verification

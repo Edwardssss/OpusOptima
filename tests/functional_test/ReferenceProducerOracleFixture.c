@@ -1,14 +1,14 @@
-int main(void)
-{
+int main(void) {
     struct board board = {0};
     struct mechanism m = {
-        .position = {17, -9}, .direction_u = {0, 1}, .direction_v = {-1, 1},
+        .position = {17, -9},
+        .direction_u = {0, 1},
+        .direction_v = {-1, 1},
     };
     board.half_cycle = 1;
     unsigned expected_capacity = 0;
     for (int i = 0; i < 257; ++i) {
-        if ((unsigned)i >= expected_capacity)
-            expected_capacity = (expected_capacity + 3) * 4 / 3;
+        if ((unsigned)i >= expected_capacity) expected_capacity = (expected_capacity + 3) * 4 / 3;
         produce_atom(&board, m, i, -i, SALT);
         assert(board.atoms_being_produced_capacity == expected_capacity);
         assert(insertions == 0);
@@ -31,7 +31,7 @@ int main(void)
     assert(inserted_atom == (VALID | GRABBED_ONCE | WHEEL_ATOM | FIRE));
     assert(inserted_position.u == 18 && inserted_position.v == -9);
 
-    const uint32_t types[] = { ARM, DUPLICATION, PROLIFERATION, VAN_BERLO, RAVARI, 0 };
+    const uint32_t types[] = {ARM, DUPLICATION, PROLIFERATION, VAN_BERLO, RAVARI, 0};
     unsigned cases = 0;
     for (unsigned t = 0; t < sizeof(types) / sizeof(types[0]); ++t) {
         m.type = types[t];
@@ -49,13 +49,16 @@ int main(void)
                 expected = t >= 1 && t <= 4;
             struct atom_ref_at_position result = get_atom(&board, m, 3, -2);
             assert((*result.atom != 0) == expected);
-            if (expected) assert(result.atom == &visible_atom && *result.atom == visible_atom);
-            else assert(result.atom != &visible_atom);
+            if (expected)
+                assert(result.atom == &visible_atom && *result.atom == visible_atom);
+            else
+                assert(result.atom != &visible_atom);
             assert(result.position.u == 19 && result.position.v == -8);
             ++cases;
         }
     }
     free(board.atoms_being_produced);
-    printf("producer classification: %u visibility cases, 258 queued atoms, wheel flags passed\n", cases);
+    printf("producer classification: %u visibility cases, 258 queued atoms, wheel flags passed\n",
+           cases);
     return 0;
 }

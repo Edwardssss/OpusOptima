@@ -26,20 +26,19 @@ using FiniteRepeatingProgressResult =
 
 // Explicit finite functional state only; never an independent certification result.
 class FiniteRepeatingProgress {
-public:
+    public:
     // enclosingDeadline must be the caller's existing deadline when part of a larger run.
     // A port must retain its raw template, local frame, and displacement across observations.
     // Throws invalid_argument for configurations outside the bounded functional domain.
-    explicit FiniteRepeatingProgress(
-        std::span<const FiniteRepeatingPortConfig> ports,
-        std::chrono::steady_clock::time_point enclosingDeadline =
-            std::chrono::steady_clock::time_point::max());
+    explicit FiniteRepeatingProgress(std::span<const FiniteRepeatingPortConfig> ports,
+                                     std::chrono::steady_clock::time_point enclosingDeadline =
+                                         std::chrono::steady_clock::time_point::max());
     FiniteRepeatingProgressResult Observe(std::size_t port, const io::Molecule& rawTemplate,
-                                         const io::Molecule& component,
-                                         core::HexCoord displacement);
+                                          const io::Molecule& component,
+                                          core::HexCoord displacement);
     [[nodiscard]] std::optional<FiniteRepeatingPortProgress> Port(std::size_t port) const;
 
-private:
+    private:
     struct PortState {
         FiniteRepeatingPortConfig config{};
         FiniteRepeatingPortProgress progress{};

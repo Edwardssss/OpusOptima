@@ -1,10 +1,10 @@
 #include "AutomaticSupply.hpp"
-#include "LogManager.hpp"
 #include "AssemblySolver.hpp"
 #include "ExecutionPlan.hpp"
 #include "FeedLayout.hpp"
 #include "InventoryIR.hpp"
 #include "InventorySearch.hpp"
+#include "LogManager.hpp"
 #include "ProductionLayout.hpp"
 #include "SupplyExecutionIR.hpp"
 #include <algorithm>
@@ -272,275 +272,284 @@ io::SolutionData Compile(const io::PuzzleData& p, const AssemblyPlan& assembly,
                 unifier = 0, disperser = 0;
     std::size_t disposal = 0;
     std::map<std::size_t, std::vector<Coord>> releasedProducts;
-    if (!sharedWorkstation) for (const auto& original : source.steps) {
-        if (original.operation.kind == K::Bond) continue;
-        auto operation = original.operation;
-        if (operation.kind == K::Acquire) {
-            const core::HexFrame frame{operation.translation, operation.rotation};
-            std::vector<IR::AtomId> blockers;
-            for (const auto& [id, atom] : material.atoms)
-                for (const auto& incoming : p.inputs.at(operation.index).atoms)
-                    if (atom.position == frame.ToWorld(incoming.position)) blockers.push_back(id);
-            for (const auto id : blockers) {
-                const auto position = material.atoms.at(id).position;
-                bool overlaps = false;
-                for (const auto& incoming : p.inputs.at(operation.index).atoms)
-                    overlaps |= position == frame.ToWorld(incoming.position);
-                if (!overlaps) continue;
-                const auto fragment = IR::Fragment(material, id);
-                int lowQ = position.q, highQ = position.q;
-                for (const auto member : fragment) {
-                    lowQ = std::min(lowQ, material.atoms.at(member).position.q);
-                    highQ = std::max(highQ, material.atoms.at(member).position.q);
-                }
-                Coord delta;
-                if (compact) {
-                    const auto destination = std::find_if(
-                        compact->buffers.begin(), compact->buffers.end(), [&](Coord candidate) {
-                            const auto offset = core::Subtract(candidate, position);
+    if (!sharedWorkstation)
+        for (const auto& original : source.steps) {
+            if (original.operation.kind == K::Bond) continue;
+            auto operation = original.operation;
+            if (operation.kind == K::Acquire) {
+                const core::HexFrame frame{operation.translation, operation.rotation};
+                std::vector<IR::AtomId> blockers;
+                for (const auto& [id, atom] : material.atoms)
+                    for (const auto& incoming : p.inputs.at(operation.index).atoms)
+                        if (atom.position == frame.ToWorld(incoming.position))
+                            blockers.push_back(id);
+                for (const auto id : blockers) {
+                    const auto position = material.atoms.at(id).position;
+                    bool overlaps = false;
+                    for (const auto& incoming : p.inputs.at(operation.index).atoms)
+                        overlaps |= position == frame.ToWorld(incoming.position);
+                    if (!overlaps) continue;
+                    const auto fragment = IR::Fragment(material, id);
+                    int lowQ = position.q, highQ = position.q;
+                    for (const auto member : fragment) {
+                        lowQ = std::min(lowQ, material.atoms.at(member).position.q);
+                        highQ = std::max(highQ, material.atoms.at(member).position.q);
+                    }
+                    Coord delta;
+                    if (compact) {
+                        const auto destination = std::find_if(
+                            compact->buffers.begin(), compact->buffers.end(), [&](Coord candidate) {
+                                const auto offset = core::Subtract(candidate, position);
+                                for (const auto member : fragment) {
+                                    const auto cell =
+                                        core::Add(material.atoms.at(member).position, offset);
+                                    if (std::find(compact->cells.begin(), compact->cells.end(),
+                                                  cell) == compact->cells.end())
+                                        return false;
+                                    for (const auto& [other, atom] : material.atoms)
+                                        if (!std::binary_search(fragment.begin(), fragment.end(),
+                                                                other) &&
+                                            atom.position == cell)
+                                            return false;
+                                }
+                                return true;
+                            });
+                        if (destination == compact->buffers.end())
+                            throw IR::LayoutFailure("compact chamber has no free residual cache");
+                        delta = core::Subtract(*destination, position);
+                    } else {
+                        const int lastDestination = 95 - (highQ - lowQ);
+                        int destination = inventoryStart;
+                        for (; destination <= lastDestination; ++destination) {
+                            bool occupied = false;
                             for (const auto member : fragment) {
-                                const auto cell =
-                                    core::Add(material.atoms.at(member).position, offset);
-                                if (std::find(compact->cells.begin(), compact->cells.end(), cell) ==
-                                    compact->cells.end())
-                                    return false;
+                                const auto cell = core::Add(material.atoms.at(member).position,
+                                                            {destination - lowQ, 0});
                                 for (const auto& [other, atom] : material.atoms)
                                     if (!std::binary_search(fragment.begin(), fragment.end(),
                                                             other) &&
                                         atom.position == cell)
-                                        return false;
+                                        occupied = true;
                             }
-                            return true;
-                        });
-                    if (destination == compact->buffers.end())
-                        throw IR::LayoutFailure("compact chamber has no free residual cache");
-                    delta = core::Subtract(*destination, position);
-                } else {
-                    const int lastDestination = 95 - (highQ - lowQ);
-                    int destination = inventoryStart;
-                    for (; destination <= lastDestination; ++destination) {
-                        bool occupied = false;
-                        for (const auto member : fragment) {
-                            const auto cell = core::Add(material.atoms.at(member).position,
-                                                        {destination - lowQ, 0});
-                            for (const auto& [other, atom] : material.atoms)
-                                if (!std::binary_search(fragment.begin(), fragment.end(), other) &&
-                                    atom.position == cell)
-                                    occupied = true;
+                            if (!occupied) break;
                         }
-                        if (!occupied) break;
+                        if (destination > lastDestination)
+                            throw IR::LayoutFailure(
+                                "automatic residual inventory exceeds width bound");
+                        delta = {destination - lowQ, 0};
+                        cursor = std::max(cursor, destination + highQ - lowQ + 1);
+                        if (cursor > 96)
+                            throw IR::LayoutFailure(
+                                "automatic residual inventory exceeds width bound");
                     }
-                    if (destination > lastDestination)
-                        throw IR::LayoutFailure("automatic residual inventory exceeds width bound");
-                    delta = {destination - lowQ, 0};
-                    cursor = std::max(cursor, destination + highQ - lowQ + 1);
-                    if (cursor > 96)
-                        throw IR::LayoutFailure("automatic residual inventory exceeds width bound");
+                    std::optional<std::size_t> storedSlot;
+                    for (const auto& [slot, ids] : material.stored)
+                        if (std::binary_search(ids.begin(), ids.end(), id)) {
+                            storedSlot = slot;
+                            break;
+                        }
+                    if (storedSlot) program.Append(p, material, {K::Retrieve, *storedSlot});
+                    program.Append(p, material, {K::Relocate, 0, {id}, 0, 0, delta});
+                    if (storedSlot) program.Append(p, material, {K::Store, *storedSlot, {id}});
                 }
-                std::optional<std::size_t> storedSlot;
-                for (const auto& [slot, ids] : material.stored)
-                    if (std::binary_search(ids.begin(), ids.end(), id)) {
-                        storedSlot = slot;
-                        break;
-                    }
-                if (storedSlot) program.Append(p, material, {K::Retrieve, *storedSlot});
-                program.Append(p, material, {K::Relocate, 0, {id}, 0, 0, delta});
-                if (storedSlot) program.Append(p, material, {K::Store, *storedSlot, {id}});
             }
-        }
-        if (operation.kind == K::Discard) {
-            const auto id = operation.atoms.at(0);
-            program.Append(
-                p, material,
-                {K::Relocate,
-                 0,
-                 {id},
-                 0,
-                 0,
-                 core::Subtract(disposals.at(disposal++), material.atoms.at(id).position)});
-        } else if (operation.kind == K::Calcify) {
-            const auto id = operation.atoms.at(0);
-            program.Append(
-                p, material,
-                {K::Relocate,
-                 0,
-                 {id},
-                 0,
-                 0,
-                 core::Subtract(calcifiers.at(calcifier++), material.atoms.at(id).position)});
-        } else if (operation.kind == K::Purify || operation.kind == K::Animismus) {
-            const auto station = operation.kind == K::Purify ? purifiers.at(purifier++)
-                                                             : animismuses.at(animismus++);
-            for (std::size_t reagent = 0; reagent < operation.atoms.size(); ++reagent) {
-                const auto id = operation.atoms[reagent];
-                const auto cell = core::Add(station, {static_cast<int>(reagent), 0});
-                program.Append(p, material,
-                               {K::Relocate,
-                                0,
-                                {id},
-                                0,
-                                0,
-                                core::Subtract(cell, material.atoms.at(id).position)});
-            }
-            std::vector<Coord> fresh{core::Add(station, {0, 1})};
-            if (operation.kind == K::Animismus) fresh.push_back(core::Add(station, {1, -1}));
-            releasedProducts.emplace(program.steps.size(), std::move(fresh));
-        } else if (operation.kind == K::Unify || operation.kind == K::Disperse) {
-            const auto station =
-                operation.kind == K::Unify ? unifiers.at(unifier++) : dispersers.at(disperser++);
-            for (std::size_t reagent = 0; reagent < operation.atoms.size(); ++reagent) {
-                const auto id = operation.atoms[reagent];
-                const auto cell = operation.kind == K::Unify
-                                      ? core::Add(station, unifyContacts.at(reagent))
-                                      : station;
-                program.Append(p, material,
-                               {K::Relocate,
-                                0,
-                                {id},
-                                0,
-                                0,
-                                core::Subtract(cell, material.atoms.at(id).position)});
-            }
-            std::vector<Coord> fresh;
-            if (operation.kind == K::Unify)
-                fresh.push_back(station);
-            else
-                for (auto offset : disperseOutlets)
-                    fresh.push_back(core::Add(station, offset));
-            releasedProducts.emplace(program.steps.size(), std::move(fresh));
-        } else if (operation.kind == K::Project || operation.kind == K::Duplicate) {
-            const auto station = operation.kind == K::Project ? projectors.at(projector++)
-                                                              : duplicators.at(duplicator++);
-            // Keep the consumed/converted operand held while parking its partner first.
-            for (std::size_t reagent : {1U, 0U}) {
-                const auto id = operation.atoms.at(reagent);
-                const auto cell = core::Add(station, {static_cast<int>(reagent), 0});
-                program.Append(p, material,
-                               {K::Relocate,
-                                0,
-                                {id},
-                                0,
-                                0,
-                                core::Subtract(cell, material.atoms.at(id).position)});
-            }
-        } else if (operation.kind == K::Relocate) {
-            const auto id = operation.atoms.at(0);
-            auto rotated = material.atoms.at(id).position;
-            for (int turn = 0; turn < operation.rotation; ++turn)
-                rotated = core::RotateClockwise(rotated);
-            operation.translation = core::Subtract(original.effects.atoms.at(id).position, rotated);
-        }
-        if (operation.kind == K::Unbond) {
-            const IR::Edge edge{std::min(operation.atoms[0], operation.atoms[1]),
-                                std::max(operation.atoms[0], operation.atoms[1])};
-            if (!material.bonds.contains(edge)) continue;
-            if (preserveResidualBonds) {
-                const auto anchor = operation.atoms.at(0);
-                const auto key = cuttingKey(material, operation);
+            if (operation.kind == K::Discard) {
+                const auto id = operation.atoms.at(0);
                 program.Append(
                     p, material,
                     {K::Relocate,
                      0,
-                     {anchor},
+                     {id},
                      0,
                      0,
-                     core::Subtract(cuttingStations.at(key), material.atoms.at(anchor).position)});
+                     core::Subtract(disposals.at(disposal++), material.atoms.at(id).position)});
+            } else if (operation.kind == K::Calcify) {
+                const auto id = operation.atoms.at(0);
+                program.Append(
+                    p, material,
+                    {K::Relocate,
+                     0,
+                     {id},
+                     0,
+                     0,
+                     core::Subtract(calcifiers.at(calcifier++), material.atoms.at(id).position)});
+            } else if (operation.kind == K::Purify || operation.kind == K::Animismus) {
+                const auto station = operation.kind == K::Purify ? purifiers.at(purifier++)
+                                                                 : animismuses.at(animismus++);
+                for (std::size_t reagent = 0; reagent < operation.atoms.size(); ++reagent) {
+                    const auto id = operation.atoms[reagent];
+                    const auto cell = core::Add(station, {static_cast<int>(reagent), 0});
+                    program.Append(p, material,
+                                   {K::Relocate,
+                                    0,
+                                    {id},
+                                    0,
+                                    0,
+                                    core::Subtract(cell, material.atoms.at(id).position)});
+                }
+                std::vector<Coord> fresh{core::Add(station, {0, 1})};
+                if (operation.kind == K::Animismus) fresh.push_back(core::Add(station, {1, -1}));
+                releasedProducts.emplace(program.steps.size(), std::move(fresh));
+            } else if (operation.kind == K::Unify || operation.kind == K::Disperse) {
+                const auto station = operation.kind == K::Unify ? unifiers.at(unifier++)
+                                                                : dispersers.at(disperser++);
+                for (std::size_t reagent = 0; reagent < operation.atoms.size(); ++reagent) {
+                    const auto id = operation.atoms[reagent];
+                    const auto cell = operation.kind == K::Unify
+                                          ? core::Add(station, unifyContacts.at(reagent))
+                                          : station;
+                    program.Append(p, material,
+                                   {K::Relocate,
+                                    0,
+                                    {id},
+                                    0,
+                                    0,
+                                    core::Subtract(cell, material.atoms.at(id).position)});
+                }
+                std::vector<Coord> fresh;
+                if (operation.kind == K::Unify)
+                    fresh.push_back(station);
+                else
+                    for (auto offset : disperseOutlets)
+                        fresh.push_back(core::Add(station, offset));
+                releasedProducts.emplace(program.steps.size(), std::move(fresh));
+            } else if (operation.kind == K::Project || operation.kind == K::Duplicate) {
+                const auto station = operation.kind == K::Project ? projectors.at(projector++)
+                                                                  : duplicators.at(duplicator++);
+                // Keep the consumed/converted operand held while parking its partner first.
+                for (std::size_t reagent : {1U, 0U}) {
+                    const auto id = operation.atoms.at(reagent);
+                    const auto cell = core::Add(station, {static_cast<int>(reagent), 0});
+                    program.Append(p, material,
+                                   {K::Relocate,
+                                    0,
+                                    {id},
+                                    0,
+                                    0,
+                                    core::Subtract(cell, material.atoms.at(id).position)});
+                }
+            } else if (operation.kind == K::Relocate) {
+                const auto id = operation.atoms.at(0);
+                auto rotated = material.atoms.at(id).position;
+                for (int turn = 0; turn < operation.rotation; ++turn)
+                    rotated = core::RotateClockwise(rotated);
+                operation.translation =
+                    core::Subtract(original.effects.atoms.at(id).position, rotated);
             }
-        }
-        program.Append(p, material, operation);
-        if (operation.kind == K::Acquire && !preserveResidualBonds) {
-            const auto remainingBonds = material.bonds;
-            for (const auto& [edge, bits] : remainingBonds)
-                if (edge.a >= original.preconditions.nextId &&
-                    edge.b >= original.preconditions.nextId)
-                    program.Append(p, material, {K::Unbond, 0, {edge.a, edge.b}, bits});
-        }
-        // Finish a cut sequence before moving fragments away from its glyphs.
-        const auto nextSource = &original + 1;
-        const bool cutting = operation.kind == K::Unbond &&
-                             nextSource != source.steps.data() + source.steps.size() &&
-                             nextSource->operation.kind == K::Unbond;
-        const bool looseAcquire =
-            operation.kind == K::Acquire && p.inputs.at(operation.index).bonds.empty();
-        if (!compact && !cutting &&
-            (looseAcquire || operation.kind == K::Unbond || operation.kind == K::Retrieve)) {
-            const auto pendingAtoms = material.atoms;
-            for (const auto& [id, atom] : pendingAtoms) {
-                if (IR::Fragment(material, id).size() != 1) continue;
-                if (std::any_of(
-                        material.stored.begin(), material.stored.end(), [&](const auto& entry) {
-                            return std::binary_search(entry.second.begin(), entry.second.end(), id);
-                        }))
-                    continue;
-                std::size_t stationIndex = 0, projectIndex = 0, duplicateIndex = 0,
-                            animismusIndex = 0, unifyIndex = 0, disperseIndex = 0;
-                for (const auto& future : source.steps) {
-                    const auto kind = future.operation.kind;
-                    if (kind != K::Purify && kind != K::Project && kind != K::Duplicate &&
-                        kind != K::Animismus && kind != K::Unify && kind != K::Disperse)
-                        continue;
-                    const auto station = kind == K::Purify      ? purifiers.at(stationIndex++)
-                                         : kind == K::Project   ? projectors.at(projectIndex++)
-                                         : kind == K::Unify     ? unifiers.at(unifyIndex++)
-                                         : kind == K::Disperse  ? dispersers.at(disperseIndex++)
-                                         : kind == K::Animismus ? animismuses.at(animismusIndex++)
-                                                                : duplicators.at(duplicateIndex++);
-                    if (&future <= &original) continue;
-                    const auto reagent =
-                        std::find(future.operation.atoms.begin(), future.operation.atoms.end(), id);
-                    if (reagent != future.operation.atoms.end()) {
-                        const auto operand =
-                            static_cast<std::size_t>(reagent - future.operation.atoms.begin());
-                        // The final reagent must arrive at the reaction step, not during feed
-                        // extraction.
-                        if ((kind == K::Purify || kind == K::Animismus) &&
-                            operand + 1 == future.operation.atoms.size())
-                            break;
-                        const auto cell =
-                            kind == K::Disperse
-                                ? station
-                                : core::Add(station, kind == K::Unify
-                                                         ? unifyContacts.at(operand)
-                                                         : Coord{static_cast<int>(operand), 0});
-                        program.Append(p, material,
-                                       {K::Relocate,
-                                        0,
-                                        {id},
-                                        0,
-                                        0,
-                                        core::Subtract(cell, material.atoms.at(id).position)});
-                        break;
-                    }
+            if (operation.kind == K::Unbond) {
+                const IR::Edge edge{std::min(operation.atoms[0], operation.atoms[1]),
+                                    std::max(operation.atoms[0], operation.atoms[1])};
+                if (!material.bonds.contains(edge)) continue;
+                if (preserveResidualBonds) {
+                    const auto anchor = operation.atoms.at(0);
+                    const auto key = cuttingKey(material, operation);
+                    program.Append(p, material,
+                                   {K::Relocate,
+                                    0,
+                                    {anchor},
+                                    0,
+                                    0,
+                                    core::Subtract(cuttingStations.at(key),
+                                                   material.atoms.at(anchor).position)});
                 }
             }
-        }
-        if (original.operation.kind != K::Relocate) continue;
-        // Always-on bonders activate as soon as both final endpoints arrive.
-        for (std::size_t port = 0; port < outputs.size(); ++port)
-            for (const auto& bond : p.outputs[port].bonds) {
-                const auto& output = outputs[port];
-                auto x = material.atoms.end(), y = material.atoms.end();
-                for (auto it = material.atoms.begin(); it != material.atoms.end(); ++it) {
+            program.Append(p, material, operation);
+            if (operation.kind == K::Acquire && !preserveResidualBonds) {
+                const auto remainingBonds = material.bonds;
+                for (const auto& [edge, bits] : remainingBonds)
+                    if (edge.a >= original.preconditions.nextId &&
+                        edge.b >= original.preconditions.nextId)
+                        program.Append(p, material, {K::Unbond, 0, {edge.a, edge.b}, bits});
+            }
+            // Finish a cut sequence before moving fragments away from its glyphs.
+            const auto nextSource = &original + 1;
+            const bool cutting = operation.kind == K::Unbond &&
+                                 nextSource != source.steps.data() + source.steps.size() &&
+                                 nextSource->operation.kind == K::Unbond;
+            const bool looseAcquire =
+                operation.kind == K::Acquire && p.inputs.at(operation.index).bonds.empty();
+            if (!compact && !cutting &&
+                (looseAcquire || operation.kind == K::Unbond || operation.kind == K::Retrieve)) {
+                const auto pendingAtoms = material.atoms;
+                for (const auto& [id, atom] : pendingAtoms) {
+                    if (IR::Fragment(material, id).size() != 1) continue;
                     if (std::any_of(material.stored.begin(), material.stored.end(),
                                     [&](const auto& entry) {
                                         return std::binary_search(entry.second.begin(),
-                                                                  entry.second.end(), it->first);
+                                                                  entry.second.end(), id);
                                     }))
                         continue;
-                    if (it->second.position == output.ToWorld(bond.from)) x = it;
-                    if (it->second.position == output.ToWorld(bond.to)) y = it;
+                    std::size_t stationIndex = 0, projectIndex = 0, duplicateIndex = 0,
+                                animismusIndex = 0, unifyIndex = 0, disperseIndex = 0;
+                    for (const auto& future : source.steps) {
+                        const auto kind = future.operation.kind;
+                        if (kind != K::Purify && kind != K::Project && kind != K::Duplicate &&
+                            kind != K::Animismus && kind != K::Unify && kind != K::Disperse)
+                            continue;
+                        const auto station = kind == K::Purify     ? purifiers.at(stationIndex++)
+                                             : kind == K::Project  ? projectors.at(projectIndex++)
+                                             : kind == K::Unify    ? unifiers.at(unifyIndex++)
+                                             : kind == K::Disperse ? dispersers.at(disperseIndex++)
+                                             : kind == K::Animismus
+                                                 ? animismuses.at(animismusIndex++)
+                                                 : duplicators.at(duplicateIndex++);
+                        if (&future <= &original) continue;
+                        const auto reagent = std::find(future.operation.atoms.begin(),
+                                                       future.operation.atoms.end(), id);
+                        if (reagent != future.operation.atoms.end()) {
+                            const auto operand =
+                                static_cast<std::size_t>(reagent - future.operation.atoms.begin());
+                            // The final reagent must arrive at the reaction step, not during feed
+                            // extraction.
+                            if ((kind == K::Purify || kind == K::Animismus) &&
+                                operand + 1 == future.operation.atoms.size())
+                                break;
+                            const auto cell =
+                                kind == K::Disperse
+                                    ? station
+                                    : core::Add(station, kind == K::Unify
+                                                             ? unifyContacts.at(operand)
+                                                             : Coord{static_cast<int>(operand), 0});
+                            program.Append(p, material,
+                                           {K::Relocate,
+                                            0,
+                                            {id},
+                                            0,
+                                            0,
+                                            core::Subtract(cell, material.atoms.at(id).position)});
+                            break;
+                        }
+                    }
                 }
-                if (x == material.atoms.end() || y == material.atoms.end()) continue;
-                IR::Edge edge{std::min(x->first, y->first), std::max(x->first, y->first)};
-                const auto existing = material.bonds.find(edge);
-                const int missing =
-                    bond.bits & ~(existing == material.bonds.end() ? 0 : existing->second);
-                if (missing)
-                    program.Append(
-                        p, material,
-                        {K::Bond, 0, {edge.a, edge.b}, static_cast<std::uint8_t>(missing)});
             }
-    }
+            if (original.operation.kind != K::Relocate) continue;
+            // Always-on bonders activate as soon as both final endpoints arrive.
+            for (std::size_t port = 0; port < outputs.size(); ++port)
+                for (const auto& bond : p.outputs[port].bonds) {
+                    const auto& output = outputs[port];
+                    auto x = material.atoms.end(), y = material.atoms.end();
+                    for (auto it = material.atoms.begin(); it != material.atoms.end(); ++it) {
+                        if (std::any_of(material.stored.begin(), material.stored.end(),
+                                        [&](const auto& entry) {
+                                            return std::binary_search(entry.second.begin(),
+                                                                      entry.second.end(),
+                                                                      it->first);
+                                        }))
+                            continue;
+                        if (it->second.position == output.ToWorld(bond.from)) x = it;
+                        if (it->second.position == output.ToWorld(bond.to)) y = it;
+                    }
+                    if (x == material.atoms.end() || y == material.atoms.end()) continue;
+                    IR::Edge edge{std::min(x->first, y->first), std::max(x->first, y->first)};
+                    const auto existing = material.bonds.find(edge);
+                    const int missing =
+                        bond.bits & ~(existing == material.bonds.end() ? 0 : existing->second);
+                    if (missing)
+                        program.Append(
+                            p, material,
+                            {K::Bond, 0, {edge.a, edge.b}, static_cast<std::uint8_t>(missing)});
+                }
+        }
     const Coord sharedEdge{cursor + 3, -1};
     if (sharedWorkstation) {
         cursor += 5;
@@ -557,7 +566,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const AssemblyPlan& assembly,
             throw IR::PermissionFailure(2, "shared workstation requires piston");
         const auto& finalState = source.steps.back().preconditions;
         std::unordered_map<Coord, IR::AtomId, core::HexCoordHash> ids;
-        for (const auto& [id, atom] : finalState.atoms) ids[atom.position] = id;
+        for (const auto& [id, atom] : finalState.atoms)
+            ids[atom.position] = id;
         const auto& first = molecule.bonds[0];
         const auto& second = molecule.bonds[1];
         Coord middle = first.from;
@@ -570,19 +580,24 @@ io::SolutionData Compile(const io::PuzzleData& p, const AssemblyPlan& assembly,
         const auto b = ids.at(outputs[0].ToWorld(middle));
         const auto c = ids.at(outputs[0].ToWorld(last));
         auto move = [&](IR::AtomId id, Coord destination, int rotation = 0) {
-            program.Append(p, material,
-                           {K::Relocate, 0, {id}, 0, rotation,
-                            core::Subtract(destination, Turn(material.atoms.at(id).position, rotation))});
+            program.Append(
+                p, material,
+                {K::Relocate,
+                 0,
+                 {id},
+                 0,
+                 rotation,
+                 core::Subtract(destination, Turn(material.atoms.at(id).position, rotation))});
         };
         for (const auto& step : source.steps) {
             if (step.operation.kind != K::Acquire) continue;
             const auto id = material.nextId;
             program.Append(p, material, step.operation);
-            const auto uses = std::count_if(source.steps.begin(), source.steps.end(),
-                                           [&](const auto& candidate) {
-                                               return candidate.operation.kind == K::Acquire &&
-                                                      candidate.operation.index == step.operation.index;
-                                           });
+            const auto uses =
+                std::count_if(source.steps.begin(), source.steps.end(), [&](const auto& candidate) {
+                    return candidate.operation.kind == K::Acquire &&
+                           candidate.operation.index == step.operation.index;
+                });
             if (uses > 1) move(id, finalState.atoms.at(id).position);
         }
         if (material.atoms.size() != 3)
@@ -592,7 +607,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const AssemblyPlan& assembly,
         program.Append(p, material, {K::Bond, 0, {a, b}, 1});
         int orientation = 0;
         const auto delta = core::Subtract(last, middle);
-        while (orientation < 6 && Turn(delta, orientation) != Coord{1, 0}) ++orientation;
+        while (orientation < 6 && Turn(delta, orientation) != Coord{1, 0})
+            ++orientation;
         if (orientation == 6) throw IR::Unsupported("shared workstation edge is not adjacent");
         int firstOrientation = 0;
         while (firstOrientation < 6 &&
@@ -946,7 +962,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const AssemblyPlan& assembly,
             if (x == state.atoms.end() || y == state.atoms.end()) continue;
             const IR::Edge edge{std::min(x->first, y->first), std::max(x->first, y->first)};
             if (!state.bonds.contains(edge) && !certifiedBond(edge, 15)) return false;
-            if (sharedWorkstation) continue; // Exact ID/bond certificate above also covers the station.
+            if (sharedWorkstation)
+                continue; // Exact ID/bond certificate above also covers the station.
             // Only final product atoms may encounter the permanently active bonders.
             for (auto it : {x, y}) {
                 bool matches = false;
@@ -1587,9 +1604,10 @@ std::optional<io::SolutionData> PlaceInChamber(
 std::optional<io::SolutionData> CompileSharedWorkstation(const io::PuzzleData& p) {
     try {
         if (p.outputs.size() != 1 || p.outputs[0].atoms.size() != 3 ||
-            p.outputs[0].bonds.size() != 2) return std::nullopt;
-        constexpr auto required = (1ULL << 2) | (1ULL << 3) | (1ULL << 8) |
-                                  (1ULL << 22) | (1ULL << 23) | (1ULL << 26);
+            p.outputs[0].bonds.size() != 2)
+            return std::nullopt;
+        constexpr auto required =
+            (1ULL << 2) | (1ULL << 3) | (1ULL << 8) | (1ULL << 22) | (1ULL << 23) | (1ULL << 26);
         if ((p.permissionBits & required) != required) return std::nullopt;
         const auto assembly = AssemblyPlanner::Plan(p);
         const auto supply = AssemblyPlanner::PlanSupply(p);

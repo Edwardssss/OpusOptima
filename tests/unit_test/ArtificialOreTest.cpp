@@ -3,11 +3,11 @@
 #include "SolutionVerifier.hpp"
 #include "SupplyExecutionIR.hpp"
 
+#include "RepoRoot.hpp"
 #include "UnitTestConstants.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;

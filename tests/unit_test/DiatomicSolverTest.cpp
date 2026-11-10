@@ -6,8 +6,8 @@
 
 #include "BinaryWriter.hpp"
 #include "DiatomicSolver.hpp"
-#include "SolutionVerifier.hpp"
 #include "RepoRoot.hpp"
+#include "SolutionVerifier.hpp"
 
 namespace {
 using namespace opusoptima;

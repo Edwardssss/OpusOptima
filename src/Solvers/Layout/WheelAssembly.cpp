@@ -259,7 +259,8 @@ io::SolutionData CompileWheelAssembly(const io::PuzzleData& puzzle) {
             }
         }
     }
-    if (salt < 0) throw std::invalid_argument("wheel assembly requires a salt or calcifiable source");
+    if (salt < 0)
+        throw std::invalid_argument("wheel assembly requires a salt or calcifiable source");
     const bool calcifySource = puzzle.inputs[salt].atoms[0].type != core::AtomType::Salt;
     auto finite = puzzle;
     struct Feed {
@@ -373,7 +374,8 @@ io::SolutionData CompileWheelAssembly(const io::PuzzleData& puzzle) {
     constexpr int stationSpacing = 5;
     constexpr int deliveryClearance = 8;
     // Preserve the four-station layout's delivery clearance without reserving unused stations.
-    const int source = destinationMin - stationSpacing * static_cast<int>(feeds.size()) - deliveryClearance;
+    const int source =
+        destinationMin - stationSpacing * static_cast<int>(feeds.size()) - deliveryClearance;
     object("input", core::Subtract({source, 7}, puzzle.inputs[salt].atoms[0].position), 1, 0, salt);
     if (calcifySource) object("glyph-calcification", {source, 7}, 1, 0);
     std::array<int, 6> stations{};
@@ -463,7 +465,7 @@ io::SolutionData CompileWheelAssembly(const io::PuzzleData& puzzle) {
 namespace {
 std::optional<core::HexCoord> RadialWheelCenter(const io::PuzzleData& puzzle) {
     constexpr auto permissions = AssemblyPlanner::RequiredPermissions | (1ULL << 13) |
-                                (1ULL << 25) | (1ULL << 26) | (1ULL << 28);
+                                 (1ULL << 25) | (1ULL << 26) | (1ULL << 28);
     if (puzzle.version != 3 || puzzle.productionInfo || puzzle.outputMultiplier != 1 ||
         (puzzle.permissionBits & permissions) != permissions || puzzle.inputs.empty() ||
         puzzle.inputs.size() > 8 || puzzle.outputs.size() != 1)
@@ -490,7 +492,8 @@ std::optional<core::HexCoord> RadialWheelCenter(const io::PuzzleData& puzzle) {
         std::set<std::pair<int, int>> leaves;
         bool valid = true;
         for (const auto& atom : target.atoms)
-            if (atom.position != center.position && core::Distance(atom.position, center.position) != 1)
+            if (atom.position != center.position &&
+                core::Distance(atom.position, center.position) != 1)
                 valid = false;
         for (const auto& bond : target.bonds) {
             const auto leaf = bond.from == center.position ? bond.to : bond.from;
@@ -503,7 +506,7 @@ std::optional<core::HexCoord> RadialWheelCenter(const io::PuzzleData& puzzle) {
     }
     return std::nullopt;
 }
-}
+} // namespace
 
 bool SupportsRadialWheelAssembly(const io::PuzzleData& puzzle) {
     return RadialWheelCenter(puzzle).has_value();
@@ -511,12 +514,14 @@ bool SupportsRadialWheelAssembly(const io::PuzzleData& puzzle) {
 
 io::SolutionData CompileRadialWheelAssembly(const io::PuzzleData& puzzle) {
     const auto center = RadialWheelCenter(puzzle);
-    if (!center) throw std::invalid_argument("radial wheel requires an ordinary Salt-centered radial product and singleton Salt feeds");
+    if (!center)
+        throw std::invalid_argument("radial wheel requires an ordinary Salt-centered radial "
+                                    "product and singleton Salt feeds");
     io::SolutionData result;
     result.puzzleName = puzzle.name;
     result.solutionName = "Reusable radial wheel assembly";
-    auto object = [&](const char* name, core::HexCoord cell, int length = 1,
-                      int rotation = 0, int index = 0) {
+    auto object = [&](const char* name, core::HexCoord cell, int length = 1, int rotation = 0,
+                      int index = 0) {
         io::SolutionObject part;
         part.typeName = name;
         part.position = cell;
@@ -542,9 +547,11 @@ io::SolutionData CompileRadialWheelAssembly(const io::PuzzleData& puzzle) {
     auto turnTo = [&](int part, int& current, int wanted, char cw, char ccw) {
         const int forward = (wanted - current + 6) % 6;
         if (forward <= 3) {
-            for (int i = 0; i < forward; ++i) emit(part, cw);
+            for (int i = 0; i < forward; ++i)
+                emit(part, cw);
         } else {
-            for (int i = forward; i < 6; ++i) emit(part, ccw);
+            for (int i = forward; i < 6; ++i)
+                emit(part, ccw);
         }
         current = wanted;
     };
@@ -592,8 +599,8 @@ struct RadialProjectionRecipe {
     core::HexCoord center;
 };
 std::optional<RadialProjectionRecipe> RadialProjection(const io::PuzzleData& p) {
-    constexpr auto permissions = AssemblyPlanner::RequiredPermissions | (1ULL << 14) |
-                                (1ULL << 25) | (1ULL << 26);
+    constexpr auto permissions =
+        AssemblyPlanner::RequiredPermissions | (1ULL << 14) | (1ULL << 25) | (1ULL << 26);
     if (p.version != 3 || p.productionInfo || p.outputMultiplier != 1 ||
         (p.permissionBits & permissions) != permissions || p.inputs.empty() ||
         p.inputs.size() > 8 || p.outputs.empty() || p.outputs.size() > 2)
@@ -622,7 +629,8 @@ std::optional<RadialProjectionRecipe> RadialProjection(const io::PuzzleData& p) 
     }
     const auto& target = p.outputs[recipe.radial];
     if (target.atoms.size() < 3 || target.atoms.size() > 7 ||
-        target.bonds.size() != target.atoms.size() - 1) return std::nullopt;
+        target.bonds.size() != target.atoms.size() - 1)
+        return std::nullopt;
     std::set<std::pair<int, int>> cells;
     for (const auto& atom : target.atoms)
         if (!cells.emplace(atom.position.q, atom.position.r).second) return std::nullopt;
@@ -650,7 +658,10 @@ std::optional<RadialProjectionRecipe> RadialProjection(const io::PuzzleData& p) 
         recipe.metalSource = -1;
         for (int type = lowest; type <= static_cast<int>(core::AtomType::Lead); ++type) {
             const int candidate = source(static_cast<core::AtomType>(type));
-            if (candidate >= 0) { recipe.metalSource = candidate; break; }
+            if (candidate >= 0) {
+                recipe.metalSource = candidate;
+                break;
+            }
         }
         if (recipe.metalSource < 0) continue;
         recipe.center = hub.position;
@@ -658,7 +669,7 @@ std::optional<RadialProjectionRecipe> RadialProjection(const io::PuzzleData& p) 
     }
     return std::nullopt;
 }
-}
+} // namespace
 
 bool SupportsRadialProjectionAssembly(const io::PuzzleData& puzzle) {
     return RadialProjection(puzzle).has_value();
@@ -666,13 +677,15 @@ bool SupportsRadialProjectionAssembly(const io::PuzzleData& puzzle) {
 
 io::SolutionData CompileRadialProjectionAssembly(const io::PuzzleData& puzzle) {
     const auto recipe = RadialProjection(puzzle);
-    if (!recipe) throw std::invalid_argument("radial projection requires genuine singleton hub, lower metal and Mercury feeds with ordinary radial metal leaves");
+    if (!recipe)
+        throw std::invalid_argument("radial projection requires genuine singleton hub, lower metal "
+                                    "and Mercury feeds with ordinary radial metal leaves");
     io::SolutionData result;
     result.puzzleName = puzzle.name;
     result.solutionName = "Controlled radial projection assembly";
     int armIndex = 0;
-    auto object = [&](const char* name, core::HexCoord cell, int length = 1,
-                      int rotation = 0, int index = 0) {
+    auto object = [&](const char* name, core::HexCoord cell, int length = 1, int rotation = 0,
+                      int index = 0) {
         io::SolutionObject part;
         part.typeName = name;
         part.position = cell;
@@ -691,8 +704,9 @@ io::SolutionData CompileRadialProjectionAssembly(const io::PuzzleData& puzzle) {
     object("glyph-projection", {3, 0}, 1, 3);
     object("out-std", core::Subtract({0, 0}, recipe->center), 1, 0, recipe->radial);
     if (recipe->singleton >= 0)
-        object("out-std", core::Subtract({3, -2}, puzzle.outputs[recipe->singleton].atoms[0].position),
-               1, 0, recipe->singleton);
+        object("out-std",
+               core::Subtract({3, -2}, puzzle.outputs[recipe->singleton].atoms[0].position), 1, 0,
+               recipe->singleton);
     const int holder = object("arm1", {-2, 0}, 2);
     const int feeder = object("arm1", {2, -1}, 1, 4);
     const int mercury = object("arm1", {4, 0});
@@ -708,17 +722,20 @@ io::SolutionData CompileRadialProjectionAssembly(const io::PuzzleData& puzzle) {
     };
     auto manufacture = [&](core::AtomType type, bool singleton) {
         emit(feeder, 'G');
-        for (int i = 0; i < 3; ++i) emit(feeder, 'r');
+        for (int i = 0; i < 3; ++i)
+            emit(feeder, 'r');
         const int depth = static_cast<int>(puzzle.inputs[recipe->metalSource].atoms[0].type) -
                           static_cast<int>(type);
         // Native projection permits the held metal to stay at this isolated station.
         // Each released Mercury dose is consumed before the delivery arm returns.
         for (int dose = 0; dose < depth; ++dose) {
             emit(mercury, 'G');
-            for (int i = 0; i < 3; ++i) emit(mercury, 'r');
+            for (int i = 0; i < 3; ++i)
+                emit(mercury, 'r');
             emit(mercury, 'g');
             emit(mercury, 'O');
-            for (int i = 0; i < 3; ++i) emit(mercury, 'R');
+            for (int i = 0; i < 3; ++i)
+                emit(mercury, 'R');
         }
         if (singleton) {
             // The singleton outlet is separate from both projection and bonding cells.
@@ -730,11 +747,11 @@ io::SolutionData CompileRadialProjectionAssembly(const io::PuzzleData& puzzle) {
             emit(feeder, 'r');
             emit(feeder, 'O');
             emit(feeder, 'g');
-            for (int i = 0; i < 4; ++i) emit(feeder, 'R');
+            for (int i = 0; i < 4; ++i)
+                emit(feeder, 'R');
         }
     };
-    if (recipe->singleton >= 0)
-        manufacture(puzzle.outputs[recipe->singleton].atoms[0].type, true);
+    if (recipe->singleton >= 0) manufacture(puzzle.outputs[recipe->singleton].atoms[0].type, true);
     emit(holder, 'G');
     for (const auto& atom : puzzle.outputs[recipe->radial].atoms) {
         if (atom.position == recipe->center) continue;

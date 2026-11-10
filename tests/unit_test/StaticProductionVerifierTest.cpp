@@ -1,10 +1,11 @@
-#include "Verification/FiniteTapeExpansion.hpp"
-#include "Verification/IndependentMetrics.hpp"
 #include "Verification/StaticProductionVerifier.hpp"
-#include "Verification/IndependentVerifier.hpp"
 #include "BinaryWriter.hpp"
 #include "ProductionMolecular.hpp"
+#include "Verification/FiniteTapeExpansion.hpp"
+#include "Verification/IndependentMetrics.hpp"
+#include "Verification/IndependentVerifier.hpp"
 
+#include "RepoRoot.hpp"
 #include "UnitTestConstants.hpp"
 #include <algorithm>
 #include <array>
@@ -13,7 +14,6 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include <utility>
-#include "RepoRoot.hpp"
 #ifdef HAS_LIBVERIFY
 #    include "libverify.h"
 #endif
@@ -66,7 +66,9 @@ TEST(IndependentStaticProduction, ConduitCellPermutationsPreserveSetsButNotOrder
                               std::to_string(opusoptima::test::ProcessId()) + ".solution");
     struct Cleanup {
         std::filesystem::path path;
-        ~Cleanup() { std::filesystem::remove(path); }
+        ~Cleanup() {
+            std::filesystem::remove(path);
+        }
     } cleanup{file};
 #endif
     std::array<int, 3> order{0, 1, 2};
@@ -74,7 +76,7 @@ TEST(IndependentStaticProduction, ConduitCellPermutationsPreserveSetsButNotOrder
         const bool unchanged = order == std::array<int, 3>{0, 1, 2};
         for (int mask = 1; mask <= (unchanged ? 1 : 3); ++mask) {
             SCOPED_TRACE(::testing::Message() << "order=" << order[0] << order[1] << order[2]
-                                             << " endpoint mask=" << mask);
+                                              << " endpoint mask=" << mask);
             auto modified = machine;
             for (std::size_t side = 0; side < endpoints.size(); ++side) {
                 if (!(mask & (1 << side))) continue;
@@ -86,8 +88,8 @@ TEST(IndependentStaticProduction, ConduitCellPermutationsPreserveSetsButNotOrder
             }
             // Each permutation preserves the exact cell set, count and conduit identity.
             const auto report = VerifyStaticProduction(puzzle, modified, 100);
-            EXPECT_EQ(report.status, unchanged ? io::VerificationStatus::Passed
-                                               : io::VerificationStatus::Rejected)
+            EXPECT_EQ(report.status,
+                      unchanged ? io::VerificationStatus::Passed : io::VerificationStatus::Rejected)
                 << report.detail;
             if (!unchanged) {
                 EXPECT_EQ(report.detail, "altered ordered conduit footprint");
@@ -133,8 +135,8 @@ TEST(IndependentStaticProduction, TapeGatePreservesEntryStatusAndErrorOrder) {
             std::filesystem::remove(file, error);
         }
     } cleanup{file};
-    const auto checkMachine = [&](const io::SolutionData& machine,
-                                  io::VerificationStatus status, const std::string& detail) {
+    const auto checkMachine = [&](const io::SolutionData& machine, io::VerificationStatus status,
+                                  const std::string& detail) {
         const auto direct = VerifyStaticProduction(puzzle, machine, 100);
         io::BinaryWriter::WriteSolutionFile(file, machine);
         const auto decoded = VerifyStaticProductionFiles(puzzlePath, file, 100);
@@ -183,8 +185,7 @@ TEST(IndependentStaticProduction, TapeGatePreservesEntryStatusAndErrorOrder) {
     }
     const auto broken = VerifyStaticProductionFiles(puzzlePath, file, 100);
     EXPECT_EQ(broken.status, io::VerificationStatus::Error);
-    EXPECT_EQ(broken.detail,
-              "independent file decoding failed: Unexpected EOF while reading i32");
+    EXPECT_EQ(broken.detail, "independent file decoding failed: Unexpected EOF while reading i32");
 }
 TEST(IndependentStaticProduction, ConduitMutationsAndOccupancyDoNotPass) {
     const auto puzzle = Conduit();
@@ -339,8 +340,7 @@ std::pair<io::PuzzleData, io::SolutionData> FiniteRepeatingPrefixFixture() {
     for (int q = 0; q < 5; ++q)
         material.bonds.push_back({1, {q, 0}, {q + 1, 0}});
     puzzle.inputs.push_back(material);
-    puzzle.outputs.push_back({{{core::AtomType::Salt, {0, 0}},
-                               {core::AtomType::Repeat, {1, 0}}},
+    puzzle.outputs.push_back({{{core::AtomType::Salt, {0, 0}}, {core::AtomType::Repeat, {1, 0}}},
                               {{1, {0, 0}, {1, 0}}}});
     io::SolutionData machine;
     machine.puzzleName = puzzle.name;
@@ -351,13 +351,16 @@ std::pair<io::PuzzleData, io::SolutionData> FiniteRepeatingPrefixFixture() {
 }
 TEST(IndependentStaticProduction, FiniteRepeatingPrefixRequiresIntermonomerBonds) {
     auto [puzzle, machine] = FiniteRepeatingPrefixFixture();
-    const auto stem = root / ("build/finite-repeating-prefix-" +
-                              std::to_string(opusoptima::test::ProcessId()));
+    const auto stem =
+        root / ("build/finite-repeating-prefix-" + std::to_string(opusoptima::test::ProcessId()));
     const std::filesystem::path puzzlePath = stem.string() + ".puzzle",
                                 solutionPath = stem.string() + ".solution";
     struct Cleanup {
         std::filesystem::path a, b;
-        ~Cleanup() { std::filesystem::remove(a); std::filesystem::remove(b); }
+        ~Cleanup() {
+            std::filesystem::remove(a);
+            std::filesystem::remove(b);
+        }
     } cleanup{puzzlePath, solutionPath};
     io::BinaryWriter::WriteSolutionFile(solutionPath, machine);
     int referenceCases = 0;
@@ -395,8 +398,8 @@ TEST(IndependentStaticProduction, FiniteRepeatingPrefixRequiresIntermonomerBonds
         const auto direct = VerifyIndependent(fixture, machine, 20);
         const auto functional = ReplayRepeatingFiniteMachine(fixture, machine, 20);
         EXPECT_FALSE(functional.certificationEligible);
-        EXPECT_EQ(functional.execution.outcome, connected ? ReplayOutcome::Completed
-                                                        : ReplayOutcome::Unavailable);
+        EXPECT_EQ(functional.execution.outcome,
+                  connected ? ReplayOutcome::Completed : ReplayOutcome::Unavailable);
         if (connected) {
             EXPECT_EQ(functional.execution.cycles, 1);
             EXPECT_EQ(functional.execution.outputs, (std::vector<std::size_t>{6}));
@@ -406,12 +409,17 @@ TEST(IndependentStaticProduction, FiniteRepeatingPrefixRequiresIntermonomerBonds
         for (const auto* report : {&direct, &files}) {
             EXPECT_EQ(report->status, io::VerificationStatus::Unavailable);
             EXPECT_EQ(report->detail, connected
-                ? "independent profile excludes Repeat/unknown elements"
-                : "independent disjoint-input links not yet established");
+                                          ? "independent profile excludes Repeat/unknown elements"
+                                          : "independent disjoint-input links not yet established");
         }
         void* native = verifier_create(puzzlePath.c_str(), solutionPath.c_str());
         ASSERT_NE(native, nullptr);
-        struct Destroy { void* value; ~Destroy() { verifier_destroy(value); } } destroy{native};
+        struct Destroy {
+            void* value;
+            ~Destroy() {
+                verifier_destroy(value);
+            }
+        } destroy{native};
         ASSERT_EQ(verifier_error(native), nullptr);
         verifier_set_cycle_limit(native, 20);
         // Literal chain has six real atoms, not six copies of the raw two-atom marker form.
@@ -447,37 +455,40 @@ TEST(IndependentStaticProduction, FiniteRepeatingPrefixRequiresOrderedHeterogene
     for (int q = 0; q < 11; ++q)
         puzzle.inputs[0].bonds.push_back({1, {q, 0}, {q + 1, 0}});
     puzzle.outputs[0] = {{{core::AtomType::Salt, {0, 0}},
-                           {core::AtomType::Fire, {1, 0}},
-                           {core::AtomType::Repeat, {2, 0}}},
-                          {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}}};
-    const auto stem = root / ("build/finite-repeating-material-" +
-                              std::to_string(opusoptima::test::ProcessId()));
+                          {core::AtomType::Fire, {1, 0}},
+                          {core::AtomType::Repeat, {2, 0}}},
+                         {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}}};
+    const auto stem =
+        root / ("build/finite-repeating-material-" + std::to_string(opusoptima::test::ProcessId()));
     const std::filesystem::path puzzlePath = stem.string() + ".puzzle",
                                 solutionPath = stem.string() + ".solution";
     struct Cleanup {
         std::filesystem::path a, b;
-        ~Cleanup() { std::filesystem::remove(a); std::filesystem::remove(b); }
+        ~Cleanup() {
+            std::filesystem::remove(a);
+            std::filesystem::remove(b);
+        }
     } cleanup{puzzlePath, solutionPath};
     io::BinaryWriter::WriteSolutionFile(solutionPath, machine);
     int referenceCases = 0;
     for (bool misplaced : {false, true}) {
         SCOPED_TRACE(misplaced ? "third monomer Fire/Salt" : "all monomers Salt/Fire");
         auto fixture = puzzle;
-        if (misplaced)
-            std::swap(fixture.inputs[0].atoms[4].type, fixture.inputs[0].atoms[5].type);
+        if (misplaced) std::swap(fixture.inputs[0].atoms[4].type, fixture.inputs[0].atoms[5].type);
         // Template displacement is (2,0): Salt@(2k,0), Fire@(2k+1,0).
         // All eleven bonds stay fixed, including Fire@(2k+1)--Salt@(2k+2).
         // Swapping only monomer 2 preserves the multiset and the first two valid monomers.
         for (const auto type : {core::AtomType::Salt, core::AtomType::Fire})
             EXPECT_EQ(std::count_if(fixture.inputs[0].atoms.begin(), fixture.inputs[0].atoms.end(),
-                                    [=](const auto& atom) { return atom.type == type; }), 6);
+                                    [=](const auto& atom) { return atom.type == type; }),
+                      6);
         WritePuzzle(puzzlePath, fixture);
         const auto decoded = io::BinaryParser::ParsePuzzleFile(puzzlePath);
         EXPECT_EQ(decoded.outputMultiplier, 1);
         ASSERT_EQ(decoded.inputs.size(), 1U);
         ASSERT_EQ(decoded.outputs.size(), 1U);
         for (const auto& pair : {std::pair{&fixture.inputs[0], &decoded.inputs[0]},
-                                std::pair{&fixture.outputs[0], &decoded.outputs[0]}}) {
+                                 std::pair{&fixture.outputs[0], &decoded.outputs[0]}}) {
             const auto& expected = *pair.first;
             const auto& actual = *pair.second;
             ASSERT_EQ(actual.atoms.size(), expected.atoms.size());
@@ -498,7 +509,8 @@ TEST(IndependentStaticProduction, FiniteRepeatingPrefixRequiresOrderedHeterogene
             EXPECT_EQ(parsedMachine.objects[i].typeName, machine.objects[i].typeName);
             EXPECT_EQ(parsedMachine.objects[i].position, machine.objects[i].position);
             EXPECT_EQ(parsedMachine.objects[i].bodyData, machine.objects[i].bodyData);
-            ASSERT_EQ(parsedMachine.objects[i].instructions.size(), machine.objects[i].instructions.size());
+            ASSERT_EQ(parsedMachine.objects[i].instructions.size(),
+                      machine.objects[i].instructions.size());
             for (std::size_t j = 0; j < machine.objects[i].instructions.size(); ++j) {
                 EXPECT_EQ(parsedMachine.objects[i].instructions[j].action,
                           machine.objects[i].instructions[j].action);
@@ -514,7 +526,12 @@ TEST(IndependentStaticProduction, FiniteRepeatingPrefixRequiresOrderedHeterogene
         }
         void* native = verifier_create(puzzlePath.c_str(), solutionPath.c_str());
         ASSERT_NE(native, nullptr);
-        struct Destroy { void* value; ~Destroy() { verifier_destroy(value); } } destroy{native};
+        struct Destroy {
+            void* value;
+            ~Destroy() {
+                verifier_destroy(value);
+            }
+        } destroy{native};
         ASSERT_EQ(verifier_error(native), nullptr);
         verifier_set_cycle_limit(native, 20);
         for (const int threshold : {2, 3, 6}) {
@@ -529,7 +546,8 @@ TEST(IndependentStaticProduction, FiniteRepeatingPrefixRequiresOrderedHeterogene
                 EXPECT_EQ(verifier_error(native), nullptr);
             } else {
                 ASSERT_NE(verifier_error(native), nullptr);
-                EXPECT_STREQ(verifier_error(native), "solution did not complete within cycle limit");
+                EXPECT_STREQ(verifier_error(native),
+                             "solution did not complete within cycle limit");
             }
         }
     }
@@ -602,8 +620,8 @@ TEST(IndependentStaticProduction, ConduitCapturesOnlyOnReleaseAndArrivesThatCycl
                     acquired.push_back(event.atoms);
                 if (event.kind == StaticProductionEvent::Kind::Transfer ||
                     event.kind == StaticProductionEvent::Kind::Output) {
-                    auto& sequence = event.kind == StaticProductionEvent::Kind::Transfer
-                                         ? transferred : emitted;
+                    auto& sequence =
+                        event.kind == StaticProductionEvent::Kind::Transfer ? transferred : emitted;
                     EXPECT_EQ(event.cycle, release + static_cast<int>(sequence.size()) * period);
                     EXPECT_EQ(event.phase, StaticProductionEvent::Phase::AfterMotion);
                     ASSERT_EQ(event.atoms.size(), 1U);
@@ -630,7 +648,9 @@ TEST(IndependentStaticProduction, ConduitCapturesOnlyOnReleaseAndArrivesThatCycl
         ASSERT_NE(native, nullptr);
         struct NativeCleanup {
             void* handle;
-            ~NativeCleanup() { verifier_destroy(handle); }
+            ~NativeCleanup() {
+                verifier_destroy(handle);
+            }
         } nativeCleanup{native};
         verifier_set_cycle_limit(native, 40);
         EXPECT_EQ(verifier_evaluate_metric(native, "cabinet violations"), 0);
@@ -652,28 +672,38 @@ TEST(IndependentStaticProduction, SixRoomStaticGlyphCellsMatchLockedCabinetRules
         std::array<core::HexCoord, 6> inside, wall, outside;
         std::vector<core::HexCoord> seams;
     };
-    const Shape shapes[]{
-        {"Small", {{{1,0},{0,1},{-1,1},{-1,0},{0,-1},{1,-1}}},
-         {{{2,0},{0,2},{-2,2},{-2,0},{0,-2},{2,-2}}},
-         {{{3,0},{0,3},{-3,3},{-3,0},{0,-3},{3,-3}}}, {}},
-        {"SmallWide", {{{2,0},{1,1},{-1,1},{-1,0},{0,-1},{2,-1}}},
-         {{{3,0},{1,2},{-2,2},{-2,0},{0,-2},{3,-2}}},
-         {{{4,0},{1,3},{-3,3},{-3,0},{0,-3},{4,-3}}}, {{1,1},{1,-1}}},
-        {"SmallWider", {{{3,0},{2,1},{-1,1},{-1,0},{0,-1},{3,-1}}},
-         {{{4,0},{2,2},{-2,2},{-2,0},{0,-2},{4,-2}}},
-         {{{5,0},{2,3},{-3,3},{-3,0},{0,-3},{5,-3}}}, {{1,1},{2,-1}}},
-        {"Medium", {{{2,0},{0,2},{-2,2},{-2,0},{0,-2},{2,-2}}},
-         {{{3,0},{0,3},{-3,3},{-3,0},{0,-3},{3,-3}}},
-         {{{4,0},{0,4},{-4,4},{-4,0},{0,-4},{4,-4}}}, {}},
-        {"MediumWide", {{{3,0},{1,2},{-2,2},{-2,0},{0,-2},{3,-2}}},
-         {{{4,0},{1,3},{-3,3},{-3,0},{0,-3},{4,-3}}},
-         {{{5,0},{1,4},{-4,4},{-4,0},{0,-4},{5,-4}}}, {{1,2},{1,-2}}},
-        {"Large", {{{3,0},{0,3},{-3,3},{-3,0},{0,-3},{3,-3}}},
-         {{{4,0},{0,4},{-4,4},{-4,0},{0,-4},{4,-4}}},
-         {{{5,0},{0,5},{-5,5},{-5,0},{0,-5},{5,-5}}}, {}}
-    };
-    const auto stem = root / ("build/independent-room-cells-" +
-                              std::to_string(opusoptima::test::ProcessId()));
+    const Shape shapes[]{{"Small",
+                          {{{1, 0}, {0, 1}, {-1, 1}, {-1, 0}, {0, -1}, {1, -1}}},
+                          {{{2, 0}, {0, 2}, {-2, 2}, {-2, 0}, {0, -2}, {2, -2}}},
+                          {{{3, 0}, {0, 3}, {-3, 3}, {-3, 0}, {0, -3}, {3, -3}}},
+                          {}},
+                         {"SmallWide",
+                          {{{2, 0}, {1, 1}, {-1, 1}, {-1, 0}, {0, -1}, {2, -1}}},
+                          {{{3, 0}, {1, 2}, {-2, 2}, {-2, 0}, {0, -2}, {3, -2}}},
+                          {{{4, 0}, {1, 3}, {-3, 3}, {-3, 0}, {0, -3}, {4, -3}}},
+                          {{1, 1}, {1, -1}}},
+                         {"SmallWider",
+                          {{{3, 0}, {2, 1}, {-1, 1}, {-1, 0}, {0, -1}, {3, -1}}},
+                          {{{4, 0}, {2, 2}, {-2, 2}, {-2, 0}, {0, -2}, {4, -2}}},
+                          {{{5, 0}, {2, 3}, {-3, 3}, {-3, 0}, {0, -3}, {5, -3}}},
+                          {{1, 1}, {2, -1}}},
+                         {"Medium",
+                          {{{2, 0}, {0, 2}, {-2, 2}, {-2, 0}, {0, -2}, {2, -2}}},
+                          {{{3, 0}, {0, 3}, {-3, 3}, {-3, 0}, {0, -3}, {3, -3}}},
+                          {{{4, 0}, {0, 4}, {-4, 4}, {-4, 0}, {0, -4}, {4, -4}}},
+                          {}},
+                         {"MediumWide",
+                          {{{3, 0}, {1, 2}, {-2, 2}, {-2, 0}, {0, -2}, {3, -2}}},
+                          {{{4, 0}, {1, 3}, {-3, 3}, {-3, 0}, {0, -3}, {4, -3}}},
+                          {{{5, 0}, {1, 4}, {-4, 4}, {-4, 0}, {0, -4}, {5, -4}}},
+                          {{1, 2}, {1, -2}}},
+                         {"Large",
+                          {{{3, 0}, {0, 3}, {-3, 3}, {-3, 0}, {0, -3}, {3, -3}}},
+                          {{{4, 0}, {0, 4}, {-4, 4}, {-4, 0}, {0, -4}, {4, -4}}},
+                          {{{5, 0}, {0, 5}, {-5, 5}, {-5, 0}, {0, -5}, {5, -5}}},
+                          {}}};
+    const auto stem =
+        root / ("build/independent-room-cells-" + std::to_string(opusoptima::test::ProcessId()));
     const std::filesystem::path puzzlePath = stem.string() + ".puzzle",
                                 solutionPath = stem.string() + ".solution";
     struct Cleanup {
@@ -695,12 +725,14 @@ TEST(IndependentStaticProduction, SixRoomStaticGlyphCellsMatchLockedCabinetRules
             Product(puzzle, control, 1, {9, 0});
             WritePuzzle(puzzlePath, puzzle);
             const auto check = [&](core::HexCoord offset, bool inside, const char* kind) {
-                SCOPED_TRACE(::testing::Message() << shape.name << " " << kind
-                    << " center=" << center.q << "," << center.r
-                    << " cell=" << offset.q << "," << offset.r);
+                SCOPED_TRACE(::testing::Message()
+                             << shape.name << " " << kind << " center=" << center.q << ","
+                             << center.r << " cell=" << offset.q << "," << offset.r);
                 auto machine = control;
                 machine.objects.push_back({"glyph-calcification",
-                    {center.q + offset.q, center.r + offset.r}, {}, {1, 0, 0, 0, 0}});
+                                           {center.q + offset.q, center.r + offset.r},
+                                           {},
+                                           {1, 0, 0, 0, 0}});
                 const auto direct = VerifyStaticProduction(puzzle, machine, 10);
                 EXPECT_EQ(direct.status, inside ? io::VerificationStatus::Passed
                                                 : io::VerificationStatus::Rejected)
@@ -719,17 +751,23 @@ TEST(IndependentStaticProduction, SixRoomStaticGlyphCellsMatchLockedCabinetRules
                 ASSERT_NE(native, nullptr);
                 struct NativeCleanup {
                     void* handle;
-                    ~NativeCleanup() { verifier_destroy(handle); }
+                    ~NativeCleanup() {
+                        verifier_destroy(handle);
+                    }
                 } nativeCleanup{native};
                 ++references;
                 verifier_set_cycle_limit(native, 10);
                 EXPECT_EQ(verifier_evaluate_metric(native, "cabinet violations"), inside ? 0 : 1);
                 EXPECT_EQ(verifier_error(native), nullptr);
             };
-            for (auto cell : shape.inside) check(cell, true, "interior corner");
-            for (auto cell : shape.wall) check(cell, false, "wall corner");
-            for (auto cell : shape.outside) check(cell, false, "exterior");
-            for (auto cell : shape.seams) check(cell, true, "stretch seam");
+            for (auto cell : shape.inside)
+                check(cell, true, "interior corner");
+            for (auto cell : shape.wall)
+                check(cell, false, "wall corner");
+            for (auto cell : shape.outside)
+                check(cell, false, "exterior");
+            for (auto cell : shape.seams)
+                check(cell, true, "stretch seam");
         }
     }
     EXPECT_EQ(references, 228U);
@@ -747,16 +785,11 @@ TEST(IndependentStaticProduction, ProjectionTwoCellFootprintMatchesLockedCabinet
         bool inside;
     };
     const Case cases[]{
-        {"Small", {1,0}, 0, {2,0}, false},
-        {"Small", {1,0}, 1, {1,1}, false},
-        {"Small", {1,0}, 2, {0,1}, true},
-        {"Small", {1,0}, 3, {0,0}, true},
-        {"Small", {1,0}, 4, {1,-1}, true},
-        {"Small", {1,0}, 5, {2,-1}, false},
-        {"Small", {0,1}, 0, {1,1}, false},
-        {"SmallWide", {0,1}, 0, {1,1}, true},
-        {"SmallWide", {1,1}, 0, {2,1}, false},
-        {"SmallWider", {1,1}, 0, {2,1}, true},
+        {"Small", {1, 0}, 0, {2, 0}, false},     {"Small", {1, 0}, 1, {1, 1}, false},
+        {"Small", {1, 0}, 2, {0, 1}, true},      {"Small", {1, 0}, 3, {0, 0}, true},
+        {"Small", {1, 0}, 4, {1, -1}, true},     {"Small", {1, 0}, 5, {2, -1}, false},
+        {"Small", {0, 1}, 0, {1, 1}, false},     {"SmallWide", {0, 1}, 0, {1, 1}, true},
+        {"SmallWide", {1, 1}, 0, {2, 1}, false}, {"SmallWider", {1, 1}, 0, {2, 1}, true},
     };
     const auto stem = root / ("build/independent-projection-cells-" +
                               std::to_string(opusoptima::test::ProcessId()));
@@ -773,8 +806,8 @@ TEST(IndependentStaticProduction, ProjectionTwoCellFootprintMatchesLockedCabinet
     std::size_t references = 0;
     for (const auto& test : cases) {
         SCOPED_TRACE(::testing::Message() << test.room << " rotation=" << test.rotation
-            << " anchor=" << test.anchor.q << "," << test.anchor.r
-            << " second=" << test.second.q << "," << test.second.r);
+                                          << " anchor=" << test.anchor.q << "," << test.anchor.r
+                                          << " second=" << test.second.q << "," << test.second.r);
         auto puzzle = ChemistryPuzzle();
         // Both complete rooms (including walls) fit [-16,15]. No active chemistry
         // or motion near the tested glyph; the salt completion control is isolated.
@@ -782,11 +815,11 @@ TEST(IndependentStaticProduction, ProjectionTwoCellFootprintMatchesLockedCabinet
         io::SolutionData machine;
         Feed(puzzle, machine, 1, {9, 0});
         Product(puzzle, machine, 1, {9, 0});
-        machine.objects.push_back({"glyph-projection", test.anchor, {},
-                                   {1, test.rotation, 0, 0, 0}});
+        machine.objects.push_back(
+            {"glyph-projection", test.anchor, {}, {1, test.rotation, 0, 0, 0}});
         const auto direct = VerifyStaticProduction(puzzle, machine, 10);
-        EXPECT_EQ(direct.status, test.inside ? io::VerificationStatus::Passed
-                                            : io::VerificationStatus::Rejected)
+        EXPECT_EQ(direct.status,
+                  test.inside ? io::VerificationStatus::Passed : io::VerificationStatus::Rejected)
             << direct.detail;
         if (!test.inside) {
             EXPECT_EQ(direct.detail, "glyph crosses a room boundary");
@@ -803,7 +836,9 @@ TEST(IndependentStaticProduction, ProjectionTwoCellFootprintMatchesLockedCabinet
         ASSERT_NE(native, nullptr);
         struct NativeCleanup {
             void* handle;
-            ~NativeCleanup() { verifier_destroy(handle); }
+            ~NativeCleanup() {
+                verifier_destroy(handle);
+            }
         } nativeCleanup{native};
         ++references;
         verifier_set_cycle_limit(native, 10);
@@ -913,13 +948,23 @@ TEST(IndependentStaticProduction, DifferentialInternalChordHeldSaltOrientationTh
     puzzle.outputs = puzzle.inputs;
     io::SolutionData machine;
     machine.puzzleName = puzzle.name;
-    machine.objects = {
-        {"input", {-1, 0}, {}, {1, 0, 0, 0, 0}},
-        {"out-std", {-1, 2}, {}, {1, 0, 0, 0, 0}},
-        {"arm1", {}, {{'G', 0}, {'a', 1}, {'A', 2}, {'A', 3}, {'A', 4}, {'A', 5},
-                      {'g', 6}, {'a', 7}, {'a', 8}, {'a', 9}, {'a', 10}},
-         {1, 3, 0, 4, 0}},
-        {"track", {}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}}};
+    machine.objects = {{"input", {-1, 0}, {}, {1, 0, 0, 0, 0}},
+                       {"out-std", {-1, 2}, {}, {1, 0, 0, 0, 0}},
+                       {"arm1",
+                        {},
+                        {{'G', 0},
+                         {'a', 1},
+                         {'A', 2},
+                         {'A', 3},
+                         {'A', 4},
+                         {'A', 5},
+                         {'g', 6},
+                         {'a', 7},
+                         {'a', 8},
+                         {'a', 9},
+                         {'a', 10}},
+                        {1, 3, 0, 4, 0}},
+                       {"track", {}, {}, {1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 1, 0, 2, 0}}};
     const auto stem = root / ("build/independent-chord-reference-" +
                               std::to_string(opusoptima::test::ProcessId()));
     const std::filesystem::path puzzlePath = stem.string() + ".puzzle",
@@ -950,7 +995,9 @@ TEST(IndependentStaticProduction, DifferentialInternalChordHeldSaltOrientationTh
     ASSERT_NE(native, nullptr);
     struct NativeCleanup {
         void* verifier;
-        ~NativeCleanup() { verifier_destroy(verifier); }
+        ~NativeCleanup() {
+            verifier_destroy(verifier);
+        }
     } nativeCleanup{native};
     verifier_set_cycle_limit(native, 100);
     const auto cycles = verifier_evaluate_metric(native, "cycles");
@@ -1028,8 +1075,8 @@ TEST(IndependentStaticProduction, FiniteRepeatResetReferenceMetricsDoNotAuthoriz
     Feed(puzzle, base, 1, {1, 0});
     Product(puzzle, base, 1, {0, 1});
     base.objects.push_back({"arm1", {}, {}, {1, 0, 0, 0, 0}});
-    const auto stem = root / ("build/finite-repeat-reset-" +
-                              std::to_string(opusoptima::test::ProcessId()));
+    const auto stem =
+        root / ("build/finite-repeat-reset-" + std::to_string(opusoptima::test::ProcessId()));
     const std::filesystem::path puzzlePath = stem.string() + ".puzzle",
                                 solutionPath = stem.string() + ".solution";
     struct Cleanup {
@@ -1048,8 +1095,7 @@ TEST(IndependentStaticProduction, FiniteRepeatResetReferenceMetricsDoNotAuthoriz
         const auto decoded = VerifyStaticProductionFiles(puzzlePath, solutionPath, 100);
         for (const auto* result : {&direct, &decoded}) {
             EXPECT_EQ(result->status, io::VerificationStatus::Unavailable);
-            EXPECT_EQ(result->detail,
-                      "unexpanded repeat/reset or unknown independent instruction");
+            EXPECT_EQ(result->detail, "unexpanded repeat/reset or unknown independent instruction");
         }
     }
     int referenceCases = 0;
@@ -1058,21 +1104,21 @@ TEST(IndependentStaticProduction, FiniteRepeatResetReferenceMetricsDoNotAuthoriz
         SCOPED_TRACE(::testing::Message() << "offset=" << offset << " repeat=" << repeat);
         // Locked decode.c: X undoes the single swing; consecutive C markers each
         // copy the same preceding block, not the previously expanded prefix.
-        const std::vector<io::ArmInstruction> raw = repeat
-            ? std::vector<io::ArmInstruction>{{'G', offset}, {'r', offset + 1},
-                                             {'g', offset + 2}, {'X', offset + 3},
-                                             {'C', offset + 4}, {'C', offset + 8}}
-            : std::vector<io::ArmInstruction>{{'G', offset}, {'r', offset + 1},
-                                             {'g', offset + 2}, {'X', offset + 3}};
-        const std::vector<io::ArmInstruction> expanded = repeat
-            ? std::vector<io::ArmInstruction>{{'G', offset}, {'r', offset + 1},
-                                             {'g', offset + 2}, {'R', offset + 3},
-                                             {'G', offset + 4}, {'r', offset + 5},
-                                             {'g', offset + 6}, {'R', offset + 7},
-                                             {'G', offset + 8}, {'r', offset + 9},
-                                             {'g', offset + 10}, {'R', offset + 11}}
-            : std::vector<io::ArmInstruction>{{'G', offset}, {'r', offset + 1},
-                                             {'g', offset + 2}, {'R', offset + 3}};
+        const std::vector<io::ArmInstruction> raw =
+            repeat ? std::vector<io::ArmInstruction>{{'G', offset},     {'r', offset + 1},
+                                                     {'g', offset + 2}, {'X', offset + 3},
+                                                     {'C', offset + 4}, {'C', offset + 8}}
+                   : std::vector<io::ArmInstruction>{
+                         {'G', offset}, {'r', offset + 1}, {'g', offset + 2}, {'X', offset + 3}};
+        const std::vector<io::ArmInstruction> expanded =
+            repeat ? std::vector<io::ArmInstruction>{{'G', offset},      {'r', offset + 1},
+                                                     {'g', offset + 2},  {'R', offset + 3},
+                                                     {'G', offset + 4},  {'r', offset + 5},
+                                                     {'g', offset + 6},  {'R', offset + 7},
+                                                     {'G', offset + 8},  {'r', offset + 9},
+                                                     {'g', offset + 10}, {'R', offset + 11}}
+                   : std::vector<io::ArmInstruction>{
+                         {'G', offset}, {'r', offset + 1}, {'g', offset + 2}, {'R', offset + 3}};
         auto rawMachine = base;
         rawMachine.objects.back().instructions = raw;
         const auto conversion = ExpandFiniteArm1Tape(puzzle, rawMachine);
@@ -1121,9 +1167,11 @@ TEST(IndependentStaticProduction, FiniteRepeatResetReferenceMetricsDoNotAuthoriz
             EXPECT_EQ(verifier_evaluate_metric(native, "cycles"), 23);
             EXPECT_EQ(verifier_evaluate_metric(native, "executed instructions"), repeat ? 12 : 4);
             const std::pair<int, int> costArea{verifier_evaluate_metric(native, "cost"),
-                                              verifier_evaluate_metric(native, "area")};
-            if (nativeCostArea) EXPECT_EQ(costArea, *nativeCostArea);
-            else nativeCostArea = costArea;
+                                               verifier_evaluate_metric(native, "area")};
+            if (nativeCostArea)
+                EXPECT_EQ(costArea, *nativeCostArea);
+            else
+                nativeCostArea = costArea;
             const auto* error = verifier_error(native);
             EXPECT_EQ(error, nullptr) << (error ? error : "");
             verifier_destroy(native);
@@ -1139,22 +1187,35 @@ TEST(IndependentStaticProduction, OfflineExpansionLockedDecoderInstructionDiffer
                                 solutionPath = stem.string() + ".solution";
     struct Cleanup {
         std::filesystem::path a, b;
-        ~Cleanup() { std::filesystem::remove(a); std::filesystem::remove(b); }
+        ~Cleanup() {
+            std::filesystem::remove(a);
+            std::filesystem::remove(b);
+        }
     } cleanup{puzzlePath, solutionPath};
     WritePuzzle(puzzlePath, puzzle);
     int referenceCases = 0;
-    for (const auto& [text, explicitTape] : std::vector<std::pair<std::string, std::string>>{
-             {"G_C__C", "G G  G"}, {"C", " "}, {"X", " "}, {"GrX", "GrgR"},
-             {"rrrX", "rrrRRR"}, {"RRRX", "RRRrrr"}, {"rXX", "rR "},
-             {"rXC_GX", "rRrRGg"}, {"O_C", "O O"}, {" _C", "   "},
-             {"BrX", "BrR"}, {"GCCg", "GGGg"}, {"GrCC", "GrGGr"},
-             {"G_XC", "G gG g"}, {"G__rCC___g", "G  rGG  rg"}}) {
+    for (const auto& [text, explicitTape] :
+         std::vector<std::pair<std::string, std::string>>{{"G_C__C", "G G  G"},
+                                                          {"C", " "},
+                                                          {"X", " "},
+                                                          {"GrX", "GrgR"},
+                                                          {"rrrX", "rrrRRR"},
+                                                          {"RRRX", "RRRrrr"},
+                                                          {"rXX", "rR "},
+                                                          {"rXC_GX", "rRrRGg"},
+                                                          {"O_C", "O O"},
+                                                          {" _C", "   "},
+                                                          {"BrX", "BrR"},
+                                                          {"GCCg", "GGGg"},
+                                                          {"GrCC", "GrGGr"},
+                                                          {"G_XC", "G gG g"},
+                                                          {"G__rCC___g", "G  rGG  rg"}}) {
         SCOPED_TRACE(text);
         io::SolutionData machine;
         machine.objects.push_back({"arm1", {}, {}, {1, 0, 0, 0, 0}});
         for (std::size_t i = 0; i < text.size(); ++i)
-            if (text[i] != '_') machine.objects[0].instructions.push_back(
-                {text[i], static_cast<std::int32_t>(i)});
+            if (text[i] != '_')
+                machine.objects[0].instructions.push_back({text[i], static_cast<std::int32_t>(i)});
         const auto result = ExpandFiniteArm1Tape(puzzle, machine);
         ASSERT_TRUE(std::holds_alternative<ExpandedFiniteTape>(result));
         const auto& converted = std::get<ExpandedFiniteTape>(result);
@@ -1166,11 +1227,13 @@ TEST(IndependentStaticProduction, OfflineExpansionLockedDecoderInstructionDiffer
                 for (std::size_t i = 0; i < explicitTape.size(); ++i)
                     machine.objects[0].instructions.push_back(
                         {explicitTape[i], static_cast<std::int32_t>(i)});
-            } else if (variant == 2) machine.objects[converted.armObject].instructions = converted.slots;
+            } else if (variant == 2)
+                machine.objects[converted.armObject].instructions = converted.slots;
             io::BinaryWriter::WriteSolutionFile(solutionPath, machine);
             void* native = verifier_create(puzzlePath.c_str(), solutionPath.c_str());
             ASSERT_NE(native, nullptr);
-            EXPECT_EQ(verifier_evaluate_metric(native, "instructions"), converted.staticInstructions);
+            EXPECT_EQ(verifier_evaluate_metric(native, "instructions"),
+                      converted.staticInstructions);
             const auto* error = verifier_error(native);
             EXPECT_EQ(error, nullptr) << (error ? error : "");
             verifier_set_cycle_limit(native, 10);

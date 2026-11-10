@@ -12,12 +12,12 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include "BaseSolver.hpp"
 #include "AssemblySolver.hpp"
-#include "CandidateArchive.hpp"
-#include "LocalOptimizer.hpp"
+#include "BaseSolver.hpp"
 #include "BinaryParser.hpp"
+#include "CandidateArchive.hpp"
 #include "CoreConstants.hpp"
+#include "LocalOptimizer.hpp"
 #include "LogManager.hpp"
 #include "SolutionVerifier.hpp"
 #include "VerificationJson.hpp"
@@ -85,18 +85,19 @@ int VerifyCommand(int argc, char* argv[]) {
 
 void PrintUsage(const char* programName) {
     const auto names = opusoptima::solvers::BaseSolver::RegisteredNames();
-    std::cerr << "Usage: " << programName << " [options]\n\n"
-              << "Options:\n"
-              << "  -p, --puzzle <path>     Path to .puzzle file\n"
-              << "  -o, --output <path>     Output path for .solution file\n"
-              << "  -s, --solver <name>     Solver algorithm (default: "
-              << opusoptima::solvers::BaseSolver::kDefaultName << ")\n"
-              << "                          assembly: recommended bounded portfolio\n"
-              << "                          single-atom: unchanged atom; diatomic: normal-bond pair\n"
-              << "                          greedy / milp: experimental candidate generators\n"
-              << "                          default: legacy greedy alias (not omitted -s)\n"
-              << "                          No upstream solver fallback\n"
-              << "                          Available:";
+    std::cerr
+        << "Usage: " << programName << " [options]\n\n"
+        << "Options:\n"
+        << "  -p, --puzzle <path>     Path to .puzzle file\n"
+        << "  -o, --output <path>     Output path for .solution file\n"
+        << "  -s, --solver <name>     Solver algorithm (default: "
+        << opusoptima::solvers::BaseSolver::kDefaultName << ")\n"
+        << "                          assembly: recommended bounded portfolio\n"
+        << "                          single-atom: unchanged atom; diatomic: normal-bond pair\n"
+        << "                          greedy / milp: experimental candidate generators\n"
+        << "                          default: legacy greedy alias (not omitted -s)\n"
+        << "                          No upstream solver fallback\n"
+        << "                          Available:";
     for (const auto& name : names)
         std::cerr << " " << name;
     std::cerr << "\n"
@@ -105,12 +106,18 @@ void PrintUsage(const char* programName) {
               << "          20s total: 15s construction/admission, 5s final verification reserve.\n"
               << "  -h, --help              Show this help\n"
               << "  -l, --list-solvers      List solvers and exit\n"
-              << "  --experimental-shared-assembly  Post-parent shared/mixed inventory assembly (default OFF)\n"
-              << "  --experimental-shared-near-cache  Dependency-derived near inventory cache (default OFF)\n"
-              << "  --experimental-shared-batch-consumer  Bypass final precursor inventory roundtrip (default OFF)\n"
-              << "  --experimental-shared-buffer-relay  Compact mixed inventory slots; requires shared assembly (default OFF)\n"
-              << "  --experimental-shared-scheduling  Empty mixed-buffer return overlap; requires shared assembly (default OFF)\n"
-              << "  --experimental-compact-relay  Replace first post-parent portfolio attempt (default OFF)\n"
+              << "  --experimental-shared-assembly  Post-parent shared/mixed inventory assembly "
+                 "(default OFF)\n"
+              << "  --experimental-shared-near-cache  Dependency-derived near inventory cache "
+                 "(default OFF)\n"
+              << "  --experimental-shared-batch-consumer  Bypass final precursor inventory "
+                 "roundtrip (default OFF)\n"
+              << "  --experimental-shared-buffer-relay  Compact mixed inventory slots; requires "
+                 "shared assembly (default OFF)\n"
+              << "  --experimental-shared-scheduling  Empty mixed-buffer return overlap; requires "
+                 "shared assembly (default OFF)\n"
+              << "  --experimental-compact-relay  Replace first post-parent portfolio attempt "
+                 "(default OFF)\n"
               << "  --authority <mode>     legacy-gate (default), independent or shadow\n"
               << "  verify ... --diagnostics  Include phase timing (not canonical performance "
                  "results)\n\n"
@@ -303,16 +310,16 @@ int main(int argc, char* argv[]) {
     // Preserve the existing search budget; publication reuses exact-byte admission evidence.
     const auto searchDeadline = cliDeadline - std::chrono::seconds(5);
     solver->SetDeadline(searchDeadline);
-    if (auto* assembly = dynamic_cast<opusoptima::solvers::AssemblySolver*>(solver.get()))
-    {
+    if (auto* assembly = dynamic_cast<opusoptima::solvers::AssemblySolver*>(solver.get())) {
         assembly->EnableExperimentalCompactRelay(options.experimentalCompactRelay);
         assembly->EnableExperimentalSharedAssembly(options.experimentalSharedAssembly);
         assembly->EnableExperimentalSharedScheduling(options.experimentalSharedScheduling);
         assembly->EnableExperimentalSharedBufferRelay(options.experimentalSharedBufferRelay);
         assembly->EnableExperimentalSharedBatchConsumer(options.experimentalSharedBatchConsumer);
         assembly->EnableExperimentalSharedNearCache(options.experimentalSharedNearCache);
-    }
-    else if (options.experimentalCompactRelay || options.experimentalSharedAssembly || options.experimentalSharedScheduling || options.experimentalSharedBufferRelay || options.experimentalSharedBatchConsumer || options.experimentalSharedNearCache)
+    } else if (options.experimentalCompactRelay || options.experimentalSharedAssembly ||
+               options.experimentalSharedScheduling || options.experimentalSharedBufferRelay ||
+               options.experimentalSharedBatchConsumer || options.experimentalSharedNearCache)
         throw std::invalid_argument("Experimental assembly options require AssemblySolver");
     verificationOptions.mode = options.authority;
     std::filesystem::path outputPath;
@@ -321,13 +328,14 @@ int main(int argc, char* argv[]) {
         outputPath = ResolveOutputPath(options.puzzlePath, options.outputPath);
         auto admissionOptions = verificationOptions;
         admissionOptions.outerDeadline = searchDeadline;
-        archive = std::make_unique<opusoptima::io::CandidateArchive>(
-            options.puzzlePath, outputPath, admissionOptions);
+        archive = std::make_unique<opusoptima::io::CandidateArchive>(options.puzzlePath, outputPath,
+                                                                     admissionOptions);
         auto submit = [&](const opusoptima::io::SolutionData& candidate,
                           const std::string& strategy) {
-            const auto structuralDeadline = archive->First() &&
-                dynamic_cast<opusoptima::solvers::AssemblySolver*>(solver.get())
-                ? searchDeadline - std::chrono::seconds(2) : searchDeadline;
+            const auto structuralDeadline =
+                archive->First() && dynamic_cast<opusoptima::solvers::AssemblySolver*>(solver.get())
+                    ? searchDeadline - std::chrono::seconds(2)
+                    : searchDeadline;
             if (std::chrono::steady_clock::now() >= structuralDeadline)
                 throw std::runtime_error("Candidate structural phase exhausted");
             if (!opusoptima::io::CalcifyAnimismusModeAllowed(strategy, admissionOptions.mode)) {
@@ -346,8 +354,9 @@ int main(int argc, char* argv[]) {
                 if (dynamic_cast<opusoptima::solvers::AssemblySolver*>(solver.get()))
                     solver->SetDeadline(searchDeadline - std::chrono::seconds(2));
                 logger->info("First verified feasible: {:.6f}s",
-                    std::chrono::duration<double>(std::chrono::steady_clock::now() -
-                        (cliDeadline - std::chrono::seconds(20))).count());
+                             std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                                           (cliDeadline - std::chrono::seconds(20)))
+                                 .count());
             }
             if (!accepted.Passed()) {
                 logger->warn("Candidate not admitted: {}", accepted.detail);

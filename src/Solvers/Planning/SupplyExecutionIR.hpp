@@ -48,8 +48,7 @@ struct JointSupplyPlan;
     const std::vector<core::HexFrame>& inputFrames = {});
 [[nodiscard]] ExecutionIR BuildJointSupplyExecutionIRWithPolicy(
     const io::PuzzleData& puzzle, const JointSupplyPlan& supply,
-    SupplyMaterialLoweringPolicy policy,
-    const std::vector<core::HexFrame>& outputFrames = {},
+    SupplyMaterialLoweringPolicy policy, const std::vector<core::HexFrame>& outputFrames = {},
     const std::vector<core::HexFrame>& inputFrames = {});
 
 } // namespace opusoptima::solvers

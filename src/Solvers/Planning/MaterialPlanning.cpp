@@ -6,9 +6,9 @@
 namespace opusoptima::solvers {
 bool SupportsClosedSingletonWheelPlanning(const io::PuzzleData& puzzle) {
     using T = core::AtomType;
-    constexpr auto permissions = (1ULL << 0) | (1ULL << 8) | (1ULL << 9) |
-        (1ULL << 11) | (1ULL << 12) | (1ULL << 13) | (1ULL << 22) |
-        (1ULL << 23) | (1ULL << 25) | (1ULL << 28);
+    constexpr auto permissions = (1ULL << 0) | (1ULL << 8) | (1ULL << 9) | (1ULL << 11) |
+                                 (1ULL << 12) | (1ULL << 13) | (1ULL << 22) | (1ULL << 23) |
+                                 (1ULL << 25) | (1ULL << 28);
     if (puzzle.version != 3 || puzzle.productionInfo || puzzle.outputMultiplier < 1 ||
         puzzle.outputMultiplier > 8 || puzzle.inputs.empty() || puzzle.inputs.size() > 4 ||
         puzzle.outputs.size() != 1 || (puzzle.permissionBits & permissions) != permissions)
@@ -25,15 +25,16 @@ bool SupportsClosedSingletonWheelPlanning(const io::PuzzleData& puzzle) {
                         [](const auto& bond) { return bond.bits != 1; }))
             return false;
         calcifiableSource |= std::any_of(input.atoms.begin(), input.atoms.end(),
-            [](const auto& atom) { return atom.type != T::Salt; });
+                                         [](const auto& atom) { return atom.type != T::Salt; });
     }
     const auto& output = puzzle.outputs.front();
     if (!calcifiableSource || output.atoms.size() < 2 || output.atoms.size() > 4 ||
         output.bonds.size() > 6 ||
         std::count_if(output.atoms.begin(), output.atoms.end(),
                       [](const auto& atom) { return atom.type == T::Fire; }) != 2 ||
-        std::any_of(output.atoms.begin(), output.atoms.end(),
-                    [&](const auto& atom) { return atom.type != T::Fire && !ordinary(atom.type); }) ||
+        std::any_of(
+            output.atoms.begin(), output.atoms.end(),
+            [&](const auto& atom) { return atom.type != T::Fire && !ordinary(atom.type); }) ||
         std::count_if(output.bonds.begin(), output.bonds.end(),
                       [](const auto& bond) { return bond.bits != 1; }) != 1)
         return false;
@@ -43,7 +44,8 @@ bool SupportsClosedSingletonWheelPlanning(const io::PuzzleData& puzzle) {
         for (const auto endpoint : {bond.from, bond.to})
             if (std::none_of(output.atoms.begin(), output.atoms.end(), [&](const auto& atom) {
                     return atom.position == endpoint && atom.type == T::Fire;
-                })) return false;
+                }))
+                return false;
     }
     try {
         (void)ExecutionIR::Initial(puzzle);
@@ -113,8 +115,8 @@ ExecutionIR LowerEndpointPrecursor(const io::PuzzleData& original, const io::Puz
 
 MaterialPlanningResult SearchMaterialExecutionBase(
     const io::PuzzleData& puzzle, MaterialPlanningLimits bounds,
-    const std::function<bool(const ExecutionPlan&)>& accept,
-    SupplyMaterialLoweringPolicy policy, const io::PuzzleData* original = nullptr) {
+    const std::function<bool(const ExecutionPlan&)>& accept, SupplyMaterialLoweringPolicy policy,
+    const io::PuzzleData* original = nullptr) {
     MaterialPlanningResult result;
     try {
         (void)ExecutionIR::Initial(puzzle);
@@ -157,12 +159,12 @@ MaterialPlanningResult SearchMaterialExecutionBase(
         limits.wheelCatalysts = !original && SupportsClosedSingletonWheelPlanning(puzzle);
         auto tryPlan = [&](const JointSupplyPlan& supply) {
             if (result.candidates >= bounds.maxCandidates ||
-                std::chrono::steady_clock::now() >= bounds.deadline) return false;
+                std::chrono::steady_clock::now() >= bounds.deadline)
+                return false;
             ++result.candidates;
             std::optional<ExecutionPlan> candidate;
             try {
-                auto material = BuildJointSupplyExecutionIRWithPolicy(
-                    puzzle, supply, policy);
+                auto material = BuildJointSupplyExecutionIRWithPolicy(puzzle, supply, policy);
                 if (original) material = LowerEndpointPrecursor(*original, puzzle, material);
                 if (policy != SupplyMaterialLoweringPolicy::PreserveCompatible &&
                     material.steps.size() > bounds.maxSteps)
@@ -187,8 +189,8 @@ MaterialPlanningResult SearchMaterialExecutionBase(
             if (recipe) {
                 auto constrainedLimits = limits;
                 constrainedLimits.maxStates = limits.maxStates / 2;
-                const auto constrained =
-                    SearchJointSupplyInventoryWithPolicy(puzzle, period, policy, constrainedLimits, &*recipe);
+                const auto constrained = SearchJointSupplyInventoryWithPolicy(
+                    puzzle, period, policy, constrainedLimits, &*recipe);
                 result.states += constrained.states;
                 limits.maxStates -= std::min(limits.maxStates, constrained.states);
                 exhausted |= constrained.status == InventorySearchStatus::Exhausted;
@@ -252,8 +254,8 @@ MaterialPlanningResult SearchMaterialExecution(
 }
 
 MaterialPlanningResult SearchMaterialExecutionWithPolicy(
-    const io::PuzzleData& puzzle, SupplyMaterialLoweringPolicy policy, MaterialPlanningLimits bounds,
-    const std::function<bool(const ExecutionPlan&)>& accept) {
+    const io::PuzzleData& puzzle, SupplyMaterialLoweringPolicy policy,
+    MaterialPlanningLimits bounds, const std::function<bool(const ExecutionPlan&)>& accept) {
     if (policy == SupplyMaterialLoweringPolicy::ClosedCardinalLife &&
         !SupportsClosedCardinalLife(puzzle)) {
         MaterialPlanningResult result;

@@ -16,7 +16,8 @@ void CheckSupplyDeadline(std::chrono::steady_clock::time_point deadline) {
 }
 // A borrowed cardinal is returned as the last cardinal target of each product.
 // This leaves the duplication station empty at the tape boundary.
-SupplyPlan BuildDuplicationSupply(const io::PuzzleData& p, std::chrono::steady_clock::time_point deadline) {
+SupplyPlan BuildDuplicationSupply(const io::PuzzleData& p,
+                                  std::chrono::steady_clock::time_point deadline) {
     const auto& target = p.outputs[0].atoms;
     int cardinal = 0;
     std::size_t saltDemand = 0, cardinalDemand = 0;
@@ -80,7 +81,7 @@ SupplyPlan BuildDuplicationSupply(const io::PuzzleData& p, std::chrono::steady_c
         ++plan.usage[catalyst].batches;
         ++plan.usage[catalyst].acquired;
         for (auto output : order) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
             if (output == last) {
                 // buffer -2 denotes the borrowed catalyst, not another source acquisition.
                 plan.steps.push_back(
@@ -99,7 +100,8 @@ SupplyPlan BuildDuplicationSupply(const io::PuzzleData& p, std::chrono::steady_c
     return plan;
 }
 
-SupplyPlan BuildMixedDuplicationSupply(const io::PuzzleData& p, std::chrono::steady_clock::time_point deadline) {
+SupplyPlan BuildMixedDuplicationSupply(const io::PuzzleData& p,
+                                       std::chrono::steady_clock::time_point deadline) {
     const auto& target = p.outputs[0].atoms;
     int cardinal = 0;
     for (const auto& atom : target) {
@@ -164,14 +166,14 @@ SupplyPlan BuildMixedDuplicationSupply(const io::PuzzleData& p, std::chrono::ste
             std::size_t source = atoms.size();
             for (std::size_t b = 0; b < buffers.size(); ++b)
                 if (buffers[b] >= 0 && matches(buffers[b])) {
-        CheckSupplyDeadline(deadline);
+                    CheckSupplyDeadline(deadline);
                     buffer = static_cast<int>(b);
                     source = buffers[b];
                     buffers[b] = -1;
                     break;
                 }
             while (source == atoms.size() && cursor < total) {
-        CheckSupplyDeadline(deadline);
+                CheckSupplyDeadline(deadline);
                 const auto next = sources[cursor++ % sources.size()];
                 if (matches(next)) {
                     source = next;
@@ -199,7 +201,7 @@ SupplyPlan BuildMixedDuplicationSupply(const io::PuzzleData& p, std::chrono::ste
         bool valid = true;
         std::size_t catalyst = 0;
         for (std::size_t product = 0; product < products && valid; ++product) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
             if (product == 0) {
                 valid = take(static_cast<core::AtomType>(cardinal), false, last,
                              SupplyPlan::Kind::Reagent);
@@ -207,7 +209,7 @@ SupplyPlan BuildMixedDuplicationSupply(const io::PuzzleData& p, std::chrono::ste
                 catalyst = plan.steps.back().sourceAtom;
             }
             for (auto output : outputs) {
-        CheckSupplyDeadline(deadline);
+                CheckSupplyDeadline(deadline);
                 if (output == last && product + 1 == products)
                     plan.steps.push_back({SupplyPlan::Kind::Take, input, catalyst, output,
                                           ElementConversion::None, -2});
@@ -229,8 +231,8 @@ SupplyPlan BuildMixedDuplicationSupply(const io::PuzzleData& p, std::chrono::ste
     throw std::invalid_argument("no closed mixed duplication inventory");
 }
 
-SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
-                       std::size_t products, std::chrono::steady_clock::time_point deadline) {
+SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe, std::size_t products,
+                       std::chrono::steady_clock::time_point deadline) {
     if (recipe && (recipe->duplications || recipe->purifications || recipe->animismus))
         throw std::invalid_argument("serial supply does not implement this recipe's reactions");
     SupplyPlan plan;
@@ -249,7 +251,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
         layouts.push_back(PlanExtractionLayout(input));
         int low = 256, high = -256;
         for (auto c : layouts.back().cells) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
             low = std::min(low, c.r);
             high = std::max(high, c.r);
         }
@@ -261,7 +263,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
         std::vector<std::size_t> blocked;
         const auto c = layouts[input].cells[atom];
         for (std::size_t j = 0; j < layouts[input].cells.size(); ++j) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
             const auto other = layouts[input].cells[j];
             if ((reset || available[input][j]) && (wide[input] || other.q == c.q) && other.r > c.r)
                 blocked.push_back(j);
@@ -352,7 +354,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
         std::size_t chosen = p.inputs.size(), chosenAtom = 0;
         int chosenBuffer = -1;
         for (std::size_t b = 0; b < buffered.size(); ++b) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
             const auto& item = buffered[b];
             if (item.occupied && (recipe ? canSupply(p.inputs[item.input].atoms[item.atom].type)
                                          : matches(p.inputs[item.input].atoms[item.atom].type))) {
@@ -364,10 +366,10 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
         }
         std::size_t bestWaste = std::numeric_limits<std::size_t>::max(), bestUseful = 0;
         for (std::size_t input = 0; chosenBuffer < 0 && input < p.inputs.size(); ++input) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
             const auto& atoms = p.inputs[input].atoms;
             for (std::size_t match = 0; match < atoms.size(); ++match) {
-        CheckSupplyDeadline(deadline);
+                CheckSupplyDeadline(deadline);
                 if (atoms[match].type == core::AtomType::Salt &&
                     target[output].type != core::AtomType::Salt)
                     continue;
@@ -401,7 +403,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
                     for (std::size_t i = 0; i < stock.size(); ++i)
                         stock[i] -= static_cast<std::int64_t>(consumed[i]);
                     auto remove = [&](std::size_t atom) {
-        CheckSupplyDeadline(deadline);
+                        CheckSupplyDeadline(deadline);
                         --stock[static_cast<int>(atoms[atom].type) - 1];
                     };
                     if (disposal) {
@@ -419,7 +421,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
                     bool feasible = stock[0] >= 0;
                     std::int64_t convertible = 0;
                     for (std::size_t i = 1; i < stock.size(); ++i) {
-        CheckSupplyDeadline(deadline);
+                        CheckSupplyDeadline(deadline);
                         if (stock[i] < demand[i]) {
                             feasible = false;
                             break;
@@ -438,7 +440,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
                 for (std::size_t j = 0; j < atoms.size(); ++j)
                     if (j != match && (reset || available[input][j]) &&
                         std::find(obstructing.begin(), obstructing.end(), j) == obstructing.end()) {
-        CheckSupplyDeadline(deadline);
+                        CheckSupplyDeadline(deadline);
                         const auto it =
                             std::find(remaining.begin(), remaining.end(), atoms[j].type);
                         if (it != remaining.end()) {
@@ -461,7 +463,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
             if (!available[chosen][chosenAtom]) {
                 for (auto j : descending(chosen))
                     if (available[chosen][j]) {
-        CheckSupplyDeadline(deadline);
+                        CheckSupplyDeadline(deadline);
                         if (disposal)
                             emit(SupplyPlan::Kind::Discard, chosen, j, output);
                         else
@@ -475,7 +477,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
                 fresh[chosen] = false;
             }
             for (auto j : blockers(chosen, chosenAtom, false)) {
-        CheckSupplyDeadline(deadline);
+                CheckSupplyDeadline(deadline);
                 if (disposal)
                     emit(SupplyPlan::Kind::Discard, chosen, j, output);
                 else
@@ -493,11 +495,11 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
                             static_cast<int>(target[output].type);
         if (plan.steps.back().conversion == ElementConversion::Projection) {
             for (int level = 0; level < levels; ++level) {
-        CheckSupplyDeadline(deadline);
+                CheckSupplyDeadline(deadline);
                 std::size_t mercuryInput = p.inputs.size(), mercuryAtom = 0;
                 int mercuryBuffer = -1;
                 for (std::size_t b = 0; b < buffered.size(); ++b) {
-        CheckSupplyDeadline(deadline);
+                    CheckSupplyDeadline(deadline);
                     const auto& item = buffered[b];
                     if (item.occupied &&
                         p.inputs[item.input].atoms[item.atom].type == core::AtomType::Quicksilver) {
@@ -510,7 +512,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
                 std::size_t mercuryWaste = std::numeric_limits<std::size_t>::max();
                 for (std::size_t i = 0; mercuryBuffer < 0 && i < p.inputs.size(); ++i)
                     for (std::size_t j = 0; j < p.inputs[i].atoms.size(); ++j) {
-        CheckSupplyDeadline(deadline);
+                        CheckSupplyDeadline(deadline);
                         if (p.inputs[i].atoms[j].type != core::AtomType::Quicksilver) continue;
                         const bool reset = !available[i][j];
                         const bool newBatch = reset || fresh[i] || plan.usage[i].batches == 0;
@@ -542,7 +544,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
                     if (!available[mercuryInput][mercuryAtom]) {
                         for (auto j : descending(mercuryInput))
                             if (available[mercuryInput][j]) {
-        CheckSupplyDeadline(deadline);
+                                CheckSupplyDeadline(deadline);
                                 if (disposal)
                                     emit(SupplyPlan::Kind::Discard, mercuryInput, j, output);
                                 else
@@ -556,7 +558,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
                         fresh[mercuryInput] = false;
                     }
                     for (auto j : blockers(mercuryInput, mercuryAtom, false)) {
-        CheckSupplyDeadline(deadline);
+                        CheckSupplyDeadline(deadline);
                         if (disposal)
                             emit(SupplyPlan::Kind::Discard, mercuryInput, j, output);
                         else
@@ -577,7 +579,7 @@ SupplyPlan BuildSupply(const io::PuzzleData& p, const ChemicalRecipe* recipe,
         if (fresh[input] || plan.usage[input].batches == 0) continue;
         for (auto j : descending(input))
             if (available[input][j]) {
-        CheckSupplyDeadline(deadline);
+                CheckSupplyDeadline(deadline);
                 if (!disposal)
                     throw std::invalid_argument(
                         "supply period leaves unused inventory without disposal permission");
@@ -611,7 +613,7 @@ SupplyPlan AssemblyPlanner::PlanSupply(const io::PuzzleData& p, bool forest,
     try {
         const auto recipe = ChemicalPlanner::Plan(p, 1, true, deadline);
         for (std::size_t products = 1; products <= maxProducts; ++products) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
             if ((6ULL * p.outputMultiplier) % products != 0) continue;
             auto budget = recipe;
             for (auto& batches : budget.inputBatches)
@@ -624,11 +626,11 @@ SupplyPlan AssemblyPlanner::PlanSupply(const io::PuzzleData& p, bool forest,
             try {
                 return BuildSupply(p, &budget, products, deadline);
             } catch (const std::invalid_argument&) {
-        CheckSupplyDeadline(deadline);
+                CheckSupplyDeadline(deadline);
                 try {
                     return BuildSupply(p, nullptr, products, deadline);
                 } catch (const std::invalid_argument&) {
-        CheckSupplyDeadline(deadline);
+                    CheckSupplyDeadline(deadline);
                 }
             }
         }
@@ -658,19 +660,19 @@ SupplyPlan AssemblyPlanner::PlanSupply(const io::PuzzleData& p, bool forest,
             const auto searched = search(products, &budget);
             if (searched.status == InventorySearchStatus::Found) return searched.plan;
         } catch (const std::invalid_argument&) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
         }
     }
     if (p.permissionBits & (1ULL << 17))
         for (std::size_t products = 1; products <= 12; ++products) {
-        CheckSupplyDeadline(deadline);
+            CheckSupplyDeadline(deadline);
             if ((6ULL * p.outputMultiplier) % products != 0) continue;
             try {
                 const auto budget = ChemicalPlanner::Plan(p, products, true, deadline);
                 const auto searched = search(products, &budget);
                 if (searched.status == InventorySearchStatus::Found) return searched.plan;
             } catch (const std::invalid_argument&) {
-        CheckSupplyDeadline(deadline);
+                CheckSupplyDeadline(deadline);
             }
         }
     // The fallback emits only the existing row compiler's serial supply operations.

@@ -1,10 +1,10 @@
 #include "AssemblySolver.hpp"
 #include "BinaryWriter.hpp"
 #include "ChemicalPlanner.hpp"
+#include "RepoRoot.hpp"
 #include "SolutionVerifier.hpp"
 #include <filesystem>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 using namespace opusoptima;
 #ifdef HAS_LIBVERIFY
 TEST(DuplicationTest, PreservativeSalt) {

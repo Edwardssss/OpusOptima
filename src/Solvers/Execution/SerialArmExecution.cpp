@@ -1,25 +1,25 @@
 #include "SerialArmExecution.hpp"
-#include "SerialPortAccess.hpp"
 #include "CandidateIdentity.hpp"
 #include "FixedArmIntervals.hpp"
 #include "FragmentCustody.hpp"
 #include "HexFrame.hpp"
 #include "SerialFragmentMotion.hpp"
+#include "SerialPortAccess.hpp"
 
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdlib>
-#include <string>
 #include <limits>
 #include <map>
 #include <queue>
 #include <set>
+#include <string>
 
 namespace opusoptima::solvers {
 void RequireFinitePhysicalTerminal(const ExecutionIR::State& state,
-    const ExecutionIR::FiniteRetention& terminal,
-    const std::map<ExecutionIR::AtomId, core::HexCoord>& targets) {
+                                   const ExecutionIR::FiniteRetention& terminal,
+                                   const std::map<ExecutionIR::AtomId, core::HexCoord>& targets) {
     ExecutionIR::RequireFiniteTerminal(state, terminal);
     if (targets.size() != terminal.slots.size())
         throw ExecutionIR::LayoutFailure("terminal retention target count mismatch");
@@ -56,9 +56,9 @@ struct PrismPlacement {
 };
 constexpr std::array<int, 3> prismColors{8, 2, 4};
 
-std::vector<PrismPlacement> SelectPrisms(
-    const std::map<Id, Cell>& sites, const std::map<IR::Edge, std::uint8_t>& bonds,
-    const std::vector<std::map<Id, Cell>>& incoming) {
+std::vector<PrismPlacement> SelectPrisms(const std::map<Id, Cell>& sites,
+                                         const std::map<IR::Edge, std::uint8_t>& bonds,
+                                         const std::vector<std::map<Id, Cell>>& incoming) {
     std::vector<PrismPlacement> result;
     for (const auto& [edge, bits] : bonds)
         for (int color : {2, 4, 8})
@@ -67,7 +67,8 @@ std::vector<PrismPlacement> SelectPrisms(
                 bool placed = false;
                 for (int turn = 0; turn < 6 && !placed; ++turn) {
                     const std::array<Cell, 3> vertices{
-                        {{0, 0}, Hex(core::HexFrame{{}, turn}.ToWorld({0, 1})),
+                        {{0, 0},
+                         Hex(core::HexFrame{{}, turn}.ToWorld({0, 1})),
                          Hex(core::HexFrame{{}, turn}.ToWorld({1, 0}))}};
                     for (int side = 0; side < 3 && !placed; ++side)
                         for (bool reverse : {false, true}) {
@@ -76,17 +77,18 @@ std::vector<PrismPlacement> SelectPrisms(
                             if (Add(origin, vertices[(side + 1) % 3]) != (reverse ? a : b))
                                 continue;
                             const auto third = Add(origin, vertices[(side + 2) % 3]);
-                            if (std::any_of(sites.begin(), sites.end(), [&](const auto& atom) {
-                                    return atom.second == third;
-                                }))
+                            if (std::any_of(sites.begin(), sites.end(),
+                                            [&](const auto& atom) { return atom.second == third; }))
                                 continue;
                             bool safe = true;
                             for (const auto& pose : incoming) {
                                 std::map<Cell, Id> occupied;
-                                for (const auto& [id, cell] : pose) occupied.emplace(cell, id);
+                                for (const auto& [id, cell] : pose)
+                                    occupied.emplace(cell, id);
                                 for (int i = 0; i < 3; ++i) {
                                     const auto x = occupied.find(Add(origin, vertices[i]));
-                                    const auto y = occupied.find(Add(origin, vertices[(i + 1) % 3]));
+                                    const auto y =
+                                        occupied.find(Add(origin, vertices[(i + 1) % 3]));
                                     if (x == occupied.end() || y == occupied.end()) continue;
                                     const IR::Edge pair{std::min(x->second, y->second),
                                                         std::max(x->second, y->second)};
@@ -96,7 +98,8 @@ std::vector<PrismPlacement> SelectPrisms(
                             }
                             if (!safe) continue;
                             auto world = vertices;
-                            for (auto& cell : world) cell = Add(origin, cell);
+                            for (auto& cell : world)
+                                cell = Add(origin, cell);
                             result.push_back({origin, turn, world});
                             placed = true;
                             break;
@@ -116,11 +119,12 @@ struct ColoredOutputStation {
 };
 
 io::SolutionData CompileWholeFragmentDock(const io::PuzzleData& p, const ExecutionPlan& plan,
-    std::chrono::steady_clock::time_point deadline) {
+                                          std::chrono::steady_clock::time_point deadline) {
     if (!plan.finiteTerminal || !plan.finiteTerminal->slots.empty() || p.inputs.size() != 1 ||
-        p.outputs.size() != 1 || p.inputs[0].atoms.size() < 2 ||
-        p.inputs[0].atoms.size() > 12 || p.inputs[0].bonds.empty())
-        throw IR::Unsupported("fragment dock requires complete connected ordinary feed/output and no retained stock");
+        p.outputs.size() != 1 || p.inputs[0].atoms.size() < 2 || p.inputs[0].atoms.size() > 12 ||
+        p.inputs[0].bonds.empty())
+        throw IR::Unsupported(
+            "fragment dock requires complete connected ordinary feed/output and no retained stock");
     for (const auto& bond : p.inputs[0].bonds)
         if (bond.bits != 1) throw IR::Unsupported("fragment dock requires ordinary internal bonds");
     for (const auto& step : plan.material.steps)
@@ -131,13 +135,15 @@ io::SolutionData CompileWholeFragmentDock(const io::PuzzleData& p, const Executi
         p.inputs[0].bonds.size() != p.outputs[0].bonds.size())
         throw IR::Unsupported("fragment dock requires identical local graph frames");
     for (const auto& a : p.inputs[0].atoms)
-        if (std::none_of(p.outputs[0].atoms.begin(), p.outputs[0].atoms.end(),
-            [&](const auto& b) { return a.position == b.position && a.type == b.type; }))
+        if (std::none_of(p.outputs[0].atoms.begin(), p.outputs[0].atoms.end(), [&](const auto& b) {
+                return a.position == b.position && a.type == b.type;
+            }))
             throw IR::Unsupported("fragment dock requires identical local graph frames");
     for (const auto& a : p.inputs[0].bonds)
-        if (std::none_of(p.outputs[0].bonds.begin(), p.outputs[0].bonds.end(),
-            [&](const auto& b) { return a.bits == b.bits &&
-                ((a.from == b.from && a.to == b.to) || (a.from == b.to && a.to == b.from)); }))
+        if (std::none_of(p.outputs[0].bonds.begin(), p.outputs[0].bonds.end(), [&](const auto& b) {
+                return a.bits == b.bits &&
+                       ((a.from == b.from && a.to == b.to) || (a.from == b.to && a.to == b.from));
+            }))
             throw IR::Unsupported("fragment dock internal edge mismatch");
     auto probe = IR::Initial(p);
     IR proof;
@@ -148,108 +154,126 @@ io::SolutionData CompileWholeFragmentDock(const io::PuzzleData& p, const Executi
     proof.AppendFromTail(p, probe, {K::Output, 0, {probeId}});
     const core::HexCoord output{18, 0};
     std::size_t candidates = 0;
-    for (const auto& atom : p.outputs[0].atoms) for (int radius = 1; radius <= 3; ++radius) {
-        for (int direction = 0; direction < 6; ++direction) {
-            if (++candidates > 18) throw IR::LayoutFailure("fragment dock bounded layouts rejected");
-            if (std::chrono::steady_clock::now() >= deadline)
-                throw IR::BudgetFailure("shared material/physical deadline exhausted");
-            const auto targetGrip = core::Add(output, atom.position);
-            core::HexCoord offset{radius, 0};
-            for (int i = 0; i < direction; ++i) offset = core::RotateClockwise(offset);
-            const auto base = core::Subtract(targetGrip, offset);
-            const core::HexFrame inverse{{}, 5};
-            const auto sourceOrigin = core::Add(base, inverse.ToWorld(core::Subtract(output, base)));
-            const core::HexFrame source{sourceOrigin, 5};
-            std::vector<core::HexCoord> feed;
-            bool collision = false;
-            for (const auto& a : p.inputs[0].atoms) {
-                feed.push_back(source.ToWorld(a.position));
-                collision |= feed.back() == base;
-                for (const auto& b : p.outputs[0].atoms)
-                    collision |= feed.back() == core::Add(output, b.position);
-            }
-            for (const auto& a : p.outputs[0].atoms)
-                collision |= core::Add(output, a.position) == base;
-            if (collision) continue;
-            io::SolutionData machine;
-            machine.puzzleName = p.name;
-            machine.solutionName = "Finite complete-fragment docking";
-            machine.objects.push_back({"input", sourceOrigin, {}, {1, 5, 0, 0, 0}});
-            machine.objects.push_back({"out-std", output, {}, {1, 0, 0, 0, 0}});
-            const int initial = (direction + 5) % 6;
-            machine.objects.push_back({"arm1", base, {}, {radius, initial, 0, 0, 0}});
-            auto& tape = machine.objects.back().instructions;
-            auto state = IR::Initial(p);
-            IR physical;
-            FragmentCustody custody;
-            int tick = 0;
-            bool legal = true;
-            for (const auto& step : plan.material.steps) {
-                const auto& op = step.operation;
-                if (op.kind == K::Relocate) continue;
-                if (op.kind == K::Acquire) {
-                    if (!state.atoms.empty()) { legal = false; break; }
-                    physical.AppendFromTail(p, state, {K::Acquire, 0, {}, 0, 5, sourceOrigin});
-                } else {
-                    const auto id = op.atoms.at(0);
-                    const auto grip = source.ToWorld(atom.position);
-                    auto held = std::find_if(state.atoms.begin(), state.atoms.end(),
-                        [&](const auto& entry) { return entry.second.position == grip; });
-                    if (held == state.atoms.end() || !CertifyFixedArmInterval(state, base, feed,
-                        {0, radius, initial, 0}, {0, radius, direction, 1}, 'r', true)) {
-                        legal = false; break;
-                    }
-                    custody.Grab(state, 0, grip, held->first);
-                    tape.push_back({'G', tick++});
-                    const auto rotatedBase = core::RotateClockwise(base);
-                    physical.AppendFromTail(p, state, {K::Relocate, 0, {id}, 0, 1,
-                        core::Subtract(base, rotatedBase)});
-                    tape.push_back({'r', tick++});
-                    custody.Validate(state);
-                    for (const auto& a : p.outputs[0].atoms)
-                        if (std::none_of(state.atoms.begin(), state.atoms.end(), [&](const auto& entry) {
-                            return entry.second.position == core::Add(output, a.position) &&
-                                   entry.second.type == a.type;
-                        })) throw IR::Error("fragment dock final physical frame mismatch");
-                    custody.Drop(0);
-                    tape.push_back({'g', tick++});
-                    // This restricted domain has no retained stock; use the same physical terminal gate.
-                    auto preview = physical;
-                    auto projected = state;
-                    preview.AppendFromTail(p, projected, {K::Output, 0, {id}});
-                    if (projected.outputs == plan.finiteTerminal->outputs)
-                        RequireFinitePhysicalTerminal(projected, *plan.finiteTerminal, {});
-                    physical.AppendFromTail(p, state, {K::Output, 0, {id}});
-                    custody.Validate(state);
-                    auto renewable = IR::Initial(p);
-                    IR renewal;
-                    renewal.AppendFromTail(p, renewable, {K::Acquire, 0, {}, 0, 5, sourceOrigin});
-                    if (!CertifyFixedArmInterval(renewable, base, feed,
-                        {0, radius, direction, 0}, {0, radius, initial, 5}, 'R', false)) {
-                        legal = false; break;
-                    }
-                    tape.push_back({'R', tick++});
+    for (const auto& atom : p.outputs[0].atoms)
+        for (int radius = 1; radius <= 3; ++radius) {
+            for (int direction = 0; direction < 6; ++direction) {
+                if (++candidates > 18)
+                    throw IR::LayoutFailure("fragment dock bounded layouts rejected");
+                if (std::chrono::steady_clock::now() >= deadline)
+                    throw IR::BudgetFailure("shared material/physical deadline exhausted");
+                const auto targetGrip = core::Add(output, atom.position);
+                core::HexCoord offset{radius, 0};
+                for (int i = 0; i < direction; ++i)
+                    offset = core::RotateClockwise(offset);
+                const auto base = core::Subtract(targetGrip, offset);
+                const core::HexFrame inverse{{}, 5};
+                const auto sourceOrigin =
+                    core::Add(base, inverse.ToWorld(core::Subtract(output, base)));
+                const core::HexFrame source{sourceOrigin, 5};
+                std::vector<core::HexCoord> feed;
+                bool collision = false;
+                for (const auto& a : p.inputs[0].atoms) {
+                    feed.push_back(source.ToWorld(a.position));
+                    collision |= feed.back() == base;
+                    for (const auto& b : p.outputs[0].atoms)
+                        collision |= feed.back() == core::Add(output, b.position);
                 }
+                for (const auto& a : p.outputs[0].atoms)
+                    collision |= core::Add(output, a.position) == base;
+                if (collision) continue;
+                io::SolutionData machine;
+                machine.puzzleName = p.name;
+                machine.solutionName = "Finite complete-fragment docking";
+                machine.objects.push_back({"input", sourceOrigin, {}, {1, 5, 0, 0, 0}});
+                machine.objects.push_back({"out-std", output, {}, {1, 0, 0, 0, 0}});
+                const int initial = (direction + 5) % 6;
+                machine.objects.push_back({"arm1", base, {}, {radius, initial, 0, 0, 0}});
+                auto& tape = machine.objects.back().instructions;
+                auto state = IR::Initial(p);
+                IR physical;
+                FragmentCustody custody;
+                int tick = 0;
+                bool legal = true;
+                for (const auto& step : plan.material.steps) {
+                    const auto& op = step.operation;
+                    if (op.kind == K::Relocate) continue;
+                    if (op.kind == K::Acquire) {
+                        if (!state.atoms.empty()) {
+                            legal = false;
+                            break;
+                        }
+                        physical.AppendFromTail(p, state, {K::Acquire, 0, {}, 0, 5, sourceOrigin});
+                    } else {
+                        const auto id = op.atoms.at(0);
+                        const auto grip = source.ToWorld(atom.position);
+                        auto held = std::find_if(
+                            state.atoms.begin(), state.atoms.end(),
+                            [&](const auto& entry) { return entry.second.position == grip; });
+                        if (held == state.atoms.end() ||
+                            !CertifyFixedArmInterval(state, base, feed, {0, radius, initial, 0},
+                                                     {0, radius, direction, 1}, 'r', true)) {
+                            legal = false;
+                            break;
+                        }
+                        custody.Grab(state, 0, grip, held->first);
+                        tape.push_back({'G', tick++});
+                        const auto rotatedBase = core::RotateClockwise(base);
+                        physical.AppendFromTail(
+                            p, state,
+                            {K::Relocate, 0, {id}, 0, 1, core::Subtract(base, rotatedBase)});
+                        tape.push_back({'r', tick++});
+                        custody.Validate(state);
+                        for (const auto& a : p.outputs[0].atoms)
+                            if (std::none_of(state.atoms.begin(), state.atoms.end(),
+                                             [&](const auto& entry) {
+                                                 return entry.second.position ==
+                                                            core::Add(output, a.position) &&
+                                                        entry.second.type == a.type;
+                                             }))
+                                throw IR::Error("fragment dock final physical frame mismatch");
+                        custody.Drop(0);
+                        tape.push_back({'g', tick++});
+                        // This restricted domain has no retained stock; use the same physical
+                        // terminal gate.
+                        auto preview = physical;
+                        auto projected = state;
+                        preview.AppendFromTail(p, projected, {K::Output, 0, {id}});
+                        if (projected.outputs == plan.finiteTerminal->outputs)
+                            RequireFinitePhysicalTerminal(projected, *plan.finiteTerminal, {});
+                        physical.AppendFromTail(p, state, {K::Output, 0, {id}});
+                        custody.Validate(state);
+                        auto renewable = IR::Initial(p);
+                        IR renewal;
+                        renewal.AppendFromTail(p, renewable,
+                                               {K::Acquire, 0, {}, 0, 5, sourceOrigin});
+                        if (!CertifyFixedArmInterval(renewable, base, feed,
+                                                     {0, radius, direction, 0},
+                                                     {0, radius, initial, 5}, 'R', false)) {
+                            legal = false;
+                            break;
+                        }
+                        tape.push_back({'R', tick++});
+                    }
+                }
+                if (!legal) continue;
+                IR::RequireFiniteTerminal(state, *plan.finiteTerminal);
+                IR::RequireComplete(state, plan.finiteTerminal->outputs);
+                if (physical.Replay(p) != state)
+                    throw IR::Error("fragment dock physical replay mismatch");
+                tape.push_back({'O', tick});
+                machine.metrics.cycles = tick + 1;
+                return machine;
             }
-            if (!legal) continue;
-            IR::RequireFiniteTerminal(state, *plan.finiteTerminal);
-            IR::RequireComplete(state, plan.finiteTerminal->outputs);
-            if (physical.Replay(p) != state) throw IR::Error("fragment dock physical replay mismatch");
-            tape.push_back({'O', tick});
-            machine.metrics.cycles = tick + 1;
-            return machine;
         }
-    }
     throw IR::LayoutFailure("fragment dock sweep or footprint collision");
 }
 
-io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int spacing,
-                         int latticePhase, int neighborChoice,
-                         std::chrono::steady_clock::time_point deadline, bool pipeline = false,
-                         bool retainOrdinary = false,
-                         const std::function<void(const std::string&)>& evidence = {},
-                         bool sparseSourceArms = false,
-                         SupplyMaterialLoweringPolicy policy = SupplyMaterialLoweringPolicy::PreserveCompatible) {
+io::SolutionData Compile(
+    const io::PuzzleData& p, const ExecutionPlan& plan, int spacing, int latticePhase,
+    int neighborChoice, std::chrono::steady_clock::time_point deadline, bool pipeline = false,
+    bool retainOrdinary = false, const std::function<void(const std::string&)>& evidence = {},
+    bool sparseSourceArms = false,
+    SupplyMaterialLoweringPolicy policy = SupplyMaterialLoweringPolicy::PreserveCompatible) {
     const bool closedLife = policy == SupplyMaterialLoweringPolicy::ClosedCardinalLife;
     if (closedLife && (!SupportsClosedCardinalLife(p) || plan.finiteTerminal))
         throw IR::Unsupported("closed cardinal life requires an unretained closed plan");
@@ -271,7 +295,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
             if (expected.step != actual.step || expected.kind != actual.kind ||
                 expected.inputs != actual.inputs || expected.products != actual.products ||
                 expected.dependsOn != actual.dependsOn || expected.buffer != actual.buffer ||
-                expected.output != actual.output || expected.outputOccurrence != actual.outputOccurrence)
+                expected.output != actual.output ||
+                expected.outputOccurrence != actual.outputOccurrence)
                 throw IR::Unsupported("terminal retention task metadata mismatch");
         }
         for (std::size_t i = 0; i < checked.caches.size(); ++i) {
@@ -295,27 +320,31 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
     const auto* fragmentDock = std::getenv("OPUSOPTIMA_FRAGMENT_PRODUCT_DOCKING");
     if (fragmentDock && std::string(fragmentDock) == "1")
         return CompileWholeFragmentDock(p, plan, deadline);
-    const bool closedSingletonWheel = !plan.finiteTerminal &&
-        std::any_of(plan.material.steps.begin(), plan.material.steps.end(), [](const auto& step) {
-            return step.operation.wheelCatalyst.has_value();
-        }) && std::all_of(plan.material.steps.begin(), plan.material.steps.end(), [](const auto& step) {
-            return !step.operation.wheelCatalyst ||
-                IR::Fragment(step.preconditions, step.operation.atoms.at(0)).size() == 1;
-        }) && std::any_of(p.outputs.begin(), p.outputs.end(), [](const auto& output) {
+    const bool closedSingletonWheel =
+        !plan.finiteTerminal &&
+        std::any_of(plan.material.steps.begin(), plan.material.steps.end(),
+                    [](const auto& step) { return step.operation.wheelCatalyst.has_value(); }) &&
+        std::all_of(
+            plan.material.steps.begin(), plan.material.steps.end(),
+            [](const auto& step) {
+                return !step.operation.wheelCatalyst ||
+                       IR::Fragment(step.preconditions, step.operation.atoms.at(0)).size() == 1;
+            }) &&
+        std::any_of(p.outputs.begin(), p.outputs.end(), [](const auto& output) {
             return std::any_of(output.bonds.begin(), output.bonds.end(),
-                [](const auto& bond) { return bond.bits != 1; });
+                               [](const auto& bond) { return bond.bits != 1; });
         });
     std::set<Id> convertedFire;
     if (closedSingletonWheel) {
         const auto checked = MakeExecutionPlan(p, plan.material);
         if (checked.origins != plan.origins || checked.tasks.size() != plan.tasks.size() ||
-            p.inputs.size() > 4 || p.outputs.size() != 1 ||
-            p.outputs.front().atoms.size() > 4 || plan.material.steps.size() > 512 ||
-            plan.origins.size() > 512 || !plan.caches.empty())
+            p.inputs.size() > 4 || p.outputs.size() != 1 || p.outputs.front().atoms.size() > 4 ||
+            plan.material.steps.size() > 512 || plan.origins.size() > 512 || !plan.caches.empty())
             throw IR::Unsupported("closed singleton wheel requires a bounded scalar output");
         for (const auto& input : p.inputs)
-            if (input.atoms.size() > 4 || std::any_of(input.bonds.begin(), input.bonds.end(),
-                    [](const auto& bond) { return bond.bits != 1; }))
+            if (input.atoms.size() > 4 ||
+                std::any_of(input.bonds.begin(), input.bonds.end(),
+                            [](const auto& bond) { return bond.bits != 1; }))
                 throw IR::Unsupported("closed singleton wheel requires small ordinary sources");
         std::map<IR::Edge, std::uint8_t> outputEdges;
         for (const auto& step : plan.material.steps)
@@ -324,13 +353,16 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 for (const auto id : ids) {
                     const auto& atom = step.preconditions.atoms.at(id);
                     if (std::none_of(p.outputs.front().atoms.begin(), p.outputs.front().atoms.end(),
-                        [&](const auto& requested) {
-                            return atom.position == requested.position && atom.type == requested.type;
-                        }))
-                        throw IR::Unsupported("closed singleton wheel requires actual output port pose");
+                                     [&](const auto& requested) {
+                                         return atom.position == requested.position &&
+                                                atom.type == requested.type;
+                                     }))
+                        throw IR::Unsupported(
+                            "closed singleton wheel requires actual output port pose");
                 }
                 for (const auto& [edge, mask] : step.preconditions.bonds)
-                    if (std::binary_search(ids.begin(), ids.end(), edge.a)) outputEdges.emplace(edge, mask);
+                    if (std::binary_search(ids.begin(), ids.end(), edge.a))
+                        outputEdges.emplace(edge, mask);
             }
         std::optional<IR::WheelCatalyst> device;
         std::set<IR::Edge> sourceEdges, sourceCuts;
@@ -339,7 +371,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
             const auto& op = step.operation;
             const auto& task = checked.tasks.at(index);
             if (plan.tasks[index].step != task.step || plan.tasks[index].kind != task.kind ||
-                plan.tasks[index].inputs != task.inputs || plan.tasks[index].products != task.products)
+                plan.tasks[index].inputs != task.inputs ||
+                plan.tasks[index].products != task.products)
                 throw IR::Unsupported("closed singleton wheel task metadata mismatch");
             if (op.kind != K::Acquire && op.kind != K::Relocate && op.kind != K::Unbond &&
                 op.kind != K::Calcify && op.kind != K::Duplicate && op.kind != K::Bond &&
@@ -349,7 +382,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 const IR::Edge edge{std::min(op.atoms.at(0), op.atoms.at(1)),
                                     std::max(op.atoms.at(0), op.atoms.at(1))};
                 if (!outputEdges.contains(edge) || outputEdges.at(edge) != op.bits)
-                    throw IR::Unsupported("closed singleton wheel only assembles final output edges");
+                    throw IR::Unsupported(
+                        "closed singleton wheel only assembles final output edges");
             }
             if (op.kind == K::Acquire)
                 for (const auto& [edge, mask] : step.effects.bonds)
@@ -360,13 +394,15 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 const IR::Edge edge{std::min(op.atoms.at(0), op.atoms.at(1)),
                                     std::max(op.atoms.at(0), op.atoms.at(1))};
                 if (op.bits != 1 || !sourceEdges.contains(edge) || !sourceCuts.insert(edge).second)
-                    throw IR::Unsupported("closed singleton wheel only cuts original source bonds once");
+                    throw IR::Unsupported(
+                        "closed singleton wheel only cuts original source bonds once");
             }
             if ((op.kind == K::Calcify || op.kind == K::Discard || op.kind == K::Relocate) &&
                 IR::Fragment(step.preconditions, op.atoms.at(0)).size() != 1)
                 throw IR::Unsupported("closed singleton wheel requires singleton reactions");
             if (op.kind == K::Calcify && !plan.origins.at(op.atoms.at(0)).input)
-                throw IR::Unsupported("closed singleton wheel calcifies original source identities");
+                throw IR::Unsupported(
+                    "closed singleton wheel calcifies original source identities");
             if (op.kind != K::Duplicate) continue;
             if (!op.wheelCatalyst || index == 0 ||
                 IR::Fragment(step.preconditions, op.atoms.at(0)).size() != 1 ||
@@ -374,25 +410,27 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 plan.material.steps[index - 1].preconditions.nextId != op.atoms.at(0))
                 throw IR::Unsupported("closed singleton wheel requires actual calcify provenance");
             const auto& binding = *op.wheelCatalyst;
-            if (device && (device->device != binding.device ||
-                           device->orientation != binding.orientation))
+            if (device &&
+                (device->device != binding.device || device->orientation != binding.orientation))
                 throw IR::Unsupported("closed singleton wheel requires one static device");
             device = binding;
             if (binding.element == core::AtomType::Fire)
                 convertedFire.insert(step.preconditions.nextId);
         }
         const auto& output = p.outputs.front();
-        if (std::count_if(output.atoms.begin(), output.atoms.end(), [](const auto& atom) {
-                return atom.type == core::AtomType::Fire;
-            }) != 2 || std::count_if(output.bonds.begin(), output.bonds.end(),
-                [](const auto& bond) { return bond.bits != 1; }) != 1)
+        if (std::count_if(output.atoms.begin(), output.atoms.end(),
+                          [](const auto& atom) { return atom.type == core::AtomType::Fire; }) !=
+                2 ||
+            std::count_if(output.bonds.begin(), output.bonds.end(),
+                          [](const auto& bond) { return bond.bits != 1; }) != 1)
             throw IR::Unsupported("closed singleton wheel requires one colored Fire pair");
         for (const auto& step : plan.material.steps)
             if (step.operation.kind == K::Output)
                 for (const auto id : IR::Fragment(step.preconditions, step.operation.atoms.at(0)))
                     if (step.preconditions.atoms.at(id).type == core::AtomType::Fire &&
                         !convertedFire.contains(id))
-                        throw IR::Unsupported("closed singleton wheel Fire lacks conversion provenance");
+                        throw IR::Unsupported(
+                            "closed singleton wheel Fire lacks conversion provenance");
     }
     std::set<IR::Edge> inheritedRoots;
     const auto rootOf = [&](Id atom) {
@@ -440,8 +478,10 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         throw IR::Unsupported("serial arm implementation needs a dividing closed period");
     for (const auto count : final.outputs)
         if (count != final.outputs[0]) throw IR::Unsupported("serial arm output periods differ");
-    if (plan.finiteTerminal) IR::RequireFiniteTerminal(final, *plan.finiteTerminal);
-    else IR::RequireComplete(final, final.outputs);
+    if (plan.finiteTerminal)
+        IR::RequireFiniteTerminal(final, *plan.finiteTerminal);
+    else
+        IR::RequireComplete(final, final.outputs);
     struct EndpointStage {
         Id endpoint{}, salt{}, product{};
         std::vector<Id> atoms;
@@ -463,8 +503,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 throw IR::Unsupported("monomer wheel requires a real calcify precursor");
             if (!monomers.empty() &&
                 (monomers.begin()->second.device != step.operation.wheelCatalyst->device ||
-                 (!closedSingletonWheel && monomers.begin()->second.element !=
-                                               step.operation.wheelCatalyst->element) ||
+                 (!closedSingletonWheel &&
+                  monomers.begin()->second.element != step.operation.wheelCatalyst->element) ||
                  monomers.begin()->second.orientation != step.operation.wheelCatalyst->orientation))
                 throw IR::Unsupported("monomer wheel requires one static cardinal station");
             monomers.emplace(substrate, *step.operation.wheelCatalyst);
@@ -535,8 +575,10 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         if (cell.first < -110 || cell.first > 110 || cell.second < -110 || cell.second > 110)
             throw IR::LayoutFailure("serial arm layout exceeds bounded workspace");
         reserved.insert(cell);
-        if (reservingOutput) overlappingOutputs |= !outputCells.insert(cell).second;
-        else nonOutputCells.insert(cell);
+        if (reservingOutput)
+            overlappingOutputs |= !outputCells.insert(cell).second;
+        else
+            nonOutputCells.insert(cell);
         lowQ = std::min(lowQ, cell.first - 4);
         highQ = std::max(highQ, cell.first + 4);
         lowR = std::min(lowR, cell.second - 4);
@@ -647,10 +689,12 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
             if (retainOrdinary) {
                 bool retained = true, seen = false;
                 for (const auto& step : plan.material.steps) {
-                    if (step.operation.kind != K::Output || step.operation.index != output) continue;
+                    if (step.operation.kind != K::Output || step.operation.index != output)
+                        continue;
                     seen = true;
                     Id a = std::numeric_limits<Id>::max(), b = a;
-                    for (const auto id : IR::Fragment(step.preconditions, step.operation.atoms.at(0))) {
+                    for (const auto id :
+                         IR::Fragment(step.preconditions, step.operation.atoms.at(0))) {
                         const auto position = step.preconditions.atoms.at(id).position;
                         if (position == bond.from) a = id;
                         if (position == bond.to) b = id;
@@ -686,23 +730,23 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
             if (!genuine && !closedSingletonWheel) continue;
             if (!(p.permissionBits & (1ULL << 11)))
                 throw IR::PermissionFailure(11, "colored output station requires prism permission");
-            if (!closedSingletonWheel && (plan.finiteTerminal || ids.size() != 2 || station.bonds.size() != 1 ||
-                p.outputs.at(station.output).atoms.size() != 2 ||
-                p.outputs.at(station.output).bonds.size() != 1 ||
-                p.inputs.size() > 4 || plan.material.steps.size() > 512 ||
-                plan.origins.size() > 512 ||
-                std::any_of(p.inputs.begin(), p.inputs.end(), [](const auto& input) {
-                    return input.atoms.size() != 1 || !input.bonds.empty();
-                }) ||
-                std::any_of(p.outputs.begin(), p.outputs.end(), [](const auto& output) {
-                    return output.atoms.size() > 2;
-                }) ||
-                std::any_of(plan.material.steps.begin(), plan.material.steps.end(),
-                    [](const auto& material) {
-                        const auto kind = material.operation.kind;
-                        return kind != K::Acquire && kind != K::Relocate &&
-                               kind != K::Bond && kind != K::Output;
-                    })))
+            if (!closedSingletonWheel &&
+                (plan.finiteTerminal || ids.size() != 2 || station.bonds.size() != 1 ||
+                 p.outputs.at(station.output).atoms.size() != 2 ||
+                 p.outputs.at(station.output).bonds.size() != 1 || p.inputs.size() > 4 ||
+                 plan.material.steps.size() > 512 || plan.origins.size() > 512 ||
+                 std::any_of(p.inputs.begin(), p.inputs.end(),
+                             [](const auto& input) {
+                                 return input.atoms.size() != 1 || !input.bonds.empty();
+                             }) ||
+                 std::any_of(p.outputs.begin(), p.outputs.end(),
+                             [](const auto& output) { return output.atoms.size() > 2; }) ||
+                 std::any_of(plan.material.steps.begin(), plan.material.steps.end(),
+                             [](const auto& material) {
+                                 const auto kind = material.operation.kind;
+                                 return kind != K::Acquire && kind != K::Relocate &&
+                                        kind != K::Bond && kind != K::Output;
+                             })))
                 throw IR::Unsupported("independent colored output station requires scalar dimers");
             if (station.bonds.size() != 1)
                 throw IR::Unsupported("colored output station requires one colored pair");
@@ -715,19 +759,20 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                     (closedSingletonWheel && !convertedFire.contains(id)))
                     throw IR::Unsupported("colored output station requires genuine Fire endpoints");
                 station.sites.emplace(id, Add(outputOrigins.at(station.output),
-                                             Hex(step.preconditions.atoms.at(id).position)));
+                                              Hex(step.preconditions.atoms.at(id).position)));
             }
-            const auto requestedBond = std::find_if(p.outputs.at(station.output).bonds.begin(),
-                p.outputs.at(station.output).bonds.end(), [](const auto& bond) { return bond.bits != 1; });
+            const auto requestedBond =
+                std::find_if(p.outputs.at(station.output).bonds.begin(),
+                             p.outputs.at(station.output).bonds.end(),
+                             [](const auto& bond) { return bond.bits != 1; });
             if (requestedBond == p.outputs.at(station.output).bonds.end())
                 throw IR::Unsupported("colored output station missing requested edge");
             const auto& requested = *requestedBond;
             const auto& edge = station.bonds.begin()->first;
             const auto a = step.preconditions.atoms.at(edge.a).position;
             const auto b = step.preconditions.atoms.at(edge.b).position;
-            if (requested.bits != mask ||
-                !((requested.from == a && requested.to == b) ||
-                  (requested.from == b && requested.to == a)))
+            if (requested.bits != mask || !((requested.from == a && requested.to == b) ||
+                                            (requested.from == b && requested.to == a)))
                 throw IR::Unsupported("colored output station requires the actual port pose");
             if (std::chrono::steady_clock::now() >= deadline)
                 throw IR::BudgetFailure("shared material/physical deadline exhausted");
@@ -746,8 +791,7 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         }
     const Cell metal{0, -6}, mercury{1, -6}, calcifier{0, -12}, purifier{0, 0}, purified{0, 1},
         disposal{8, -6}, animismus{6, 0};
-    bool projects = false, calcifies = false, purifies = false, discards = false,
-         animates = false;
+    bool projects = false, calcifies = false, purifies = false, discards = false, animates = false;
     for (const auto& task : plan.tasks) {
         projects |= task.kind == K::Project;
         calcifies |= task.kind == K::Calcify;
@@ -758,12 +802,14 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
     if (animates) {
         const auto* enabled = std::getenv("OPUSOPTIMA_SERIAL_ANIMISMUS");
         if (!closedLife && (!enabled || std::string(enabled) != "1"))
-            throw IR::Unsupported("serial arm material reaction not yet implemented (Animismus experiment disabled)");
+            throw IR::Unsupported(
+                "serial arm material reaction not yet implemented (Animismus experiment disabled)");
         if (!(p.permissionBits & (1ULL << 16)))
             throw IR::Unsupported("Animismus permission required");
         const auto* precursor = std::getenv("OPUSOPTIMA_CALCIFY_ANIMISMUS");
         if (discards || (calcifies && !closedLife && (!precursor || std::string(precursor) != "1")))
-            throw IR::Unsupported("Animismus experiment excludes disabled precursor calcification and disposal");
+            throw IR::Unsupported(
+                "Animismus experiment excludes disabled precursor calcification and disposal");
         std::size_t vitaeCount = 0, morsCount = 0;
         for (const auto& output : p.outputs)
             for (const auto& atom : output.atoms) {
@@ -771,7 +817,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 morsCount += atom.type == core::AtomType::Mors;
             }
         if ((!vitaeCount || vitaeCount != morsCount) && !plan.finiteTerminal)
-            throw IR::Unsupported("Animismus experiment requires balanced ordinary coproduct outputs");
+            throw IR::Unsupported(
+                "Animismus experiment requires balanced ordinary coproduct outputs");
         for (auto offset : {Cell{0, 0}, Cell{1, 0}, Cell{0, 1}, Cell{1, -1}})
             reserve(Add(animismus, offset));
         object("glyph-life-and-death", animismus);
@@ -818,8 +865,7 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
             reserve(cell);
             wheelCells.insert(cell);
         }
-        if (reserved.contains(base))
-            throw IR::LayoutFailure("monomer wheel occupied base");
+        if (reserved.contains(base)) throw IR::LayoutFailure("monomer wheel occupied base");
         reserve(base);
         wheelCells.insert(base);
         object("baron", base, monomers.begin()->second.orientation);
@@ -827,11 +873,20 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         for (const auto& [substrate, binding] : monomers) {
             Cell offset{};
             switch (binding.element) {
-            case core::AtomType::Water: offset = {0, 1}; break;
-            case core::AtomType::Air: offset = {-1, 1}; break;
-            case core::AtomType::Fire: offset = {0, -1}; break;
-            case core::AtomType::Earth: offset = {1, -1}; break;
-            default: throw IR::Unsupported("monomer wheel requires cardinal type");
+            case core::AtomType::Water:
+                offset = {0, 1};
+                break;
+            case core::AtomType::Air:
+                offset = {-1, 1};
+                break;
+            case core::AtomType::Fire:
+                offset = {0, -1};
+                break;
+            case core::AtomType::Earth:
+                offset = {1, -1};
+                break;
+            default:
+                throw IR::Unsupported("monomer wheel requires cardinal type");
             }
             offset = Hex(core::HexFrame{{}, binding.orientation}.ToWorld(Hex(offset)));
             const auto catalyst = Add(base, offset);
@@ -914,7 +969,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         for (int distance = 1; distance <= binding.convert.second - binding.build.second;
              ++distance) {
             auto pose = prismSites;
-            for (auto& [id, cell] : pose) cell = Add(cell, {0, distance});
+            for (auto& [id, cell] : pose)
+                cell = Add(cell, {0, distance});
             incoming.push_back(std::move(pose));
         }
         for (const auto& glyph : SelectPrisms(prismSites, binding.bonds, incoming))
@@ -983,11 +1039,11 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         for (const auto& port : inputPorts)
             if (port.retained.empty())
                 for (const auto& atom : p.inputs[port.input].atoms) {
-                    const auto degree =
-                        std::count_if(p.inputs[port.input].bonds.begin(),
-                                      p.inputs[port.input].bonds.end(), [&](const auto& bond) {
-                                          return bond.from == atom.position || bond.to == atom.position;
-                                      });
+                    const auto degree = std::count_if(
+                        p.inputs[port.input].bonds.begin(), p.inputs[port.input].bonds.end(),
+                        [&](const auto& bond) {
+                            return bond.from == atom.position || bond.to == atom.position;
+                        });
                     if (degree < 3) continue;
                     const auto cell = Add(port.origin, Hex(atom.position));
                     for (const auto direction : directions)
@@ -1059,22 +1115,27 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         dockingCells.insert(entry);
     }
     const auto* accessFlag = std::getenv("OPUSOPTIMA_PRODUCT_PORT_ACCESS");
-    const bool temporalOutput = (closedLife || (accessFlag && std::string(accessFlag) == "1")) &&
-        !plan.finiteTerminal && !stage && monomers.empty() && inheritedRoots.empty() &&
-        !overlappingOutputs && coloredStations.empty() && !closedSingletonWheel &&
-        std::all_of(p.inputs.begin(), p.inputs.end(), [](const auto& input) {
-            if (input.atoms.size() == 1) return input.bonds.empty();
-            if (input.atoms.size() != 2 || input.bonds.size() != 1) return false;
-            const auto& bond = input.bonds.front();
-            if (bond.bits != 1 || input.atoms[0].position == input.atoms[1].position)
-                return false;
-            return (bond.from == input.atoms[0].position && bond.to == input.atoms[1].position) ||
-                   (bond.to == input.atoms[0].position && bond.from == input.atoms[1].position);
-        }) && SerialMaterialSourceCuts(plan.material) &&
+    const bool temporalOutput =
+        (closedLife || (accessFlag && std::string(accessFlag) == "1")) && !plan.finiteTerminal &&
+        !stage && monomers.empty() && inheritedRoots.empty() && !overlappingOutputs &&
+        coloredStations.empty() && !closedSingletonWheel &&
+        std::all_of(p.inputs.begin(), p.inputs.end(),
+                    [](const auto& input) {
+                        if (input.atoms.size() == 1) return input.bonds.empty();
+                        if (input.atoms.size() != 2 || input.bonds.size() != 1) return false;
+                        const auto& bond = input.bonds.front();
+                        if (bond.bits != 1 || input.atoms[0].position == input.atoms[1].position)
+                            return false;
+                        return (bond.from == input.atoms[0].position &&
+                                bond.to == input.atoms[1].position) ||
+                               (bond.to == input.atoms[0].position &&
+                                bond.from == input.atoms[1].position);
+                    }) &&
+        SerialMaterialSourceCuts(plan.material) &&
         std::all_of(p.outputs.begin(), p.outputs.end(), [](const auto& output) {
             return output.atoms.size() > 1 && !output.bonds.empty() &&
-                std::all_of(output.bonds.begin(), output.bonds.end(),
-                [](const auto& bond) { return bond.bits == 1; });
+                   std::all_of(output.bonds.begin(), output.bonds.end(),
+                               [](const auto& bond) { return bond.bits == 1; });
         });
     if (closedLife && !temporalOutput)
         throw IR::Unsupported("closed cardinal life requires the ordinary temporal contract");
@@ -1094,19 +1155,22 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 const auto atom = step.effects.atoms.find(first + i);
                 const auto position = frame.ToWorld(input.atoms[i].position);
                 const auto cell = Hex(position);
-                const core::HexFrame materialFrame{step.operation.translation, step.operation.rotation};
+                const core::HexFrame materialFrame{step.operation.translation,
+                                                   step.operation.rotation};
                 if (atom == step.effects.atoms.end() || atom->second.type != input.atoms[i].type ||
                     atom->second.position != materialFrame.ToWorld(input.atoms[i].position) ||
-                    !feeds.contains(cell) || !nonOutputCells.contains(cell) || outputCells.contains(cell))
-                    throw IR::LayoutFailure("temporal source regeneration footprint is not protected");
+                    !feeds.contains(cell) || !nonOutputCells.contains(cell) ||
+                    outputCells.contains(cell))
+                    throw IR::LayoutFailure(
+                        "temporal source regeneration footprint is not protected");
             }
             if (input.atoms.size() != 2) continue;
             const IR::Edge edge{first, first + 1};
             auto physical = step.effects;
             for (std::size_t i = 0; i < input.atoms.size(); ++i)
                 physical.atoms.at(first + i).position = frame.ToWorld(input.atoms[i].position);
-            if (!SerialSourceCutWitness(physical, edge, 1, machine.objects, feeds,
-                                         nonOutputCells, outputCells, p.permissionBits))
+            if (!SerialSourceCutWitness(physical, edge, 1, machine.objects, feeds, nonOutputCells,
+                                        outputCells, p.permissionBits))
                 throw IR::LayoutFailure("temporal source Unbond has no physical glyph witness");
             auto a = Hex(physical.atoms.at(edge.a).position);
             auto b = Hex(physical.atoms.at(edge.b).position);
@@ -1115,9 +1179,15 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         }
         for (auto cell : outputCells)
             if (!nonOutputCells.contains(cell)) futureOutputCells.insert(cell);
-        const std::set<std::string> known{"arm1", "input", "out-std", "bonder",
-            "glyph-life-and-death", "glyph-projection", "glyph-calcification",
-            "glyph-purification", "glyph-disposal"};
+        const std::set<std::string> known{"arm1",
+                                          "input",
+                                          "out-std",
+                                          "bonder",
+                                          "glyph-life-and-death",
+                                          "glyph-projection",
+                                          "glyph-calcification",
+                                          "glyph-purification",
+                                          "glyph-disposal"};
         for (const auto& glyph : machine.objects) {
             if (glyph.typeName == "unbonder") {
                 if (glyph.bodyData.size() < 2 || glyph.bodyData[1] < 0 || glyph.bodyData[1] >= 6)
@@ -1149,19 +1219,20 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
             for (int turn : {1, 5}) {
                 const auto donor = Add(base, directions[(grip + turn) % 6]);
                 if (!arms.contains(donor) &&
-                    (!reserved.contains(donor) || feeds.contains(donor) || !inheritedRoots.empty() ||
-                     futureOutputCells.contains(donor)))
+                    (!reserved.contains(donor) || feeds.contains(donor) ||
+                     !inheritedRoots.empty() || futureOutputCells.contains(donor)))
                     return true;
             }
         }
         return false;
     };
-    const bool checkPortGeometry = plan.finiteTerminal && accessFlag && std::string(accessFlag) == "1";
+    const bool checkPortGeometry =
+        plan.finiteTerminal && accessFlag && std::string(accessFlag) == "1";
     std::vector<Cell> uncovered;
     for (const auto cell : reserved)
         if (!accessible(cell)) {
-            if (checkPortGeometry && SerialPortApproaches(cell, reserved, feeds,
-                                                          !inheritedRoots.empty()).empty())
+            if (checkPortGeometry &&
+                SerialPortApproaches(cell, reserved, feeds, !inheritedRoots.empty()).empty())
                 throw IR::LayoutFailure("serial port has no static approach witness at (" +
                                         std::to_string(cell.first) + "," +
                                         std::to_string(cell.second) + ")");
@@ -1193,15 +1264,19 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
             const auto* trace = std::getenv("OPUSOPTIMA_PRODUCT_PORT_TRACE");
             if (trace && std::string(trace) == "1" && evidence) {
                 std::string detail = "port-geometry spacing=" + std::to_string(spacing) +
-                    " phase=" + std::to_string(latticePhase) + " neighbor=" +
-                    std::to_string(neighborChoice) + " reserved=";
-                for (auto x : reserved) detail += std::to_string(x.first) + "," + std::to_string(x.second) + ";";
+                                     " phase=" + std::to_string(latticePhase) +
+                                     " neighbor=" + std::to_string(neighborChoice) + " reserved=";
+                for (auto x : reserved)
+                    detail += std::to_string(x.first) + "," + std::to_string(x.second) + ";";
                 detail += " arms=";
-                for (auto [x, index] : arms) detail += std::to_string(x.first) + "," + std::to_string(x.second) + ";";
+                for (auto [x, index] : arms)
+                    detail += std::to_string(x.first) + "," + std::to_string(x.second) + ";";
                 detail += " feeds=";
-                for (auto x : feeds) detail += std::to_string(x.first) + "," + std::to_string(x.second) + ";";
+                for (auto x : feeds)
+                    detail += std::to_string(x.first) + "," + std::to_string(x.second) + ";";
                 detail += " protected=";
-                for (auto x : protectedPorts) detail += std::to_string(x.first) + "," + std::to_string(x.second) + ";";
+                for (auto x : protectedPorts)
+                    detail += std::to_string(x.first) + "," + std::to_string(x.second) + ";";
                 evidence(detail);
             }
             throw IR::LayoutFailure("serial port placement cannot preserve approach access at (" +
@@ -1211,7 +1286,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
     }
     std::vector<core::HexCoord> staticWheelFootprint;
     if (closedSingletonWheel) {
-        for (const auto cell : wheelCells) staticWheelFootprint.push_back(Hex(cell));
+        for (const auto cell : wheelCells)
+            staticWheelFootprint.push_back(Hex(cell));
         for (const auto& station : coloredStations)
             for (const auto& glyph : station.glyphs)
                 for (const auto cell : glyph.vertices)
@@ -1258,14 +1334,15 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                         actual[edge] |= prismColors[side];
                     }
             for (const auto& [edge, mask] : actual) {
-                const bool bound = std::any_of(coloredStations.begin(), coloredStations.end(),
-                    [&](const auto& station) {
+                const bool bound = std::any_of(
+                    coloredStations.begin(), coloredStations.end(), [&](const auto& station) {
                         return station.bonds.contains(edge) && station.bonds.at(edge) == mask &&
-                            Hex(state.atoms.at(edge.a).position) == station.sites.at(edge.a) &&
-                            Hex(state.atoms.at(edge.b).position) == station.sites.at(edge.b);
+                               Hex(state.atoms.at(edge.a).position) == station.sites.at(edge.a) &&
+                               Hex(state.atoms.at(edge.b).position) == station.sites.at(edge.b);
                     });
                 if (!bound)
-                    throw IR::LayoutFailure("colored output prism creates an unbound or extra color");
+                    throw IR::LayoutFailure(
+                        "colored output prism creates an unbound or extra color");
             }
             return actual;
         };
@@ -1290,18 +1367,21 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 if (mask == 1 && (closedSingletonWheel || temporalOutput)) {
                     const auto a = Hex(state.atoms.at(edge.a).position);
                     const auto b = Hex(state.atoms.at(edge.b).position);
-                    if (std::none_of(machine.objects.begin(), machine.objects.end(), [&](const auto& glyph) {
-                            if (glyph.typeName != "bonder") return false;
-                            const auto x = Hex(glyph.position);
-                            const auto y = Add(x, directions.at(glyph.bodyData.at(1)));
-                            return (x == a && y == b) || (x == b && y == a);
-                        }))
-                        throw IR::LayoutFailure("closed ordinary output bond has no physical glyph witness");
+                    if (std::none_of(machine.objects.begin(), machine.objects.end(),
+                                     [&](const auto& glyph) {
+                                         if (glyph.typeName != "bonder") return false;
+                                         const auto x = Hex(glyph.position);
+                                         const auto y = Add(x, directions.at(glyph.bodyData.at(1)));
+                                         return (x == a && y == b) || (x == b && y == a);
+                                     }))
+                        throw IR::LayoutFailure(
+                            "closed ordinary output bond has no physical glyph witness");
                 }
                 if (mask != 1 && !coloredStations.empty()) {
                     const auto actual = stationMasks();
                     if (!actual.contains(edge) || actual.at(edge) != mask)
-                        throw IR::LayoutFailure("colored output bond has no exact physical station");
+                        throw IR::LayoutFailure(
+                            "colored output bond has no exact physical station");
                     custody.Validate(state);
                 }
                 append({K::Bond, 0, {edge.a, edge.b}, mask});
@@ -1321,8 +1401,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 throw IR::Unsupported("serial scalar transport cannot move an assembled fragment");
             std::optional<SerialSingletonContacts> contacts;
             if (temporalOutput)
-                contacts.emplace(state, id, ordinaryEndpoints, outputCells,
-                                 nonOutputCells, target, targetBonds);
+                contacts.emplace(state, id, ordinaryEndpoints, outputCells, nonOutputCells, target,
+                                 targetBonds);
             if (contacts && !contacts->Allows(origin, destination))
                 throw IR::LayoutFailure("scalar origin has an uncertified ordinary bonder contact");
             struct Step {
@@ -1429,14 +1509,14 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 // A released scalar is available next cycle. Only an already aligned,
                 // distinct receiver may grab during the donor's two idle cycles.
                 // Keep this proof local to a single route (no task/input phase crossing).
-                if (pipeline && deliveredBy && *deliveredBy != step.base &&
-                    angle == step.from &&
+                if (pipeline && deliveredBy && *deliveredBy != step.base && angle == step.from &&
                     (tape.empty() || tape.back().parameter < tick - 2))
                     tick -= 2;
                 while (angle != step.from) {
                     if (closedSingletonWheel &&
                         !CertifyFixedArmInterval(state, Hex(step.base), staticWheelFootprint,
-                            {0, 1, angle, 0}, {0, 1, (angle + 1) % 6, 0}, 'r', false))
+                                                 {0, 1, angle, 0}, {0, 1, (angle + 1) % 6, 0}, 'r',
+                                                 false))
                         throw IR::LayoutFailure("closed wheel empty arm interval rejected");
                     tape.push_back({'r', tick++});
                     angle = (angle + 1) % 6;
@@ -1446,15 +1526,16 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 const char action = (step.to - step.from + 6) % 6 == 1 ? 'r' : 'R';
                 const HeldArmState from{0, 1, step.from, 0},
                     to{0, 1, step.to, action == 'r' ? 1 : 5};
-                if (!CertifyFixedArmInterval(state, Hex(step.base), staticWheelFootprint,
-                                             from, to, action, true))
+                if (!CertifyFixedArmInterval(state, Hex(step.base), staticWheelFootprint, from, to,
+                                             action, true))
                     throw IR::LayoutFailure("serial arm interval certificate rejected");
                 const auto next = Add(step.base, directions[step.to]);
                 if (contacts && !contacts->Allows(next, destination))
                     throw IR::LayoutFailure("scalar ordinary bonder contact witness rejected");
                 if (next != destination && futureOutputCells.contains(next) && evidence)
                     evidence("certified future output transit atom=" + std::to_string(id) +
-                        " cell=" + std::to_string(next.first) + "," + std::to_string(next.second));
+                             " cell=" + std::to_string(next.first) + "," +
+                             std::to_string(next.second));
                 append(
                     {K::Relocate, 0, {id}, 0, 0, Hex(Sub(next, Hex(state.atoms.at(id).position)))});
                 angle = step.to;
@@ -1468,7 +1549,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         };
         auto move = [&](Id id, Cell destination, const IR::State* expected = nullptr) {
             for (const auto& [slot, stored] : state.stored)
-                if (plan.finiteTerminal && std::find(stored.begin(), stored.end(), id) != stored.end() &&
+                if (plan.finiteTerminal &&
+                    std::find(stored.begin(), stored.end(), id) != stored.end() &&
                     Hex(state.atoms.at(id).position) != destination)
                     throw IR::LayoutFailure("terminal retention custody cannot be displaced");
             const auto members = IR::Fragment(state, id);
@@ -1589,7 +1671,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                     if (!blocked)
                         for (const auto& atom : p.inputs[port.input].atoms)
                             certificateWorld.atoms.emplace(
-                                fake--, IR::Atom{atom.type, Hex(Add(port.origin, Hex(atom.position)))});
+                                fake--,
+                                IR::Atom{atom.type, Hex(Add(port.origin, Hex(atom.position)))});
                 }
                 for (const auto& [base, index] : arms)
                     if (Hex(base) != armBase && core::Distance(Hex(base), armBase) <= radius + 1)
@@ -1786,13 +1869,13 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                         edge.b >= original.preconditions.nextId &&
                         !keepForAcquire.at(task.step).contains(
                             {edge.a - original.preconditions.nextId,
-                             edge.b - original.preconditions.nextId}))
-                    {
+                             edge.b - original.preconditions.nextId})) {
                         if ((closedSingletonWheel || temporalOutput) &&
-                            !SerialSourceCutWitness(state, edge, bits, machine.objects, feeds,
-                                nonOutputCells, temporalOutput ? outputCells : std::set<Cell>{},
-                                p.permissionBits))
-                            throw IR::LayoutFailure("closed source Unbond has no physical glyph witness");
+                            !SerialSourceCutWitness(
+                                state, edge, bits, machine.objects, feeds, nonOutputCells,
+                                temporalOutput ? outputCells : std::set<Cell>{}, p.permissionBits))
+                            throw IR::LayoutFailure(
+                                "closed source Unbond has no physical glyph witness");
                         append({K::Unbond, 0, {edge.a, edge.b}, bits});
                         custody.Validate(state);
                     }
@@ -1812,8 +1895,9 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                         continue;
                 }
                 if (!target.contains(id)) {
-                    const auto endpoint = std::find_if(plan.retentionEndpoints.begin(),
-                        plan.retentionEndpoints.end(), [&](const auto& binding) {
+                    const auto endpoint = std::find_if(
+                        plan.retentionEndpoints.begin(), plan.retentionEndpoints.end(),
+                        [&](const auto& binding) {
                             return binding.atom == id && binding.relocateStep == task.step;
                         });
                     if (endpoint == plan.retentionEndpoints.end() ||
@@ -1852,11 +1936,12 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                     if (op.index >= plan.finiteTerminal->capacity)
                         throw IR::LayoutFailure("finite physical slot capacity exceeded");
                     const auto id = op.atoms.at(0);
-                    const auto endpoint = std::find_if(plan.retentionEndpoints.begin(),
-                        plan.retentionEndpoints.end(), [&](const auto& binding) {
-                            return binding.storeStep == task.step && binding.atom == id &&
-                                   binding.slot == op.index;
-                        });
+                    const auto endpoint =
+                        std::find_if(plan.retentionEndpoints.begin(), plan.retentionEndpoints.end(),
+                                     [&](const auto& binding) {
+                                         return binding.storeStep == task.step &&
+                                                binding.atom == id && binding.slot == op.index;
+                                     });
                     if (endpoint == plan.retentionEndpoints.end() ||
                         state.atoms.at(id).type != endpoint->type)
                         throw IR::Unsupported("finite Store endpoint mismatch");
@@ -1867,7 +1952,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                         throw IR::LayoutFailure("finite Store not at bound physical endpoint");
                     append(op);
                     custody.Validate(state);
-                } else park(op.atoms.at(0));
+                } else
+                    park(op.atoms.at(0));
             } else if (op.kind == K::Retrieve) {
             } else if (op.kind == K::Project) {
                 move(op.atoms[1], mercury);
@@ -1896,7 +1982,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 for (const auto& [other, atom] : state.atoms)
                     if (Hex(atom.position) == vitae || Hex(atom.position) == mors)
                         outletStock.push_back(other);
-                for (auto other : outletStock) park(other);
+                for (auto other : outletStock)
+                    park(other);
                 clearFeedCenter(op.atoms.at(0));
                 move(op.atoms.at(0), animismus);
                 clearFeedCenter(op.atoms.at(1));
@@ -1939,7 +2026,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                         for (const auto& [other, atom] : state.atoms)
                             if (other != op.atoms[0] && Hex(atom.position) == calcifier)
                                 stock.push_back(other);
-                        for (auto other : stock) park(other);
+                        for (auto other : stock)
+                            park(other);
                         clearFeedCenter(op.atoms[0]);
                     }
                     move(op.atoms[0], calcifier);
@@ -1957,8 +2045,8 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                     append(op);
                     tick += 2;
                     custody.Validate(state);
-                    if (evidence) evidence("monomer wheel bound product=" +
-                                           std::to_string(state.nextId - 1));
+                    if (evidence)
+                        evidence("monomer wheel bound product=" + std::to_string(state.nextId - 1));
                     continue;
                 }
                 if (!stage || op.atoms.at(0) != stage->salt)
@@ -2021,7 +2109,7 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                             if (Hex(state.atoms.at(id).position) != cell ||
                                 state.atoms.at(id).type != core::AtomType::Fire ||
                                 std::any_of(custody.Held().begin(), custody.Held().end(),
-                                    [&](const auto& held) { return held.second == id; }))
+                                            [&](const auto& held) { return held.second == id; }))
                                 throw IR::LayoutFailure("colored output station custody mismatch");
                         }
                         const auto actual = stationMasks();
@@ -2055,12 +2143,15 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
                 const auto position = Hex(state.atoms.at(endpoint.atom).position);
                 if (position != retentionTargets.at(endpoint.atom))
                     throw IR::LayoutFailure("terminal retention departed bound endpoint");
-                if (evidence) evidence("retention atom=" + std::to_string(endpoint.atom) +
-                    " type=" + std::to_string(static_cast<int>(endpoint.type)) +
-                    " slot=" + std::to_string(endpoint.slot) + " q=" +
-                    std::to_string(position.first) + " r=" + std::to_string(position.second));
+                if (evidence)
+                    evidence("retention atom=" + std::to_string(endpoint.atom) +
+                             " type=" + std::to_string(static_cast<int>(endpoint.type)) +
+                             " slot=" + std::to_string(endpoint.slot) +
+                             " q=" + std::to_string(position.first) +
+                             " r=" + std::to_string(position.second));
             }
-        } else IR::RequireComplete(state, final.outputs);
+        } else
+            IR::RequireComplete(state, final.outputs);
         if (carrier)
             while (carrierAt != carrierStart) {
                 machine.objects[*carrier].instructions.push_back(
@@ -2075,7 +2166,7 @@ io::SolutionData Compile(const io::PuzzleData& p, const ExecutionPlan& plan, int
         while (angle) {
             if (closedSingletonWheel &&
                 !CertifyFixedArmInterval(IR::Initial(p), Hex(base), staticWheelFootprint,
-                    {0, 1, angle, 0}, {0, 1, (angle + 1) % 6, 0}, 'r', false))
+                                         {0, 1, angle, 0}, {0, 1, (angle + 1) % 6, 0}, 'r', false))
                 throw IR::LayoutFailure("closed wheel arm reset intersects device");
             tape.push_back({'r', tick++});
             angle = (angle + 1) % 6;
@@ -2114,8 +2205,9 @@ static std::optional<io::SolutionData> CompileAcceptedSerialArmExecutionWithSour
             for (int neighbor : {0, 2, 4}) {
                 if (wholeFragment && (spacing != 8 || phase != 0 || neighbor != 0)) continue;
                 if (std::chrono::steady_clock::now() >= deadline) {
-                    if (classifiedFeedback) classifiedFeedback(SerialArmFailure::BudgetExhausted,
-                        "shared material/physical deadline exhausted");
+                    if (classifiedFeedback)
+                        classifiedFeedback(SerialArmFailure::BudgetExhausted,
+                                           "shared material/physical deadline exhausted");
                     return {};
                 }
                 std::optional<io::SolutionData> machine;
@@ -2124,13 +2216,15 @@ static std::optional<io::SolutionData> CompileAcceptedSerialArmExecutionWithSour
                                       feedback, sparseSourceArms, policy);
                 } catch (const IR::Error& error) {
                     if (classifiedFeedback) {
-                        const auto category = dynamic_cast<const IR::BudgetFailure*>(&error)
-                            ? SerialArmFailure::BudgetExhausted
+                        const auto category =
+                            dynamic_cast<const IR::BudgetFailure*>(&error)
+                                ? SerialArmFailure::BudgetExhausted
                             : dynamic_cast<const IR::LayoutFailure*>(&error)
-                            ? SerialArmFailure::LayoutCollision
+                                ? SerialArmFailure::LayoutCollision
                             : dynamic_cast<const IR::Unsupported*>(&error) ||
-                              dynamic_cast<const IR::PermissionFailure*>(&error)
-                            ? SerialArmFailure::Unsupported : SerialArmFailure::MechanicalFailure;
+                                    dynamic_cast<const IR::PermissionFailure*>(&error)
+                                ? SerialArmFailure::Unsupported
+                                : SerialArmFailure::MechanicalFailure;
                         classifiedFeedback(category, error.what());
                     }
                     if (feedback) feedback(error.what());
@@ -2156,8 +2250,8 @@ static std::optional<io::SolutionData> CompileAcceptedSerialArmExecutionWithSour
                         std::chrono::steady_clock::now() < deadline) {
                         std::optional<io::SolutionData> child;
                         try {
-                            child = Compile(p, material, spacing, phase, neighbor, deadline,
-                                            true, false, {}, sparseSourceArms, policy);
+                            child = Compile(p, material, spacing, phase, neighbor, deadline, true,
+                                            false, {}, sparseSourceArms, policy);
                         } catch (const IR::Error& error) {
                             if (feedback) feedback(error.what());
                         }
@@ -2183,8 +2277,9 @@ std::optional<io::SolutionData> CompileAcceptedSerialArmExecution(
     std::chrono::steady_clock::time_point deadline,
     const std::function<void(SerialArmFailure, const std::string&)>& classifiedFeedback,
     const std::function<void(const io::SolutionData&, const io::SolutionData&)>& acceptedPipeline) {
-    return CompileAcceptedSerialArmExecutionWithSourcePolicy(p,material,accept,feedback,deadline,
-        classifiedFeedback,acceptedPipeline,false, SupplyMaterialLoweringPolicy::PreserveCompatible);
+    return CompileAcceptedSerialArmExecutionWithSourcePolicy(
+        p, material, accept, feedback, deadline, classifiedFeedback, acceptedPipeline, false,
+        SupplyMaterialLoweringPolicy::PreserveCompatible);
 }
 
 std::optional<io::SolutionData> CompileAcceptedSerialArmExecutionWithPolicy(
@@ -2194,8 +2289,9 @@ std::optional<io::SolutionData> CompileAcceptedSerialArmExecutionWithPolicy(
     std::chrono::steady_clock::time_point deadline,
     const std::function<void(SerialArmFailure, const std::string&)>& classifiedFeedback,
     const std::function<void(const io::SolutionData&, const io::SolutionData&)>& acceptedPipeline) {
-    return CompileAcceptedSerialArmExecutionWithSourcePolicy(p, material, accept, feedback, deadline,
-        classifiedFeedback, acceptedPipeline, false, policy);
+    return CompileAcceptedSerialArmExecutionWithSourcePolicy(p, material, accept, feedback,
+                                                             deadline, classifiedFeedback,
+                                                             acceptedPipeline, false, policy);
 }
 
 std::optional<io::SolutionData> CompileAcceptedSparseSourceSerialArmExecution(
@@ -2203,7 +2299,8 @@ std::optional<io::SolutionData> CompileAcceptedSparseSourceSerialArmExecution(
     const std::function<bool(const io::SolutionData&)>& accept,
     const std::function<void(const std::string&)>& feedback,
     std::chrono::steady_clock::time_point deadline) {
-    return CompileAcceptedSerialArmExecutionWithSourcePolicy(p,material,accept,feedback,deadline,
-        {},{},true, SupplyMaterialLoweringPolicy::PreserveCompatible);
+    return CompileAcceptedSerialArmExecutionWithSourcePolicy(
+        p, material, accept, feedback, deadline, {}, {}, true,
+        SupplyMaterialLoweringPolicy::PreserveCompatible);
 }
 } // namespace opusoptima::solvers

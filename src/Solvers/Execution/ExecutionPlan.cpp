@@ -1,9 +1,9 @@
-#include "RowPhaseProfile.hpp"
 #include "ExecutionPlan.hpp"
+#include "RowPhaseProfile.hpp"
 
 #include <algorithm>
-#include <set>
 #include <cstdlib>
+#include <set>
 
 namespace opusoptima::solvers {
 static ExecutionPlan BuildPlan(const io::PuzzleData& puzzle, ExecutionIR material,
@@ -111,11 +111,12 @@ static ExecutionPlan BuildPlan(const io::PuzzleData& puzzle, ExecutionIR materia
         if (terminal->outputs != std::vector<std::size_t>{6})
             throw IR::Unsupported("finite stop boundary requires one six-product output");
         const auto completion = std::find_if(plan.material.steps.begin(), plan.material.steps.end(),
-            [&](const auto& step) {
-                return step.operation.kind == IR::Kind::Output &&
-                       step.effects.outputs == terminal->outputs;
-            });
-        if (completion == plan.material.steps.end()) throw IR::Error("finite completion Output missing");
+                                             [&](const auto& step) {
+                                                 return step.operation.kind == IR::Kind::Output &&
+                                                        step.effects.outputs == terminal->outputs;
+                                             });
+        if (completion == plan.material.steps.end())
+            throw IR::Error("finite completion Output missing");
         const auto completionStep = std::size_t(completion - plan.material.steps.begin());
         for (const auto& slot : terminal->slots) {
             const auto cache = openSlots.find(slot.slot);
@@ -130,7 +131,8 @@ static ExecutionPlan BuildPlan(const io::PuzzleData& puzzle, ExecutionIR materia
                 operation.atoms != std::vector<IR::AtomId>{slot.atom} ||
                 IR::Fragment(relocation.preconditions, slot.atom).size() != 1 ||
                 relocation.effects.atoms.at(slot.atom).type != slot.type ||
-                relocation.effects.atoms.at(slot.atom).position != final.atoms.at(slot.atom).position ||
+                relocation.effects.atoms.at(slot.atom).position !=
+                    final.atoms.at(slot.atom).position ||
                 plan.material.steps.at(store).operation.atoms != std::vector<IR::AtomId>{slot.atom})
                 throw IR::Error("terminal endpoint relocation/Store mismatch");
             plan.retentionEndpoints.push_back({store - 1, store, slot.slot, slot.atom, slot.type,
@@ -147,7 +149,8 @@ ExecutionPlan MakeExecutionPlan(const io::PuzzleData& puzzle, ExecutionIR materi
     return BuildPlan(puzzle, std::move(material), {});
 }
 ExecutionPlan MakeFiniteExecutionPlan(const io::PuzzleData& puzzle, ExecutionIR material,
-    ExecutionIR::FiniteRetention terminal, io::VerificationMode mode) {
+                                      ExecutionIR::FiniteRetention terminal,
+                                      io::VerificationMode mode) {
     const auto* enabled = std::getenv("OPUSOPTIMA_FINITE_RETENTION");
     if (!enabled || std::string(enabled) != "1" || mode == io::VerificationMode::Independent)
         throw ExecutionIR::Unsupported("finite retention requires opt-in legacy-primary authority");
@@ -156,10 +159,10 @@ ExecutionPlan MakeFiniteExecutionPlan(const io::PuzzleData& puzzle, ExecutionIR 
         terminal.outputs != std::vector<std::size_t>(puzzle.outputs.size(), 6))
         throw ExecutionIR::Unsupported("finite retention requires original six-product task");
     const auto* fragmentDock = std::getenv("OPUSOPTIMA_FRAGMENT_PRODUCT_DOCKING");
-    const bool wholeFragment = fragmentDock && std::string(fragmentDock) == "1" &&
-        terminal.slots.empty() && puzzle.inputs.size() == 1 &&
-        puzzle.inputs[0].atoms.size() >= 2 && puzzle.inputs[0].atoms.size() <= 12 &&
-        !puzzle.inputs[0].bonds.empty();
+    const bool wholeFragment =
+        fragmentDock && std::string(fragmentDock) == "1" && terminal.slots.empty() &&
+        puzzle.inputs.size() == 1 && puzzle.inputs[0].atoms.size() >= 2 &&
+        puzzle.inputs[0].atoms.size() <= 12 && !puzzle.inputs[0].bonds.empty();
     for (const auto& input : puzzle.inputs) {
         if (wholeFragment) {
             for (const auto& bond : input.bonds)

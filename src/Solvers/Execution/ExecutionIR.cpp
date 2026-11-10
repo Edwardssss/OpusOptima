@@ -1,5 +1,5 @@
-#include "RowPhaseProfile.hpp"
 #include "ExecutionIR.hpp"
+#include "RowPhaseProfile.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -173,7 +173,9 @@ std::vector<ExecutionIR::AtomId> ExecutionIR::Fragment(const State& s, AtomId at
     return {ids.begin(), ids.end()};
 }
 void ExecutionIR::Apply(const io::PuzzleData& p, State& s, const Operation& op) {
-    row_profile::Scope profile(row_profile::Scope::Within(row_profile::Replay) ? row_profile::ApplyReplay : row_profile::ApplyLive);
+    row_profile::Scope profile(row_profile::Scope::Within(row_profile::Replay)
+                                   ? row_profile::ApplyReplay
+                                   : row_profile::ApplyLive);
     using K = Kind;
     auto permission = [&](int bit) {
         if (p.permissionBits & (1ULL << bit)) return;
@@ -445,7 +447,7 @@ ExecutionIR::State ExecutionIR::Replay(const io::PuzzleData& p) const {
     return s;
 }
 ExecutionIR::State ExecutionIR::ProjectOutput(const io::PuzzleData& puzzle, const State& tail,
-                                             const Operation& output) const {
+                                              const Operation& output) const {
     Check(output.kind == Kind::Output, "projection requires Output");
     auto projected = Replay(puzzle);
     Check(projected == tail, "projected Output state differs from replay");
@@ -455,20 +457,24 @@ ExecutionIR::State ExecutionIR::ProjectOutput(const io::PuzzleData& puzzle, cons
 void ExecutionIR::RequireFiniteTerminal(const State& s, const FiniteRetention& terminal) {
     Check(s.outputs == terminal.outputs && s.discarded == 0, "finite output/discard mismatch");
     Check(terminal.capacity > 0 && terminal.capacity <= 6 &&
-          terminal.slots.size() <= terminal.capacity, "finite slot capacity exceeded");
+              terminal.slots.size() <= terminal.capacity,
+          "finite slot capacity exceeded");
     Check(s.atoms.size() == terminal.slots.size() && s.stored.size() == terminal.slots.size() &&
-          s.bonds.empty(), "finite inventory mismatch");
+              s.bonds.empty(),
+          "finite inventory mismatch");
     std::set<AtomId> ids;
     std::set<std::size_t> slots;
     std::set<std::pair<int, int>> cells;
     for (const auto& slot : terminal.slots) {
         Check(slot.slot < terminal.capacity && slots.insert(slot.slot).second &&
-              ids.insert(slot.atom).second, "duplicate finite slot or identity");
+                  ids.insert(slot.atom).second,
+              "duplicate finite slot or identity");
         Check(slot.type == core::AtomType::Vitae || slot.type == core::AtomType::Mors,
               "unsupported finite material");
         Check(s.atoms.contains(slot.atom) && s.atoms.at(slot.atom).type == slot.type,
               "finite material mismatch");
-        Check(s.stored.contains(slot.slot) && s.stored.at(slot.slot) == std::vector<AtomId>{slot.atom},
+        Check(s.stored.contains(slot.slot) &&
+                  s.stored.at(slot.slot) == std::vector<AtomId>{slot.atom},
               "finite custody mismatch");
         const auto cell = s.atoms.at(slot.atom).position;
         Check(cells.emplace(cell.q, cell.r).second, "overlapping finite inventory");

@@ -1,5 +1,4 @@
-static void check_raster(void)
-{
+static void check_raster(void) {
     const float radii[] = {15, 20, 29};
     const struct vector origins[] = {{0, 0}, {100, -100}};
     unsigned cases = 0;
@@ -11,15 +10,15 @@ static void check_raster(void)
                         struct board board = {0};
                         board.grid.board = &board;
                         struct vector p = origins[origin];
-                        if (occupied)
-                            insert_atom(&board, p, VALID | (occupied == 2 ? REMOVED : 0));
+                        if (occupied) insert_atom(&board, p, VALID | (occupied == 2 ? REMOVED : 0));
                         struct xy_vector center = to_xy(p);
                         struct collider collider = {{center.x + x, center.y + y}, radii[radius]};
                         struct collider storage[1];
                         struct vector location = {999, 999};
                         struct collider_list list = {.colliders = storage,
-                            .bounding_box = empty_rect, .bounding_box_up_to_cursor = empty_rect,
-                            .collision_location = &location};
+                                                     .bounding_box = empty_rect,
+                                                     .bounding_box_up_to_cursor = empty_rect,
+                                                     .collision_location = &location};
                         add_collider(&list, &board, collider);
                         unsigned expected = 0;
                         bool hit = false;
@@ -53,8 +52,7 @@ static void check_raster(void)
     puts("raster: 3042 real-grid finite insertion cases passed");
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     int configured = configure_arithmetic_test(argc, argv);
     if (configured) return configured;
     if (!qualified_arithmetic()) {

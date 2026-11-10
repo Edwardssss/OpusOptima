@@ -24,7 +24,7 @@ ProgramFragment Fragment(const std::string& arm, std::vector<ProgramInstruction>
 std::vector<PlacedInstruction> Tape(const ProgramBuilder& builder, const std::string& arm) {
     return builder.Arm(arm);
 }
-}  // namespace
+} // namespace
 
 TEST(ProgramBuilder, DifferentArmsOverlapFreely) {
     ProgramBuilder builder;

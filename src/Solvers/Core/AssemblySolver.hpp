@@ -118,18 +118,28 @@ class AssemblyPlanner {
     /// Deterministic connected-graph traversal; explicit cycle-closing bonds.
     /// Feeds are renewable; matching prefers unused inputs, then the first match.
     [[nodiscard]] static AssemblyPlan Plan(const io::PuzzleData& puzzle, bool forest = false,
-        std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max());
+                                           std::chrono::steady_clock::time_point deadline =
+                                               std::chrono::steady_clock::time_point::max());
     /// Replays checked preconditions/effects/reservations and rejects edited,
     /// incomplete, reordered or foreign plans (canonical schedule required).
     static void Validate(const io::PuzzleData& puzzle, const AssemblyPlan& plan,
                          bool forest = false,
-                         std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max());
+                         std::chrono::steady_clock::time_point deadline =
+                             std::chrono::steady_clock::time_point::max());
 };
 
 struct AssemblyFailure {
-    enum class Category { Planning, IndependentVerifier, VerificationUnavailable,
-        Unsupported, SearchExhausted, BudgetExhausted, MaterialMechanicalFailure,
-        LayoutCollision, InfrastructureError };
+    enum class Category {
+        Planning,
+        IndependentVerifier,
+        VerificationUnavailable,
+        Unsupported,
+        SearchExhausted,
+        BudgetExhausted,
+        MaterialMechanicalFailure,
+        LayoutCollision,
+        InfrastructureError
+    };
     Category category{};
     std::string stage;
     std::string detail;
@@ -171,7 +181,8 @@ class AssemblySolver final : public BaseSolver {
     [[nodiscard]] io::SolutionData SolveVerified(const io::PuzzleData& puzzle,
                                                  const CandidateVerification& verify,
                                                  const AssemblyFeedback& feedback);
-    using CandidateSink = std::function<io::VerificationReport(const io::SolutionData&, const std::string&)>;
+    using CandidateSink =
+        std::function<io::VerificationReport(const io::SolutionData&, const std::string&)>;
     static constexpr std::size_t MaxCandidateSubmissions = 12;
     static constexpr std::size_t MaxPortfolioConstructions = 3;
     // Baseline first, then at most three ordinary finite-output construction attempts.
@@ -180,12 +191,24 @@ class AssemblySolver final : public BaseSolver {
     [[nodiscard]] io::SolutionData CollectVerified(const io::PuzzleData& puzzle,
                                                    const CandidateSink& sink,
                                                    std::size_t maxAccepted = 3);
-    void EnableExperimentalSharedBatchConsumer(bool enabled) { sharedBatchConsumerEnabled_ = enabled; }
-    void EnableExperimentalSharedNearCache(bool enabled) { sharedNearCacheEnabled_ = enabled; }
-    void EnableExperimentalSharedBufferRelay(bool enabled) { sharedBufferRelayEnabled_ = enabled; }
-    void EnableExperimentalSharedScheduling(bool enabled) { sharedSchedulingEnabled_ = enabled; }
-    void EnableExperimentalSharedAssembly(bool enabled) { sharedAssemblyEnabled_ = enabled; }
-    void EnableExperimentalCompactRelay(bool enabled) { compactRelayEnabled_ = enabled; }
+    void EnableExperimentalSharedBatchConsumer(bool enabled) {
+        sharedBatchConsumerEnabled_ = enabled;
+    }
+    void EnableExperimentalSharedNearCache(bool enabled) {
+        sharedNearCacheEnabled_ = enabled;
+    }
+    void EnableExperimentalSharedBufferRelay(bool enabled) {
+        sharedBufferRelayEnabled_ = enabled;
+    }
+    void EnableExperimentalSharedScheduling(bool enabled) {
+        sharedSchedulingEnabled_ = enabled;
+    }
+    void EnableExperimentalSharedAssembly(bool enabled) {
+        sharedAssemblyEnabled_ = enabled;
+    }
+    void EnableExperimentalCompactRelay(bool enabled) {
+        compactRelayEnabled_ = enabled;
+    }
     [[nodiscard]] std::int32_t EstimateCycles(const io::PuzzleData& puzzle) override;
     [[nodiscard]] static bool Supports(const io::PuzzleData& puzzle) noexcept;
     [[nodiscard]] static io::SolutionData Compile(const io::PuzzleData& puzzle,

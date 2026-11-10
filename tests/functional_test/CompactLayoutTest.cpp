@@ -16,13 +16,13 @@
 
 #include <gtest/gtest.h>
 
+#include "../unit_test/TestOutputDirectory.hpp"
 #include "AssemblySolver.hpp"
 #include "BinaryParser.hpp"
 #include "BinaryWriter.hpp"
 #include "LocalOptimizer.hpp"
-#include "RowAssembly.hpp"
-#include "../unit_test/TestOutputDirectory.hpp"
 #include "RepoRoot.hpp"
+#include "RowAssembly.hpp"
 
 using namespace opusoptima::io;
 
@@ -35,8 +35,10 @@ struct FlagGuard {
         if (value) saved_ = std::string(value);
     }
     ~FlagGuard() {
-        if (saved_) setenv(name_, saved_->c_str(), 1);
-        else unsetenv(name_);
+        if (saved_)
+            setenv(name_, saved_->c_str(), 1);
+        else
+            unsetenv(name_);
     }
     FlagGuard(const FlagGuard&) = delete;
     FlagGuard& operator=(const FlagGuard&) = delete;
@@ -66,13 +68,14 @@ std::size_t TrackCount(const SolutionData& solution) {
 // Default-on must stay stable, and explicit "off" must restore the legacy
 // geometry byte-for-byte. Unknown values keep the legacy geometry.
 TEST(CompactLayout, FlagOffRestoresLegacyMachine) {
-    const auto puzzle = BinaryParser::ParsePuzzleFile(Root() / "asset/puzzle/easy/just-salt.puzzle");
+    const auto puzzle =
+        BinaryParser::ParsePuzzleFile(Root() / "asset/puzzle/easy/just-salt.puzzle");
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto plan = opusoptima::solvers::AssemblyPlanner::Plan(puzzle, false, deadline);
     FlagGuard guard(kCompactLayout);
     setenv(kCompactLayout, "off", 1);
-    const auto legacy =
-        BinaryWriter::WriteSolution(opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline));
+    const auto legacy = BinaryWriter::WriteSolution(
+        opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline));
     for (const char* value : {"off", "unknown", ""}) {
         setenv(kCompactLayout, value, 1);
         const auto bytes = BinaryWriter::WriteSolution(
@@ -80,10 +83,8 @@ TEST(CompactLayout, FlagOffRestoresLegacyMachine) {
         EXPECT_EQ(bytes, legacy) << "value=" << value;
     }
     unsetenv(kCompactLayout);
-    const auto compact =
-        opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
-    const auto again =
-        opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
+    const auto compact = opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
+    const auto again = opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     EXPECT_EQ(BinaryWriter::WriteSolution(again), BinaryWriter::WriteSolution(compact));
     setenv(kCompactLayout, "on", 1);
     const auto explicitOn =
@@ -95,13 +96,13 @@ TEST(CompactLayout, FlagOffRestoresLegacyMachine) {
 // The compact layout only contracts geometry: the object/arm inventory and its
 // order stay identical, no rail grows, and the machine is deterministic.
 TEST(CompactLayout, ShrinksOnlyFeedGeometry) {
-    const auto puzzle = BinaryParser::ParsePuzzleFile(Root() / "asset/puzzle/easy/just-salt.puzzle");
+    const auto puzzle =
+        BinaryParser::ParsePuzzleFile(Root() / "asset/puzzle/easy/just-salt.puzzle");
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto plan = opusoptima::solvers::AssemblyPlanner::Plan(puzzle, false, deadline);
     FlagGuard guard(kCompactLayout);
     setenv(kCompactLayout, "off", 1);
-    const auto baseline =
-        opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
+    const auto baseline = opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     unsetenv(kCompactLayout);
     const auto compact = opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     const auto compactAgain =
@@ -122,16 +123,17 @@ TEST(CompactLayout, ShrinksOnlyFeedGeometry) {
 // Paths outside the bounded ordinary row scope never read the flag: the finite
 // single-product emitter must stay byte-identical.
 TEST(CompactLayout, OutOfScopeEmittersAreUnchanged) {
-    const auto puzzle = BinaryParser::ParsePuzzleFile(Root() / "asset/puzzle/easy/just-salt.puzzle");
+    const auto puzzle =
+        BinaryParser::ParsePuzzleFile(Root() / "asset/puzzle/easy/just-salt.puzzle");
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto plan = opusoptima::solvers::AssemblyPlanner::Plan(puzzle, false, deadline);
     FlagGuard guard(kCompactLayout);
     unsetenv(kCompactLayout);
-    const auto baseline =
-        BinaryWriter::WriteSolution(opusoptima::solvers::CompileRowAssemblySingleProduct(puzzle, plan));
+    const auto baseline = BinaryWriter::WriteSolution(
+        opusoptima::solvers::CompileRowAssemblySingleProduct(puzzle, plan));
     setenv(kCompactLayout, "on", 1);
-    const auto compact =
-        BinaryWriter::WriteSolution(opusoptima::solvers::CompileRowAssemblySingleProduct(puzzle, plan));
+    const auto compact = BinaryWriter::WriteSolution(
+        opusoptima::solvers::CompileRowAssemblySingleProduct(puzzle, plan));
     unsetenv(kCompactLayout);
     EXPECT_EQ(compact, baseline);
 }
@@ -140,7 +142,8 @@ TEST(CompactLayout, OutOfScopeEmittersAreUnchanged) {
 // independent-outputs and similar compositions. Compact layout is opt-in only
 // on the explicit scheduled-row path, so this emitter must stay byte-identical.
 TEST(CompactLayout, GenericRowAssemblyIsUnchanged) {
-    const auto puzzle = BinaryParser::ParsePuzzleFile(Root() / "asset/puzzle/easy/just-salt.puzzle");
+    const auto puzzle =
+        BinaryParser::ParsePuzzleFile(Root() / "asset/puzzle/easy/just-salt.puzzle");
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto plan = opusoptima::solvers::AssemblyPlanner::Plan(puzzle, false, deadline);
     FlagGuard guard(kCompactLayout);
@@ -186,10 +189,12 @@ TEST(CompactLayout, RegisteredLayoutProbe) {
                 // rest of a measurement batch.
                 const auto plan =
                     opusoptima::solvers::AssemblyPlanner::Plan(puzzle, false, deadline);
-                solution = mode < 2   ? opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)
-                           : mode < 4 ? opusoptima::solvers::CompileRowAssembly(puzzle, plan, 4)
-                           : mode < 6 ? opusoptima::solvers::CompileCloseFeedRowAssembly(puzzle, plan)
-                                      : opusoptima::solvers::CompileComponentRowAssembly(puzzle, plan);
+                solution =
+                    mode < 2
+                        ? opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)
+                    : mode < 4 ? opusoptima::solvers::CompileRowAssembly(puzzle, plan, 4)
+                    : mode < 6 ? opusoptima::solvers::CompileCloseFeedRowAssembly(puzzle, plan)
+                               : opusoptima::solvers::CompileComponentRowAssembly(puzzle, plan);
                 compiled = true;
             } catch (const std::exception& error) {
                 std::cout << "LAYOUTFAIL " << mode << ' ' << puzzlePath << ' ' << error.what()
@@ -202,8 +207,8 @@ TEST(CompactLayout, RegisteredLayoutProbe) {
             output.write(reinterpret_cast<const char*>(bytes.data()),
                          static_cast<std::streamsize>(bytes.size()));
             output.close();
-            std::cout << "LAYOUT " << mode << ' ' << outputPath << ' '
-                      << CandidateSha256(bytes) << std::endl;
+            std::cout << "LAYOUT " << mode << ' ' << outputPath << ' ' << CandidateSha256(bytes)
+                      << std::endl;
             if (extra == "v8") {
                 const auto compacted =
                     BinaryWriter::WriteSolution(opusoptima::solvers::LocalTrial(solution, 8));

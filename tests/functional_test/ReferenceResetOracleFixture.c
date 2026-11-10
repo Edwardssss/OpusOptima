@@ -1,10 +1,9 @@
-static void check_grid_rehash(void)
-{
+static void check_grid_rehash(void) {
     struct board board = {0};
     board.grid.board = &board;
     atom permanent = VALID | GRABBED_ONCE | (1ULL << NORMAL_BOND);
     for (int i = 0; i < 128; ++i) {
-        struct vector p = { i < 64 ? i - 32 : i + 100, i < 64 ? 0 : -100 };
+        struct vector p = {i < 64 ? i - 32 : i + 100, i < 64 ? 0 : -100};
         insert_atom(&board, p, permanent | BEING_DROPPED | (1ULL << RECENT_BOND));
         schedule_flag_reset_if_needed(&board, lookup_atom(&board, p));
     }
@@ -13,8 +12,8 @@ static void check_grid_rehash(void)
         rehash(&board.grid, board.grid.hash_capacity * 2);
         assert(board.flag_reset_length == 128);
         for (int i = 0; i < 128; ++i) {
-            struct vector p = { i < 64 ? i - 32 : i + 100, i < 64 ? 0 : -100 };
-            atom *current = lookup_atom(&board, p);
+            struct vector p = {i < 64 ? i - 32 : i + 100, i < 64 ? 0 : -100};
+            atom* current = lookup_atom(&board, p);
             unsigned matches = 0;
             for (uint32_t j = 0; j < board.flag_reset_length; ++j)
                 matches += board.flag_reset[j] == current;
@@ -24,7 +23,7 @@ static void check_grid_rehash(void)
     }
     reset_temporary_flags(&board);
     for (int i = 0; i < 128; ++i) {
-        struct vector p = { i < 64 ? i - 32 : i + 100, i < 64 ? 0 : -100 };
+        struct vector p = {i < 64 ? i - 32 : i + 100, i < 64 ? 0 : -100};
         assert(*lookup_atom(&board, p) == permanent);
     }
     assert(board.flag_reset_length == 0 && board.area == 128);
@@ -33,29 +32,27 @@ static void check_grid_rehash(void)
     puts("rehash: 128 live atoms across four forced growth rounds passed");
 }
 
-static void check_removal_and_reinsertion(void)
-{
+static void check_removal_and_reinsertion(void) {
     struct board board = {0};
     board.grid.board = &board;
     struct vector positions[2] = {{0, 0}, {100, -100}};
-    atom values[3] = {VALID | GRABBED_ONCE, VALID | WHEEL_ATOM,
-        VALID | (1ULL << NORMAL_BOND)};
+    atom values[3] = {VALID | GRABBED_ONCE, VALID | WHEEL_ATOM, VALID | (1ULL << NORMAL_BOND)};
     for (unsigned layer = 0; layer < 3; ++layer)
         for (unsigned i = 0; i < 2; ++i)
             insert_atom(&board, positions[i], values[layer] | BEING_DROPPED);
     assert(board.area == 2 && board.number_of_overlapped_atoms == 4);
     for (unsigned layer = 0; layer < 2; ++layer) {
         for (unsigned i = 0; i < 2; ++i) {
-            atom *current = lookup_atom(&board, positions[i]);
+            atom* current = lookup_atom(&board, positions[i]);
             assert(!remove_atom(&board, (struct atom_ref_at_position){current, positions[i]}));
-            assert(*current == (values[layer + 1] | BEING_DROPPED |
-                (layer == 0 ? OVERLAPS_ATOMS : 0)));
+            assert(*current ==
+                   (values[layer + 1] | BEING_DROPPED | (layer == 0 ? OVERLAPS_ATOMS : 0)));
             assert(board.number_of_overlapped_atoms == 3 - layer * 2 - i);
         }
     }
     reset_temporary_flags(&board);
     for (unsigned i = 0; i < 2; ++i) {
-        atom *current = lookup_atom(&board, positions[i]);
+        atom* current = lookup_atom(&board, positions[i]);
         assert(*current == values[2]);
         assert(remove_atom(&board, (struct atom_ref_at_position){current, positions[i]}));
         assert(*current == (VALID | REMOVED));
@@ -69,8 +66,7 @@ static void check_removal_and_reinsertion(void)
     puts("removal: two interleaved three-layer stacks and removed-slot reinsertion passed");
 }
 
-static void check_used_area(void)
-{
+static void check_used_area(void) {
     struct board board = {0};
     board.grid.board = &board;
     uint64_t overlap = 0;
@@ -93,8 +89,7 @@ static void check_used_area(void)
     puts("area: 128 array/hash cells preserve visited and removed overlap rules passed");
 }
 
-static void check_move_buffer(void)
-{
+static void check_move_buffer(void) {
     struct board board = {0};
     board.grid.board = &board;
     atom value = VALID | GRABBED_ONCE | (1ULL << NORMAL_BOND);
@@ -124,11 +119,11 @@ static void check_move_buffer(void)
     free(board.moving_atoms.atoms_at_positions);
     free(board.grid.atoms_at_positions);
     free(board.flag_reset);
-    puts("move: 128 ordinary atoms preserve buffer growth, movement indices and reinsertion passed");
+    puts(
+        "move: 128 ordinary atoms preserve buffer growth, movement indices and reinsertion passed");
 }
 
-static void check_move_overlap(void)
-{
+static void check_move_overlap(void) {
     struct board board = {0};
     board.grid.board = &board;
     struct vector p = {0, 0};
@@ -154,8 +149,7 @@ static void check_move_overlap(void)
     puts("move: overlap removal preserves survivor before marking final vacancy passed");
 }
 
-static void check_move_chain(void)
-{
+static void check_move_chain(void) {
     struct board board = {0};
     board.grid.board = &board;
     uint32_t bucket = 0;
@@ -180,8 +174,7 @@ static void check_move_chain(void)
         assert(lookup_chain_atom(&board, p) == UINT32_MAX);
         assert(board.moving_atoms.atoms_at_positions[step].atom == (VALID | IS_CHAIN_ATOM));
         assert(*lookup_atom(&board, p) == (VALID | REMOVED | MOVED | MOVEMENT_INDEX(step)));
-        if (step)
-            assert(atoms[order[step - 1]].prev_in_list == &atoms[i].next_in_list);
+        if (step) assert(atoms[order[step - 1]].prev_in_list == &atoms[i].next_in_list);
     }
     assert(bucket == UINT32_MAX && board.area == 3);
     assert(atoms[2].next_in_list == 0 && atoms[0].next_in_list == 1);
@@ -195,23 +188,25 @@ static void check_move_chain(void)
     puts("move: three chain atoms preserve colliding-bucket and movement-list links passed");
 }
 
-static void check_move_bfs(void)
-{
+static void check_move_bfs(void) {
     struct board board = {0};
     board.grid.board = &board;
     struct vector positions[] = {{0, 0}, {1, 0}, {2, 0}, {8, 8}, {0, 1}};
-    insert_atom(&board, positions[0], VALID | (1ULL << NORMAL_BOND) | (RECENT_BONDS & (BOND_LOW_BITS << 1)));
+    insert_atom(&board, positions[0],
+                VALID | (1ULL << NORMAL_BOND) | (RECENT_BONDS & (BOND_LOW_BITS << 1)));
     insert_atom(&board, positions[1], VALID | (1ULL << (NORMAL_BOND + 3)) | (1ULL << NORMAL_BOND));
     insert_atom(&board, positions[2], VALID | (1ULL << (NORMAL_BOND + 3)) | HAS_DISJOINT_BOND);
     insert_atom(&board, positions[3], VALID | HAS_DISJOINT_BOND);
     insert_atom(&board, positions[4], VALID);
-    insert_disjoint_bond(&board.disjoint_bond_table, (struct disjoint_bond){positions[2], positions[3]});
-    insert_disjoint_bond(&board.disjoint_bond_table, (struct disjoint_bond){positions[3], positions[2]});
+    insert_disjoint_bond(&board.disjoint_bond_table,
+                         (struct disjoint_bond){positions[2], positions[3]});
+    insert_disjoint_bond(&board.disjoint_bond_table,
+                         (struct disjoint_bond){positions[3], positions[2]});
     struct movement movement = {.absolute_grab_position = {0, 0}, .translation = {1, 0}};
     move_atoms(&board, lookup_atom(&board, positions[0]), movement);
     assert(!board.collision && board.movements.length == 1);
     assert(board.moving_atoms.cursor == 4 && board.moving_atoms.length == 4);
-    struct movement *stored = &board.movements.movements[0];
+    struct movement* stored = &board.movements.movements[0];
     assert(stored->number_of_atoms == 4 && stored->first_atom_index == 0);
     assert(stored->first_chain_atom == UINT32_MAX);
     for (unsigned i = 0; i < 4; ++i) {
@@ -219,9 +214,12 @@ static void check_move_bfs(void)
         assert(*lookup_atom(&board, positions[i]) == (VALID | REMOVED | MOVED));
     }
     assert(*lookup_atom(&board, positions[4]) == VALID);
-    assert(vectors_equal(lookup_disjoint_bond(&stored->disjoint_bonds, positions[2]).to_position, positions[3]));
-    assert(vectors_equal(lookup_disjoint_bond(&stored->disjoint_bonds, positions[3]).to_position, positions[2]));
-    assert(disjoint_bonds_equal(lookup_disjoint_bond(&board.disjoint_bond_table, positions[2]), uninitialized_disjoint_bond));
+    assert(vectors_equal(lookup_disjoint_bond(&stored->disjoint_bonds, positions[2]).to_position,
+                         positions[3]));
+    assert(vectors_equal(lookup_disjoint_bond(&stored->disjoint_bonds, positions[3]).to_position,
+                         positions[2]));
+    assert(disjoint_bonds_equal(lookup_disjoint_bond(&board.disjoint_bond_table, positions[2]),
+                                uninitialized_disjoint_bond));
     move_atoms(&board, lookup_atom(&board, positions[0]), movement);
     assert(!board.collision && board.movements.length == 1 && board.moving_atoms.length == 4);
     movement.translation = (struct vector){0, 1};
@@ -233,7 +231,8 @@ static void check_move_bfs(void)
     assert(vectors_equal(board.collision_location, positions[0]));
     assert(strcmp(board.collision_reason, "atom moved in two directions simultaneously") == 0);
     struct movement left = {.type = PIVOT_MOVEMENT, .translation = {1, 0}};
-    struct movement right = {.type = PIVOT_MOVEMENT, .translation = {1, 0}, .absolute_grab_position = {9, 9}};
+    struct movement right = {
+        .type = PIVOT_MOVEMENT, .translation = {1, 0}, .absolute_grab_position = {9, 9}};
     assert(movements_equal(left, right));
     left.rotation = 1;
     assert(!movements_equal(left, right));
@@ -253,11 +252,11 @@ static void check_move_bfs(void)
     free(board.moving_atoms.atoms_at_positions);
     free(board.grid.atoms_at_positions);
     free(board.flag_reset);
-    puts("move: real BFS follows ordinary and disjoint bonds, excludes recent bonds and detects conflicting movement passed");
+    puts("move: real BFS follows ordinary and disjoint bonds, excludes recent bonds and detects "
+         "conflicting movement passed");
 }
 
-static void check_input_grid_lifecycle(void)
-{
+static void check_input_grid_lifecycle(void) {
     unsigned cases = 0;
     for (unsigned hashed = 0; hashed < 2; ++hashed) {
         for (unsigned reverse = 0; reverse < 2; ++reverse) {
@@ -278,10 +277,13 @@ static void check_input_grid_lifecycle(void)
                 for (unsigned i = 0; i < 2; ++i) {
                     unsigned identity = i ^ reverse;
                     ios[i] = (struct input_output){.type = INPUT | BLOCKED,
-                        .atoms = atoms[identity], .number_of_atoms = 2,
-                        .disjoint_bonds = &bonds[identity], .number_of_disjoint_bonds = 1};
+                                                   .atoms = atoms[identity],
+                                                   .number_of_atoms = 2,
+                                                   .disjoint_bonds = &bonds[identity],
+                                                   .number_of_disjoint_bonds = 1};
                 }
-                struct solution solution = {.inputs_and_outputs = ios, .number_of_inputs_and_outputs = 2};
+                struct solution solution = {.inputs_and_outputs = ios,
+                                            .number_of_inputs_and_outputs = 2};
                 if (removed) {
                     insert_atom(&board, p, VALID | REMOVED);
                     insert_atom(&board, q, VALID | REMOVED);
@@ -290,26 +292,34 @@ static void check_input_grid_lifecycle(void)
                 assert(ios[0].type == INPUT && ios[1].type == INPUT);
                 spawn_inputs(&solution, &board);
                 assert(board.area == 2 && board.number_of_overlapped_atoms == 2);
-                assert(*lookup_atom(&board, p) == (VALID | atoms[reverse][0].atom | OVERLAPS_ATOMS));
-                assert(*lookup_atom(&board, q) == (VALID | atoms[reverse][1].atom | OVERLAPS_ATOMS));
+                assert(*lookup_atom(&board, p) ==
+                       (VALID | atoms[reverse][0].atom | OVERLAPS_ATOMS));
+                assert(*lookup_atom(&board, q) ==
+                       (VALID | atoms[reverse][1].atom | OVERLAPS_ATOMS));
                 assert(board.overlapped_atoms[0].atom == (VALID | atoms[1 ^ reverse][0].atom));
                 assert(board.overlapped_atoms[1].atom == (VALID | atoms[1 ^ reverse][1].atom));
                 assert(vectors_equal(board.overlapped_atoms[0].position, p));
                 assert(vectors_equal(board.overlapped_atoms[1].position, q));
-                assert(disjoint_bonds_equal(lookup_disjoint_bond(&board.disjoint_bond_table, p), bonds[0]));
-                assert(disjoint_bonds_equal(lookup_disjoint_bond(&board.disjoint_bond_table, q), bonds[1]));
+                assert(disjoint_bonds_equal(lookup_disjoint_bond(&board.disjoint_bond_table, p),
+                                            bonds[0]));
+                assert(disjoint_bonds_equal(lookup_disjoint_bond(&board.disjoint_bond_table, q),
+                                            bonds[1]));
                 flag_blocked_inputs(&solution, &board);
                 assert((ios[0].type & BLOCKED) && (ios[1].type & BLOCKED));
                 spawn_inputs(&solution, &board);
                 assert(board.area == 2 && board.number_of_overlapped_atoms == 2);
-                assert(!remove_atom(&board, (struct atom_ref_at_position){lookup_atom(&board, p), p}));
-                assert(!remove_atom(&board, (struct atom_ref_at_position){lookup_atom(&board, q), q}));
+                assert(
+                    !remove_atom(&board, (struct atom_ref_at_position){lookup_atom(&board, p), p}));
+                assert(
+                    !remove_atom(&board, (struct atom_ref_at_position){lookup_atom(&board, q), q}));
                 assert(*lookup_atom(&board, p) == (VALID | atoms[1 ^ reverse][0].atom));
                 assert(*lookup_atom(&board, q) == (VALID | atoms[1 ^ reverse][1].atom));
                 flag_blocked_inputs(&solution, &board);
                 assert((ios[0].type & BLOCKED) && (ios[1].type & BLOCKED));
-                assert(remove_atom(&board, (struct atom_ref_at_position){lookup_atom(&board, p), p}));
-                assert(remove_atom(&board, (struct atom_ref_at_position){lookup_atom(&board, q), q}));
+                assert(
+                    remove_atom(&board, (struct atom_ref_at_position){lookup_atom(&board, p), p}));
+                assert(
+                    remove_atom(&board, (struct atom_ref_at_position){lookup_atom(&board, q), q}));
                 flag_blocked_inputs(&solution, &board);
                 assert(ios[0].type == INPUT && ios[1].type == INPUT);
                 spawn_inputs(&solution, &board);
@@ -326,8 +336,7 @@ static void check_input_grid_lifecycle(void)
     puts("input grid: 8 array/hash, identity-order and removed-slot lifecycles passed");
 }
 
-int main(void)
-{
+int main(void) {
     check_input_grid_lifecycle();
     check_move_bfs();
     check_move_chain();
@@ -340,13 +349,12 @@ int main(void)
     atom permanent = VALID | GRABBED_ONCE | WHEEL_ATOM | (1ULL << NORMAL_BOND);
     atom ordinary[64];
     for (unsigned i = 0; i < 64; ++i) {
-        ordinary[i] = permanent | ((i & 1) ? BEING_DROPPED : 0) |
-            ((i & 2) ? (1ULL << RECENT_BOND) : 0);
+        ordinary[i] =
+            permanent | ((i & 1) ? BEING_DROPPED : 0) | ((i & 2) ? (1ULL << RECENT_BOND) : 0);
         uint32_t before = board.flag_reset_length;
         schedule_flag_reset_if_needed(&board, &ordinary[i]);
         assert(board.flag_reset_length == before + ((i & 3) != 0));
-        if (i & 3)
-            assert(board.flag_reset[before] == &ordinary[i]);
+        if (i & 3) assert(board.flag_reset[before] == &ordinary[i]);
     }
     assert(board.flag_reset_capacity >= board.flag_reset_length);
     uint32_t length = board.flag_reset_length;
@@ -354,8 +362,8 @@ int main(void)
     assert(board.flag_reset_length == length + 1);
     struct atom_at_position overlap[4] = {0};
     for (unsigned i = 0; i < 4; ++i)
-        overlap[i].atom = permanent | ((i & 1) ? BEING_DROPPED : 0) |
-            ((i & 2) ? (1ULL << RECENT_BOND) : 0);
+        overlap[i].atom =
+            permanent | ((i & 1) ? BEING_DROPPED : 0) | ((i & 2) ? (1ULL << RECENT_BOND) : 0);
     board.overlapped_atoms = overlap;
     board.number_of_overlapped_atoms = 4;
     reset_temporary_flags(&board);

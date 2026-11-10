@@ -1,12 +1,12 @@
 #include "ProductionMolecular.hpp"
 #include "AssemblySolver.hpp"
 #include "BinaryWriter.hpp"
+#include "RepoRoot.hpp"
 #include "SolutionVerifier.hpp"
 #include "UnitTestConstants.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;

@@ -28,7 +28,7 @@ io::SolutionData Machine(std::initializer_list<std::vector<std::pair<char, int>>
     }
     return machine;
 }
-}  // namespace
+} // namespace
 
 TEST(ScheduleAudit, CleanMachineIsReportedClean) {
     const auto machine = Machine({{{'E', 0}, {'G', 1}, {'e', 2}}, {{'E', 0}, {'G', 1}}});

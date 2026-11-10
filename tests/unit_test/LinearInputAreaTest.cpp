@@ -119,7 +119,8 @@ TEST(LinearInputArea, ModuleInventoryMatchesUpstreamGeometry) {
 TEST(LinearInputArea, ExtractionTapeFollowsSupplyOrder) {
     for (int atoms = 1; atoms <= 4; ++atoms) {
         auto area = BuildLinearInputArea(LinearChain(atoms), {0, 0}, 0);
-        for (int atom = 0; atom < atoms; ++atom) EmitLinearInputAtom(area, atom);
+        for (int atom = 0; atom < atoms; ++atom)
+            EmitLinearInputAtom(area, atom);
         ExpectMonotoneTicks(area);
 
         const auto* grab = Find(area, "piston");
@@ -128,17 +129,20 @@ TEST(LinearInputArea, ExtractionTapeFollowsSupplyOrder) {
         ASSERT_NE(output, nullptr);
 
         std::string grabTape, outputTape;
-        for (const auto& instruction : grab->instructions) grabTape.push_back(instruction.action);
+        for (const auto& instruction : grab->instructions)
+            grabTape.push_back(instruction.action);
         for (const auto& instruction : output->instructions)
             outputTape.push_back(instruction.action);
 
         std::string expectedGrab = "GE";
-        for (int atom = 1; atom < atoms; ++atom) expectedGrab.push_back('A');
+        for (int atom = 1; atom < atoms; ++atom)
+            expectedGrab.push_back('A');
         if (atoms > 1) expectedGrab.push_back('X');
         EXPECT_EQ(grabTape, expectedGrab);
 
         std::string expectedOutput;
-        for (int atom = 0; atom < atoms; ++atom) expectedOutput += "GRX";
+        for (int atom = 0; atom < atoms; ++atom)
+            expectedOutput += "GRX";
         EXPECT_EQ(outputTape, expectedOutput);
 
         // The reset overlaps the next tick, so a width-w source finishes after
@@ -164,8 +168,10 @@ TEST(LinearInputArea, RejectsUnsupportedSources) {
 TEST(LinearInputArea, ModulesKeepIndependentClocks) {
     auto first = BuildLinearInputArea(LinearChain(3), {0, 0}, 0);
     auto second = BuildLinearInputArea(LinearChain(2), {20, 0}, 1);
-    for (int atom = 0; atom < 3; ++atom) EmitLinearInputAtom(first, atom);
-    for (int atom = 0; atom < 2; ++atom) EmitLinearInputAtom(second, atom);
+    for (int atom = 0; atom < 3; ++atom)
+        EmitLinearInputAtom(first, atom);
+    for (int atom = 0; atom < 2; ++atom)
+        EmitLinearInputAtom(second, atom);
     EXPECT_EQ(first.time, 10);
     EXPECT_EQ(second.time, 7);
     EXPECT_EQ(first.machine.objects.size(), second.machine.objects.size());
@@ -177,8 +183,7 @@ TEST(LinearInputArea, ModulesKeepIndependentClocks) {
 // shared-serpentine machine behind an explicit `off`. Every other value must be
 // deterministic so the portfolio and the measurement probes agree.
 TEST(LinearInputArea, DirectIntakeIsDefaultAndOffRestoresFeeder) {
-    const auto puzzle =
-        io::BinaryParser::ParsePuzzleFile("asset/puzzle/easy/just-salt.puzzle");
+    const auto puzzle = io::BinaryParser::ParsePuzzleFile("asset/puzzle/easy/just-salt.puzzle");
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto plan = AssemblyPlanner::Plan(puzzle, false, deadline);
     const char* flag = "OPUSOPTIMA_DIRECT_INPUT";
@@ -186,29 +191,30 @@ TEST(LinearInputArea, DirectIntakeIsDefaultAndOffRestoresFeeder) {
         const char* name;
         std::optional<std::string> saved;
         ~Guard() {
-            if (saved) setenv(name, saved->c_str(), 1);
-            else unsetenv(name);
+            if (saved)
+                setenv(name, saved->c_str(), 1);
+            else
+                unsetenv(name);
         }
     } guard{flag, std::getenv(flag) ? std::optional<std::string>(std::getenv(flag)) : std::nullopt};
 
     unsetenv(flag);
-    const auto intake = io::BinaryWriter::WriteSolution(
-        CompileScheduledRowAssembly(puzzle, plan, deadline));
+    const auto intake =
+        io::BinaryWriter::WriteSolution(CompileScheduledRowAssembly(puzzle, plan, deadline));
     setenv(flag, "off", 1);
-    const auto feeder = io::BinaryWriter::WriteSolution(
-        CompileScheduledRowAssembly(puzzle, plan, deadline));
+    const auto feeder =
+        io::BinaryWriter::WriteSolution(CompileScheduledRowAssembly(puzzle, plan, deadline));
     EXPECT_NE(intake, feeder);
     // Unknown values keep the default machine, and every run is deterministic.
     for (const char* value : {"on", "1", "", "enabled"}) {
         setenv(flag, value, 1);
-        EXPECT_EQ(io::BinaryWriter::WriteSolution(
-                      CompileScheduledRowAssembly(puzzle, plan, deadline)),
-                  intake)
+        EXPECT_EQ(
+            io::BinaryWriter::WriteSolution(CompileScheduledRowAssembly(puzzle, plan, deadline)),
+            intake)
             << "value=" << value;
     }
     // The explicit feeder switch is stable as well.
     setenv(flag, "off", 1);
-    EXPECT_EQ(io::BinaryWriter::WriteSolution(
-                  CompileScheduledRowAssembly(puzzle, plan, deadline)),
+    EXPECT_EQ(io::BinaryWriter::WriteSolution(CompileScheduledRowAssembly(puzzle, plan, deadline)),
               feeder);
 }

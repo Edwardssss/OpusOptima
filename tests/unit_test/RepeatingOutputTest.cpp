@@ -6,8 +6,8 @@
 #include "AssemblySolver.hpp"
 #include "BinaryWriter.hpp"
 #include "RepeatingOutput.hpp"
-#include "SolutionVerifier.hpp"
 #include "RepoRoot.hpp"
+#include "SolutionVerifier.hpp"
 
 namespace {
 using namespace opusoptima;

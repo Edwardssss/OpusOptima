@@ -1,11 +1,11 @@
 #include "Triplex.hpp"
 #include "BinaryWriter.hpp"
+#include "RepoRoot.hpp"
 #include "SolutionVerifier.hpp"
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <iostream>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;

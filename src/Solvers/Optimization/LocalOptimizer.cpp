@@ -3,8 +3,8 @@
 #include "VerificationJson.hpp"
 #include <algorithm>
 #include <array>
-#include <fstream>
 #include <cstdlib>
+#include <fstream>
 #include <limits>
 #include <map>
 #include <set>
@@ -24,15 +24,24 @@ bool RemoveIdleArms(io::SolutionData& candidate) {
     });
     // Preserve existing empty-arm trials and the tape periods of active machines.
     if (!removed) {
-        const bool passive = std::all_of(candidate.objects.begin(),candidate.objects.end(),[](const auto& object) {
-            return std::all_of(object.instructions.begin(),object.instructions.end(),
-                [](const auto& instruction) { return instruction.action == 'O' || instruction.action == ' '; });
-        });
-        if (passive) std::erase_if(candidate.objects,arm);
+        const bool passive =
+            std::all_of(candidate.objects.begin(), candidate.objects.end(), [](const auto& object) {
+                return std::all_of(object.instructions.begin(), object.instructions.end(),
+                                   [](const auto& instruction) {
+                                       return instruction.action == 'O' ||
+                                              instruction.action == ' ';
+                                   });
+            });
+        if (passive)
+            std::erase_if(candidate.objects, arm);
         else {
             const auto idle = [&](const auto& object) {
-                return arm(object) && std::all_of(object.instructions.begin(),object.instructions.end(),
-                    [](const auto& instruction) { return instruction.action == 'O' || instruction.action == ' '; });
+                return arm(object) &&
+                       std::all_of(object.instructions.begin(), object.instructions.end(),
+                                   [](const auto& instruction) {
+                                       return instruction.action == 'O' ||
+                                              instruction.action == ' ';
+                                   });
             };
             int retainedEnd = -1;
             bool explicitTape = true;
@@ -42,19 +51,22 @@ bool RemoveIdleArms(io::SolutionData& candidate) {
                 for (const auto& instruction : object.instructions) {
                     // Reset/repeat expansion can change the serialized tape's period.
                     if (instruction.parameter <= previous ||
-                        std::string_view("GgAaEeRrPpO ").find(instruction.action) == std::string_view::npos)
+                        std::string_view("GgAaEeRrPpO ").find(instruction.action) ==
+                            std::string_view::npos)
                         explicitTape = false;
                     previous = instruction.parameter;
                     if (instruction.action != ' ')
-                        retainedEnd = std::max(retainedEnd,instruction.parameter);
+                        retainedEnd = std::max(retainedEnd, instruction.parameter);
                 }
             }
             if (explicitTape && retainedEnd >= 0)
-                std::erase_if(candidate.objects,[&](const auto& object) {
-                    return idle(object) && std::all_of(object.instructions.begin(),object.instructions.end(),
-                        [&](const auto& instruction) {
-                            return instruction.parameter >= 0 && instruction.parameter <= retainedEnd;
-                        });
+                std::erase_if(candidate.objects, [&](const auto& object) {
+                    return idle(object) &&
+                           std::all_of(object.instructions.begin(), object.instructions.end(),
+                                       [&](const auto& instruction) {
+                                           return instruction.parameter >= 0 &&
+                                                  instruction.parameter <= retainedEnd;
+                                       });
                 });
         }
     }
@@ -77,15 +89,15 @@ bool TrimUsedRail(io::SolutionData& candidate) {
         if (object.typeName == "arm1" || object.typeName == "piston") {
             if (arm) return false;
             arm = &object;
-        } else if (!object.instructions.empty()) return false;
+        } else if (!object.instructions.empty())
+            return false;
     }
-    if (!arm || !track || arm->instructions.empty() || track->bodyData.size() < 10)
-        return false;
+    if (!arm || !track || arm->instructions.empty() || track->bodyData.size() < 10) return false;
     auto& body = track->bodyData;
     const int count = body[4];
-    if (count < 2 || body.size() != 6 + 2 * static_cast<std::size_t>(count) ||
-        body[1] != 0 || !NonLoopingTrack(*track, count) ||
-        !NonLoopingTrack(*track, count - 1)) return false;
+    if (count < 2 || body.size() != 6 + 2 * static_cast<std::size_t>(count) || body[1] != 0 ||
+        !NonLoopingTrack(*track, count) || !NonLoopingTrack(*track, count - 1))
+        return false;
     std::set<std::pair<int, int>> cells;
     int start = -1;
     for (int i = 0; i < count; ++i) {
@@ -94,11 +106,11 @@ bool TrimUsedRail(io::SolutionData& candidate) {
         if (i) {
             const auto dq = static_cast<long long>(q) - body[3 + 2 * i];
             const auto dr = static_cast<long long>(r) - body[4 + 2 * i];
-            if (std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1)
-                return false;
+            if (std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1) return false;
         }
         if (static_cast<long long>(track->position.q) + q == arm->position.q &&
-            static_cast<long long>(track->position.r) + r == arm->position.r) start = i;
+            static_cast<long long>(track->position.r) + r == arm->position.r)
+            start = i;
     }
     if (start < 0) return false;
     int position = start, low = start, high = start, time = 0;
@@ -134,16 +146,19 @@ bool TrimSharedTrackEnvelopes(io::SolutionData& candidate) {
         if (!object.instructions.empty() || body.size() < 8 || body[1] != 0) return false;
         const int count = body[4];
         if (count < 1 || body.size() != 6 + 2 * static_cast<std::size_t>(count) ||
-            !NonLoopingTrack(object, count)) return false;
+            !NonLoopingTrack(object, count))
+            return false;
         for (int j = 0; j < count; ++j) {
             const long long q = body[5 + 2 * j], r = body[6 + 2 * j];
             if (j) {
                 const auto dq = q - body[3 + 2 * j], dr = r - body[4 + 2 * j];
-                if (std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1)
-                    return false;
+                if (std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1) return false;
             }
-            if (!cells.emplace(Cell{object.position.q + q, object.position.r + r},
-                               std::pair{rails.size(), j}).second) return false;
+            if (!cells
+                     .emplace(Cell{object.position.q + q, object.position.r + r},
+                              std::pair{rails.size(), j})
+                     .second)
+                return false;
         }
         rails.push_back({i, count, count, -1});
     }
@@ -153,7 +168,8 @@ bool TrimSharedTrackEnvelopes(io::SolutionData& candidate) {
         if (!arm) {
             if (!object.instructions.empty() || object.typeName == "arm2" ||
                 object.typeName == "arm3" || object.typeName == "arm6" ||
-                object.typeName == "baron") return false;
+                object.typeName == "baron")
+                return false;
             continue;
         }
         const auto found = cells.find({object.position.q, object.position.r});
@@ -171,7 +187,8 @@ bool TrimSharedTrackEnvelopes(io::SolutionData& candidate) {
         int previous = -1;
         for (const auto& instruction : object.instructions) {
             if (instruction.parameter <= previous ||
-                std::string_view("GgAaEeRrPpOB ").find(instruction.action) == std::string_view::npos)
+                std::string_view("GgAaEeRrPpOB ").find(instruction.action) ==
+                    std::string_view::npos)
                 return false;
             previous = instruction.parameter;
             if (instruction.action == 'A' || instruction.action == 'a') {
@@ -213,8 +230,7 @@ bool ParallelReturns(io::SolutionData& candidate) {
                 boundary = std::max(boundary, instruction.parameter);
             }
         }
-        if (!object.instructions.empty() && object.instructions.back().action != 'O')
-            return false;
+        if (!object.instructions.empty() && object.instructions.back().action != 'O') return false;
     }
     if (reset <= boundary) return false;
     for (const auto& object : candidate.objects) {
@@ -250,8 +266,8 @@ bool CompactEmptyReturns(io::SolutionData& candidate) {
     auto arm = candidate.objects.end();
     for (auto it = candidate.objects.begin(); it != candidate.objects.end(); ++it) {
         if (it->instructions.empty()) continue;
-        if (arm != candidate.objects.end() ||
-            (it->typeName != "arm1" && it->typeName != "piston")) return false;
+        if (arm != candidate.objects.end() || (it->typeName != "arm1" && it->typeName != "piston"))
+            return false;
         arm = it;
     }
     if (arm == candidate.objects.end()) return false;
@@ -261,8 +277,8 @@ bool CompactEmptyReturns(io::SolutionData& candidate) {
     std::vector<io::ArmInstruction> compact;
     bool held = false;
     const auto emptyMotion = [](char action) {
-        return action == 'A' || action == 'a' || action == 'E' || action == 'e' ||
-               action == 'r' || action == 'R' || action == ' ';
+        return action == 'A' || action == 'a' || action == 'E' || action == 'e' || action == 'r' ||
+               action == 'R' || action == ' ';
     };
     for (std::size_t i = 0; i < tape.size();) {
         const char action = tape[i].action;
@@ -276,16 +292,32 @@ bool CompactEmptyReturns(io::SolutionData& candidate) {
         int track = 0, extension = 0, rotation = 0;
         while (i < tape.size() && emptyMotion(tape[i].action)) {
             switch (tape[i++].action) {
-            case 'A': ++track; break; case 'a': --track; break;
-            case 'E': ++extension; break; case 'e': --extension; break;
-            case 'R': ++rotation; break; case 'r': --rotation; break;
-            default: break;
+            case 'A':
+                ++track;
+                break;
+            case 'a':
+                --track;
+                break;
+            case 'E':
+                ++extension;
+                break;
+            case 'e':
+                --extension;
+                break;
+            case 'R':
+                ++rotation;
+                break;
+            case 'r':
+                --rotation;
+                break;
+            default:
+                break;
             }
         }
         rotation = (rotation % 6 + 6) % 6;
         if (rotation > 3) rotation -= 6;
-        if (static_cast<std::size_t>(std::abs(track) + std::abs(extension) +
-                                     std::abs(rotation)) >= i - begin) {
+        if (static_cast<std::size_t>(std::abs(track) + std::abs(extension) + std::abs(rotation)) >=
+            i - begin) {
             compact.insert(compact.end(), tape.begin() + begin, tape.begin() + i);
             continue;
         }
@@ -296,7 +328,9 @@ bool CompactEmptyReturns(io::SolutionData& candidate) {
                 compact.push_back(instruction);
             }
         };
-        append(track, 'A', 'a'); append(extension, 'E', 'e'); append(rotation, 'R', 'r');
+        append(track, 'A', 'a');
+        append(extension, 'E', 'e');
+        append(rotation, 'R', 'r');
     }
     if (compact.size() == tape.size()) return false;
     for (std::size_t i = 0; i < compact.size(); ++i)
@@ -350,7 +384,8 @@ bool PrepositionEmptyRotations(io::SolutionData& candidate) {
     for (auto& object : trial.objects)
         for (auto& instruction : object.instructions)
             instruction.parameter = static_cast<int>(
-                std::lower_bound(times.begin(), times.end(), instruction.parameter) - times.begin());
+                std::lower_bound(times.begin(), times.end(), instruction.parameter) -
+                times.begin());
     // The global rank also retimes O markers, preserving a shared explicit period.
     // Empty arms can still collide; only the whole-machine native gate admits this trial.
     candidate = std::move(trial);
@@ -368,15 +403,13 @@ bool CompactTransportEnabled() {
     return !value || std::string_view(value) != "off";
 }
 bool MechanicalArm(const io::SolutionObject& object) {
-    return object.typeName == "arm1" || object.typeName == "arm2" ||
-           object.typeName == "arm3" || object.typeName == "arm6" ||
-           object.typeName == "piston" || object.typeName == "baron";
+    return object.typeName == "arm1" || object.typeName == "arm2" || object.typeName == "arm3" ||
+           object.typeName == "arm6" || object.typeName == "piston" || object.typeName == "baron";
 }
 // A baron (wheel) grabs by rotating, so a tape without G/g never proves it idle.
 bool TapedArm(const io::SolutionObject& object) {
-    return object.typeName == "arm1" || object.typeName == "arm2" ||
-           object.typeName == "arm3" || object.typeName == "arm6" ||
-           object.typeName == "piston";
+    return object.typeName == "arm1" || object.typeName == "arm2" || object.typeName == "arm3" ||
+           object.typeName == "arm6" || object.typeName == "piston";
 }
 // Reset/repeat tapes (X/C) expand to a different period, so hardware edits against a
 // serialized tape would misprice the machine. Every P0 transform needs explicit tapes.
@@ -401,7 +434,8 @@ bool RetypeNonExtendingPistons(io::SolutionData& candidate) {
         if (object.typeName != "piston") continue;
         const bool motion = std::any_of(
             object.instructions.begin(), object.instructions.end(), [](const auto& instruction) {
-                return std::string_view("EeRrPp").find(instruction.action) != std::string_view::npos;
+                return std::string_view("EeRrPp").find(instruction.action) !=
+                       std::string_view::npos;
             });
         if (motion) continue;
         object.typeName = "arm1";
@@ -445,11 +479,12 @@ bool CompactTrackEnvelopes(io::SolutionData& candidate) {
             const long long q = body[5 + 2 * j], r = body[6 + 2 * j];
             if (j) {
                 const auto dq = q - body[3 + 2 * j], dr = r - body[4 + 2 * j];
-                if (std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1)
-                    return false;
+                if (std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1) return false;
             }
-            if (!cells.emplace(Cell{object.position.q + q, object.position.r + r},
-                               std::pair{rails.size(), j}).second)
+            if (!cells
+                     .emplace(Cell{object.position.q + q, object.position.r + r},
+                              std::pair{rails.size(), j})
+                     .second)
                 return false;
         }
         rails.push_back({i, count, count, -1});
@@ -506,7 +541,8 @@ bool CompactTrackEnvelopes(io::SolutionData& candidate) {
     }
     if (!unused.empty()) {
         std::sort(unused.rbegin(), unused.rend());
-        for (const auto index : unused) trimmed.objects.erase(trimmed.objects.begin() + index);
+        for (const auto index : unused)
+            trimmed.objects.erase(trimmed.objects.begin() + index);
         changed = true;
     }
     if (changed) candidate = std::move(trimmed);
@@ -526,15 +562,17 @@ bool CompactReturns(io::SolutionData& candidate) {
     if (SerialReturnsOnly()) return false;
     const char* emptyReturns = std::getenv("OPUSOPTIMA_EMPTY_RETURN");
     return ((!emptyReturns || std::string_view(emptyReturns) != "off") &&
-            CompactEmptyReturns(candidate)) || ParallelReturns(candidate);
+            CompactEmptyReturns(candidate)) ||
+           ParallelReturns(candidate);
 }
-}
+} // namespace
 static io::SolutionData LocalTrialImpl(const io::SolutionData& parent, int variant,
                                        const char** transformation = nullptr) {
     auto candidate = parent;
     const char* reuse = std::getenv("OPUSOPTIMA_SHARED_BONDER");
     if (variant == 3 && reuse && std::string_view(reuse) == "on") {
-        static constexpr core::HexCoord directions[] = {{1,0},{0,1},{-1,1},{-1,0},{0,-1},{1,-1}};
+        static constexpr core::HexCoord directions[] = {{1, 0},  {0, 1},  {-1, 1},
+                                                        {-1, 0}, {0, -1}, {1, -1}};
         for (auto first = candidate.objects.begin(); first != candidate.objects.end(); ++first) {
             if (first->typeName != "bonder" || first->bodyData.size() < 2) continue;
             const auto endpoint = [&](const auto& object) {
@@ -543,15 +581,18 @@ static io::SolutionData LocalTrialImpl(const io::SolutionData& parent, int varia
             };
             for (auto second = std::next(first); second != candidate.objects.end(); ++second) {
                 if (second->typeName != "bonder" || second->bodyData.size() < 2) continue;
-                if ((first->position == second->position && endpoint(*first) == endpoint(*second)) ||
-                    (first->position == endpoint(*second) && endpoint(*first) == second->position)) {
+                if ((first->position == second->position &&
+                     endpoint(*first) == endpoint(*second)) ||
+                    (first->position == endpoint(*second) &&
+                     endpoint(*first) == second->position)) {
                     candidate.objects.erase(second);
                     return candidate;
                 }
             }
         }
-        const auto bonder = std::find_if(candidate.objects.begin(), candidate.objects.end(),
-                                        [](const auto& object) { return object.typeName == "bonder"; });
+        const auto bonder =
+            std::find_if(candidate.objects.begin(), candidate.objects.end(),
+                         [](const auto& object) { return object.typeName == "bonder"; });
         if (bonder != candidate.objects.end()) candidate.objects.erase(bonder);
         return candidate;
     }
@@ -563,16 +604,22 @@ static io::SolutionData LocalTrialImpl(const io::SolutionData& parent, int varia
     if (variant == 0 || variant == 1) {
         std::set<int> times;
         for (const auto& object : candidate.objects)
-            for (const auto& instruction : object.instructions) times.insert(instruction.parameter);
+            for (const auto& instruction : object.instructions)
+                times.insert(instruction.parameter);
         int end = 0, gap = 0, previous = -1;
         for (int time : times) {
-            if (time - previous - 1 > gap) { gap = time - previous - 1; end = time; }
+            if (time - previous - 1 > gap) {
+                gap = time - previous - 1;
+                end = time;
+            }
             previous = time;
         }
         for (auto& object : candidate.objects)
             for (auto& instruction : object.instructions) {
-                if (variant == 0) instruction.parameter /= 2;
-                else if (instruction.parameter >= end) instruction.parameter -= gap;
+                if (variant == 0)
+                    instruction.parameter /= 2;
+                else if (instruction.parameter >= end)
+                    instruction.parameter -= gap;
             }
     } else if (variant == 2) {
         RemoveIdleArms(candidate);
@@ -583,12 +630,15 @@ static io::SolutionData LocalTrialImpl(const io::SolutionData& parent, int varia
     } else if (variant == 3 || variant == 4) {
         const int turns = variant == 3 ? 1 : 5;
         auto rotate = [turns](int& q, int& r) {
-            for (int i = 0; i < turns; ++i) { int old = q; q = -r; r += old; }
+            for (int i = 0; i < turns; ++i) {
+                int old = q;
+                q = -r;
+                r += old;
+            }
         };
         for (auto& object : candidate.objects) {
             rotate(object.position.q, object.position.r);
-            if (object.bodyData.size() > 1)
-                object.bodyData[1] = (object.bodyData[1] + turns) % 6;
+            if (object.bodyData.size() > 1) object.bodyData[1] = (object.bodyData[1] + turns) % 6;
             // Track offsets are serialized coordinates, not arm instructions.
             if (object.typeName == "track" && object.bodyData.size() >= 6)
                 for (std::size_t i = 5; i + 1 < object.bodyData.size() - 1; i += 2)
@@ -604,7 +654,8 @@ static io::SolutionData LocalTrialImpl(const io::SolutionData& parent, int varia
                 auto combined = parent;
                 // Both envelope passes must succeed; idle removal never widens the rail domain.
                 if (RemoveIdleArms(combined) && TrimSharedTrackEnvelopes(combined)) {
-                    if (transformation) *transformation = "remove-idle-arms-and-trim-shared-track-envelopes";
+                    if (transformation)
+                        *transformation = "remove-idle-arms-and-trim-shared-track-envelopes";
                     return combined;
                 }
             }
@@ -615,14 +666,14 @@ static io::SolutionData LocalTrialImpl(const io::SolutionData& parent, int varia
             const char* emptyReturns = std::getenv("OPUSOPTIMA_EMPTY_RETURN");
             auto trimmed = candidate;
             const bool tapeChanged = !SerialReturnsOnly() &&
-                (!emptyReturns || std::string_view(emptyReturns) != "off") &&
-                CompactEmptyReturns(trimmed);
+                                     (!emptyReturns || std::string_view(emptyReturns) != "off") &&
+                                     CompactEmptyReturns(trimmed);
             // Parent/v4 scores cannot prove dominance over the ungenerated old v7.
             if (!tapeChanged && TrimUsedRail(trimmed)) return trimmed;
         }
         for (auto& object : candidate.objects) {
-            if (object.typeName != "track" || object.bodyData.size() < 10 ||
-                object.bodyData[4] < 2) continue;
+            if (object.typeName != "track" || object.bodyData.size() < 10 || object.bodyData[4] < 2)
+                continue;
             const auto index = variant == 6 ? 5 : 5 + 2 * (object.bodyData[4] - 1);
             object.bodyData.erase(object.bodyData.begin() + index,
                                   object.bodyData.begin() + index + 2);
@@ -649,16 +700,24 @@ void OptimizeVerified(io::CandidateArchive& archive,
     std::vector<io::CandidateArchive::Entry> parents;
     std::set<std::string> seen;
     auto key = [](io::SolutionData solution) {
-        solution.solutionName.clear(); solution.metrics = {};
+        solution.solutionName.clear();
+        solution.metrics = {};
         return io::CandidateSha256(io::BinaryWriter::WriteSolution(solution));
     };
     for (const auto& entry : archive.Slots()) {
         if (entry && seen.insert(key(entry->solution)).second) parents.push_back(entry);
     }
     static constexpr const char* transformations[]{
-        "timing-floor-divide-2", "timing-close-largest-gap", "remove-empty-arms-or-static-noop-arms",
-        "rotate-60", "compact-single-arm-empty-returns-or-parallel-returns-or-preposition-empty-rotations-or-rotate-300", "timing-divide-2-and-remove-idle-arms",
-        "trim-track-head-one", "trim-track-tail-one", "compact-transport-hardware"};
+        "timing-floor-divide-2",
+        "timing-close-largest-gap",
+        "remove-empty-arms-or-static-noop-arms",
+        "rotate-60",
+        "compact-single-arm-empty-returns-or-parallel-returns-or-preposition-empty-rotations-or-"
+        "rotate-300",
+        "timing-divide-2-and-remove-idle-arms",
+        "trim-track-head-one",
+        "trim-track-tail-one",
+        "compact-transport-hardware"};
     static_assert(std::size(transformations) == 9);
     std::ofstream trace(archive.Directory() / "local-trials.jsonl");
     const auto* bonderFlag = std::getenv("OPUSOPTIMA_SHARED_BONDER");
@@ -672,17 +731,16 @@ void OptimizeVerified(io::CandidateArchive& archive,
     // on both select the new default, where v8 is already present exactly once.
     const auto* compact = std::getenv("OPUSOPTIMA_COMPACT_TRANSPORT");
     const bool legacyQueue = compact && std::string_view(compact) == "off";
-    std::vector<int> variants = prioritizeBonder
-        ? std::vector<int>{0,1,2,3,4,5,6,7}
-        : std::vector<int>{0,1,2,4,5,6,7,3};
+    std::vector<int> variants = prioritizeBonder ? std::vector<int>{0, 1, 2, 3, 4, 5, 6, 7}
+                                                 : std::vector<int>{0, 1, 2, 4, 5, 6, 7, 3};
     if (!legacyQueue) std::replace(variants.begin(), variants.end(), 0, 8);
     // Snapshot only: accepted children never recursively refill this queue.
     // Defer the dedicated rotation trial, but preserve shared-bonder priority.
     for (int variant : variants) {
         for (const auto& parent : parents) {
             if (std::chrono::steady_clock::now() >= deadline) return;
-            trace << "{\"event\":\"reached\",\"variant\":" << variant
-                  << ",\"parentSha256\":\"" << parent->solutionHash << "\"}\n";
+            trace << "{\"event\":\"reached\",\"variant\":" << variant << ",\"parentSha256\":\""
+                  << parent->solutionHash << "\"}\n";
             const char* transformation = transformations[variant];
             auto candidate = LocalTrialImpl(parent->solution, variant, &transformation);
             const auto candidateHash = key(candidate);
@@ -692,16 +750,16 @@ void OptimizeVerified(io::CandidateArchive& archive,
                 trace.flush();
                 continue;
             }
-            const auto strategy = "local-v" + std::to_string(variant) +
-                ":parent=" + parent->solutionHash;
+            const auto strategy =
+                "local-v" + std::to_string(variant) + ":parent=" + parent->solutionHash;
             const char* reuse = std::getenv("OPUSOPTIMA_SHARED_BONDER");
             const bool sharedBonder = variant == 3 && reuse && std::string_view(reuse) == "on";
-            trace << "{\"event\":\"attempt\",\"variant\":" << variant
-                  << ",\"parentSha256\":\"" << parent->solutionHash << "\"}\n";
+            trace << "{\"event\":\"attempt\",\"variant\":" << variant << ",\"parentSha256\":\""
+                  << parent->solutionHash << "\"}\n";
             auto report = archive.Submit(candidate, strategy, deadline);
             trace << "{\"event\":\"" << (report.Passed() ? "accepted" : "rejected")
-                  << "\",\"variant\":" << variant << ",\"parentSha256\":\""
-                  << parent->solutionHash << "\"}\n";
+                  << "\",\"variant\":" << variant << ",\"parentSha256\":\"" << parent->solutionHash
+                  << "\"}\n";
             if (report.Passed()) {
                 auto publication = archive.Options();
                 publication.outerDeadline = deadline;
@@ -715,12 +773,13 @@ void OptimizeVerified(io::CandidateArchive& archive,
                   << ",\"cycles\":" << parent->verification.metrics.cycles
                   << ",\"area\":" << parent->verification.metrics.area
                   << "},\"variant\":" << variant << ",\"transformation\":\""
-                  << (sharedBonder ? "remove-first-shared-bonder" : transformation) << "\",\"verification\":"
-                  << io::VerificationReportJson(report) << "}\n";
+                  << (sharedBonder ? "remove-first-shared-bonder" : transformation)
+                  << "\",\"verification\":" << io::VerificationReportJson(report) << "}\n";
             trace.flush();
             if (report.status == io::VerificationStatus::Timeout ||
                 report.status == io::VerificationStatus::Unavailable ||
-                report.status == io::VerificationStatus::Error) return;
+                report.status == io::VerificationStatus::Error)
+                return;
         }
     }
 }

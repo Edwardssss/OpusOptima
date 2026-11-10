@@ -74,8 +74,11 @@ TEST(SolutionParseUnitTest, ParsesArmInstructions) {
 
 TEST(SolutionParseUnitTest, PreservesSignedInt32TapePositionsThroughCodec) {
     const std::vector<opusoptima::io::ArmInstruction> instructions = {
-        {'G', std::numeric_limits<std::int32_t>::min()}, {'r', -20001},
-        {'g', -20000}, {'R', 20000}, {'O', 20001},
+        {'G', std::numeric_limits<std::int32_t>::min()},
+        {'r', -20001},
+        {'g', -20000},
+        {'R', 20000},
+        {'O', 20001},
         {'B', std::numeric_limits<std::int32_t>::max()}};
     opusoptima::io::SolutionData solution;
     solution.objects = {{"arm1", {}, instructions, {1, 0, 0, 0, 0}}};
@@ -100,9 +103,11 @@ TEST(SolutionParseUnitTest, RejectsInstructionCountsAndByteTruncationAtTheActual
         builder.PushI32(1);
         builder.PushVStr("arm1");
         builder.PushU8(1);
-        for (int field = 0; field < 5; ++field) builder.PushI32(0);
+        for (int field = 0; field < 5; ++field)
+            builder.PushI32(0);
         builder.PushI32(count);
-        for (int byte = 0; byte < payloadBytes; ++byte) builder.PushU8(0);
+        for (int byte = 0; byte < payloadBytes; ++byte)
+            builder.PushU8(0);
         try {
             static_cast<void>(opusoptima::io::BinaryParser::ParseSolution(builder.Span()));
             FAIL() << "Expected instruction structure rejection";
@@ -213,7 +218,8 @@ TEST(SolutionParseUnitTest, RejectsInvalidCountsBeforeReadingEntries) {
                 static_cast<void>(opusoptima::io::BinaryParser::ParseSolution(builder.Span()));
                 FAIL() << "Expected invalid count to be rejected";
             } catch (const opusoptima::io::ParseError& error) {
-                EXPECT_STREQ(error.what(), metrics ? "Invalid metrics count" : "Invalid object count");
+                EXPECT_STREQ(error.what(),
+                             metrics ? "Invalid metrics count" : "Invalid object count");
             }
         }
     }
@@ -230,7 +236,8 @@ TEST(SolutionParseUnitTest, AcceptsMinimumSizeObjectsAndZeroMetrics) {
         for (int i = 0; i < count; ++i) {
             builder.PushVStr("");
             builder.PushU8(1);
-            for (int field = 0; field < 7; ++field) builder.PushI32(0);
+            for (int field = 0; field < 7; ++field)
+                builder.PushI32(0);
         }
         const auto solution = opusoptima::io::BinaryParser::ParseSolution(builder.Span());
         EXPECT_EQ(solution.objects.size(), static_cast<std::size_t>(count));

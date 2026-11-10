@@ -1,8 +1,8 @@
 // Focused tests for the transport/hardware compaction (default-queued as v8) in
 // LocalOptimizer. Every transform is deterministic; only v8 is part of the default
 // local-trial queue. Variant 0 remains reachable through the legacy queue.
-#include <cstdlib>
 #include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -14,15 +14,15 @@
 
 #include <gtest/gtest.h>
 
+#include "../unit_test/TestOutputDirectory.hpp"
+#include "AssemblySolver.hpp"
 #include "BinaryParser.hpp"
 #include "BinaryWriter.hpp"
 #include "CandidateArchive.hpp"
 #include "LocalOptimizer.hpp"
-#include "AssemblySolver.hpp"
+#include "RepoRoot.hpp"
 #include "RowAssembly.hpp"
 #include "SingleAtomSolver.hpp"
-#include "../unit_test/TestOutputDirectory.hpp"
-#include "RepoRoot.hpp"
 
 using namespace opusoptima::io;
 
@@ -33,8 +33,10 @@ struct FlagGuard {
         if (value) saved_ = std::string(value);
     }
     ~FlagGuard() {
-        if (saved_) setenv(name_, saved_->c_str(), 1);
-        else unsetenv(name_);
+        if (saved_)
+            setenv(name_, saved_->c_str(), 1);
+        else
+            unsetenv(name_);
     }
     FlagGuard(const FlagGuard&) = delete;
     FlagGuard& operator=(const FlagGuard&) = delete;
@@ -44,12 +46,13 @@ struct FlagGuard {
 std::string Tape(const std::vector<ArmInstruction>& instructions) {
     std::string text;
     for (const auto& instruction : instructions)
-        text += std::string(1, instruction.action) +
-                std::to_string(instruction.parameter) + ',';
+        text += std::string(1, instruction.action) + std::to_string(instruction.parameter) + ',';
     return text;
 }
-std::filesystem::path Root() { return opusoptima::test::RepoRoot(__FILE__); }
+std::filesystem::path Root() {
+    return opusoptima::test::RepoRoot(__FILE__);
 }
+} // namespace
 
 TEST(LocalCompaction, RetypesOnlyNonExtendingPistons) {
     FlagGuard guard("OPUSOPTIMA_COMPACT_TRANSPORT");
@@ -99,8 +102,8 @@ TEST(LocalCompaction, RemovesNoGrabArmsAndRejectsResetTapes) {
 TEST(LocalCompaction, TrimsAndErasesRailsFromArmMovement) {
     FlagGuard guard("OPUSOPTIMA_COMPACT_TRANSPORT");
     SolutionData parent;
-    parent.objects.push_back({"track", {0, 0}, {},
-                              {1, 0, 0, 0, 5, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 7}});
+    parent.objects.push_back(
+        {"track", {0, 0}, {}, {1, 0, 0, 0, 5, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 7}});
     parent.objects.push_back({"arm1", {1, 0}, {{'G', 0}, {'A', 1}, {'g', 2}, {'a', 3}}, {}});
     parent.objects.push_back({"track", {20, 0}, {}, {1, 0, 0, 0, 3, 0, 0, 1, 0, 2, 0, 7}});
     setenv("OPUSOPTIMA_COMPACT_TRANSPORT", "off", 1);
@@ -127,17 +130,18 @@ TEST(LocalCompaction, TrimsAndErasesRailsFromArmMovement) {
 TEST(LocalCompaction, DefaultQueueReplacesV0WithV8AndOffRestoresLegacy) {
     FlagGuard guard("OPUSOPTIMA_COMPACT_TRANSPORT");
     const auto puzzle = Root() / "asset/puzzle/easy/just-salt.puzzle";
-    const auto parent = opusoptima::solvers::SingleAtomSolver{}.Solve(
-        BinaryParser::ParsePuzzleFile(puzzle));
+    const auto parent =
+        opusoptima::solvers::SingleAtomSolver{}.Solve(BinaryParser::ParsePuzzleFile(puzzle));
     // The trace records a "reached" event for every queued variant, so its order is
     // the exact default queue the solver would run.
     const auto orderFor = [&](const char* value) {
-        if (value) setenv("OPUSOPTIMA_COMPACT_TRANSPORT", value, 1);
-        else unsetenv("OPUSOPTIMA_COMPACT_TRANSPORT");
+        if (value)
+            setenv("OPUSOPTIMA_COMPACT_TRANSPORT", value, 1);
+        else
+            unsetenv("OPUSOPTIMA_COMPACT_TRANSPORT");
         opusoptima::test::ScopedTestDirectory scratch;
         VerificationOptions options;
-        options.outerDeadline = std::chrono::steady_clock::now() +
-                                std::chrono::seconds(15);
+        options.outerDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
         CandidateArchive archive(puzzle, scratch.Path() / "queue.solution", options);
         const auto submitted = archive.Submit(parent, "parent");
         EXPECT_TRUE(submitted.Passed()) << submitted.detail;
@@ -178,8 +182,8 @@ TEST(LocalCompaction, RegisteredP0CompactionCandidates) {
             << line;
         ASSERT_TRUE(std::filesystem::exists(parentPath)) << parentPath;
         const auto parent = BinaryParser::ParseSolutionFile(parentPath);
-        const auto bytes = BinaryWriter::WriteSolution(
-            opusoptima::solvers::LocalTrial(parent, variant));
+        const auto bytes =
+            BinaryWriter::WriteSolution(opusoptima::solvers::LocalTrial(parent, variant));
         std::ofstream output(outputPath, std::ios::binary | std::ios::trunc);
         ASSERT_TRUE(output) << outputPath;
         output.write(reinterpret_cast<const char*>(bytes.data()),
@@ -187,8 +191,8 @@ TEST(LocalCompaction, RegisteredP0CompactionCandidates) {
         output.close();
         // Native judgment is a separate per-objective verify step in the driver.
         static_cast<void>(BinaryParser::ParseSolutionFile(outputPath));
-        std::cout << "P0CAND " << variant << ' ' << outputPath << ' '
-                  << CandidateSha256(bytes) << std::endl;
+        std::cout << "P0CAND " << variant << ' ' << outputPath << ' ' << CandidateSha256(bytes)
+                  << std::endl;
         ++written;
     }
     EXPECT_GT(written, 0U);
@@ -218,9 +222,10 @@ TEST(RowRelay, RegisteredRowCompilation) {
         const auto plan = opusoptima::solvers::AssemblyPlanner::Plan(puzzle, false, deadline);
         SolutionData solution;
         try {
-            solution = mode == 1 ? opusoptima::solvers::CompileRowAssembly(puzzle, plan, 3)
+            solution = mode == 1   ? opusoptima::solvers::CompileRowAssembly(puzzle, plan, 3)
                        : mode == 2 ? opusoptima::solvers::CompileRowAssembly(puzzle, plan, 4)
-                       : opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
+                                   : opusoptima::solvers::CompileScheduledRowAssembly(puzzle, plan,
+                                                                                      deadline);
         } catch (const std::exception& error) {
             std::cout << "ROWFAIL " << mode << ' ' << puzzlePath << ' ' << error.what()
                       << std::endl;
@@ -232,8 +237,8 @@ TEST(RowRelay, RegisteredRowCompilation) {
         output.write(reinterpret_cast<const char*>(bytes.data()),
                      static_cast<std::streamsize>(bytes.size()));
         output.close();
-        std::cout << "ROWCAND " << mode << ' ' << outputPath << ' '
-                  << CandidateSha256(bytes) << std::endl;
+        std::cout << "ROWCAND " << mode << ' ' << outputPath << ' ' << CandidateSha256(bytes)
+                  << std::endl;
         ++written;
     }
     EXPECT_GT(written, 0U);

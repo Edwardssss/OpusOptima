@@ -1,7 +1,7 @@
 #include "ExecutionIR.hpp"
-#include "RowPhaseProfile.hpp"
 #include "ExecutionPlan.hpp"
 #include "FragmentCustody.hpp"
+#include "RowPhaseProfile.hpp"
 #include <gtest/gtest.h>
 #include <tuple>
 
@@ -164,7 +164,8 @@ TEST(ExecutionIRTest, AnimismusDistinctSaltFreshProductsAndAtomicRefusals) {
     auto p = Puzzle({T::Salt, T::Salt, T::Earth});
     IR ir;
     auto s = IR::Initial(p);
-    for (std::size_t i = 0; i < 3; ++i) Add(ir, p, s, K::Acquire, {}, i);
+    for (std::size_t i = 0; i < 3; ++i)
+        Add(ir, p, s, K::Acquire, {}, i);
     const auto before = s;
     EXPECT_THROW(Add(ir, p, s, K::Animismus, {1, 1}), IR::Error);
     EXPECT_THROW(Add(ir, p, s, K::Animismus, {1, 3}), IR::Error);
@@ -384,7 +385,11 @@ TEST(ExecutionIRTest, PhaseDiagnosticsPreserveTransactionAndHistoricalTamperReje
     auto referenceState = IR::Initial(puzzle);
     for (bool enabled : {false, true}) {
         row_profile::Counters counters;
-        struct Reset { ~Reset() { row_profile::active = nullptr; } } reset;
+        struct Reset {
+            ~Reset() {
+                row_profile::active = nullptr;
+            }
+        } reset;
         row_profile::active = enabled ? &counters : nullptr;
         IR ledger;
         auto state = IR::Initial(puzzle);
@@ -396,7 +401,10 @@ TEST(ExecutionIRTest, PhaseDiagnosticsPreserveTransactionAndHistoricalTamperReje
         EXPECT_EQ(ledger.steps, steps);
         ledger.AppendFromTail(puzzle, state, {K::Output, 0, {1}});
         EXPECT_EQ(ledger.Replay(puzzle), state);
-        if (!enabled) { reference = ledger; referenceState = state; }
+        if (!enabled) {
+            reference = ledger;
+            referenceState = state;
+        }
         EXPECT_EQ(reference.steps, ledger.steps);
         EXPECT_EQ(referenceState, state);
         ledger.steps.front().operation.index = 99;
@@ -410,7 +418,8 @@ TEST(ExecutionIRTest, PhaseDiagnosticsPreserveTransactionAndHistoricalTamperReje
             EXPECT_GT(counters.phases[row_profile::ApplyLive].calls, 0U);
             EXPECT_GT(counters.phases[row_profile::ApplyReplay].calls, 0U);
         } else {
-            for (const auto& entry : counters.phases) EXPECT_EQ(entry.calls, 0U);
+            for (const auto& entry : counters.phases)
+                EXPECT_EQ(entry.calls, 0U);
         }
     }
 }
@@ -598,7 +607,9 @@ TEST(ExecutionIRTest, ProjectedOutputDoesNotBypassOwningFinitePlanLateStoreCheck
     } catch (const IR::Error& error) {
         EXPECT_STREQ(error.what(), "terminal retention Store must precede completion Output");
     }
-    if (prior) setenv("OPUSOPTIMA_FINITE_RETENTION", saved.c_str(), 1);
-    else unsetenv("OPUSOPTIMA_FINITE_RETENTION");
+    if (prior)
+        setenv("OPUSOPTIMA_FINITE_RETENTION", saved.c_str(), 1);
+    else
+        unsetenv("OPUSOPTIMA_FINITE_RETENTION");
 }
 }} // namespace opusoptima::solvers

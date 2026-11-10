@@ -26,7 +26,12 @@ struct ExpandedFiniteTape {
     std::vector<TapeOrigin> origins;
 };
 enum class TapeExpansionError {
-    Malformed, OutsideDomain, BoundExceeded, Conflict, UnknownState, ResourceUnavailable
+    Malformed,
+    OutsideDomain,
+    BoundExceeded,
+    Conflict,
+    UnknownState,
+    ResourceUnavailable
 };
 struct TapeExpansionFailure {
     TapeExpansionError code;
@@ -37,6 +42,7 @@ using TapeExpansionResult = std::variant<ExpandedFiniteTape, TapeExpansionFailur
 // Offline conversion only: success is neither a scope decision nor certification.
 // The optional enclosing deadline never renews the caller's budget. Initial
 // structural/domain validation precedes cancellation, which returns no partial tape.
-TapeExpansionResult ExpandFiniteArm1Tape(const io::PuzzleData&, const io::SolutionData&,
+TapeExpansionResult ExpandFiniteArm1Tape(
+    const io::PuzzleData&, const io::SolutionData&,
     std::optional<std::chrono::steady_clock::time_point> deadline = {});
 } // namespace opusoptima::verification

@@ -2,11 +2,11 @@
 #include "InventorySearch.hpp"
 #include "SupplyExecutionIR.hpp"
 
+#include "RepoRoot.hpp"
 #include <algorithm>
 #include <array>
 #include <filesystem>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 
 namespace opusoptima::solvers {
 namespace {
@@ -24,9 +24,8 @@ const std::array<Original, 4> originals{{
     {"tourney-2020/OM2020_W5_Overloaded.puzzle", 2, 0, 0, 5, 0, {1, 1, 1, 1}},
 }};
 io::PuzzleData Puzzle(const Original& original) {
-    return io::BinaryParser::ParsePuzzleFile(
-        opusoptima::test::RepoRoot(__FILE__) / "asset/puzzle" /
-        original.file);
+    return io::BinaryParser::ParsePuzzleFile(opusoptima::test::RepoRoot(__FILE__) / "asset/puzzle" /
+                                             original.file);
 }
 InventorySearchLimits Limits() {
     InventorySearchLimits limits;

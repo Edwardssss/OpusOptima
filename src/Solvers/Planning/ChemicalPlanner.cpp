@@ -22,7 +22,8 @@ ChemicalRecipe ChemicalPlanner::Plan(const io::PuzzleData& p) {
 }
 
 ChemicalRecipe ChemicalPlanner::Plan(const io::PuzzleData& p, std::size_t products,
-                                     bool allowSurplus, std::chrono::steady_clock::time_point deadline) {
+                                     bool allowSurplus,
+                                     std::chrono::steady_clock::time_point deadline) {
     return PlanRecipe(p, products, allowSurplus, false, deadline);
 }
 
@@ -153,7 +154,8 @@ ChemicalRecipe ChemicalPlanner::PlanRecipe(const io::PuzzleData& p, std::size_t 
     highs.setOptionValue("threads", 1);
     // HiGHS' restart bound bookkeeping can abort on recipes with reversible metal routes.
     highs.setOptionValue("mip_allow_restart", false);
-    const auto remaining = std::chrono::duration<double>(deadline - std::chrono::steady_clock::now()).count();
+    const auto remaining =
+        std::chrono::duration<double>(deadline - std::chrono::steady_clock::now()).count();
     if (remaining <= 0) throw std::invalid_argument("chemical planning deadline");
     highs.setOptionValue("time_limit", std::min(2.0, remaining));
     const auto loadStatus = highs.passModel(

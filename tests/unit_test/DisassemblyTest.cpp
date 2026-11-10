@@ -13,11 +13,11 @@
 #include "InventoryIR.hpp"
 #include "MaterialPlanning.hpp"
 #include "PhysicalInventory.hpp"
+#include "RepoRoot.hpp"
 #include "SerialArmExecution.hpp"
 #include "SolutionVerifier.hpp"
 #include "SupplyExecutionIR.hpp"
 #include <fstream>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;
@@ -126,13 +126,16 @@ TEST_F(DisassemblyVerifierTest, SerialAnimismusBalancedSaltSixProducts) {
             setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", "1", 1);
         }
         ~Environment() {
-            if (present) setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", old.c_str(), 1);
-            else unsetenv("OPUSOPTIMA_SERIAL_ANIMISMUS");
+            if (present)
+                setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", old.c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_SERIAL_ANIMISMUS");
         }
     } environment;
     int candidates = 0;
     std::ofstream log(root / "native-candidates.log");
-    auto machine = solvers::CompileAcceptedSerialArmExecution(p, *material.plan,
+    auto machine = solvers::CompileAcceptedSerialArmExecution(
+        p, *material.plan,
         [&](const auto& candidate) {
             const auto output = root / ("candidate-" + std::to_string(candidates++) + ".solution");
             io::BinaryWriter::WriteSolutionFile(output, candidate);
@@ -142,7 +145,8 @@ TEST_F(DisassemblyVerifierTest, SerialAnimismusBalancedSaltSixProducts) {
                 << " coordinate=" << report.errorU << ',' << report.errorV
                 << " detail=" << report.detail << std::endl;
             return report.Passed();
-        }, [&](const auto& detail) { log << detail << std::endl; });
+        },
+        [&](const auto& detail) { log << detail << std::endl; });
     EXPECT_TRUE(machine) << "See native-candidates.log; candidates=" << candidates;
 }
 TEST_F(DisassemblyVerifierTest, SerialCalcifyAnimismusBalancedCardinalSixProducts) {
@@ -166,10 +170,14 @@ TEST_F(DisassemblyVerifierTest, SerialCalcifyAnimismusBalancedCardinalSixProduct
             setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", "1", 1);
         }
         ~Environment() {
-            if (hadPrecursor) setenv("OPUSOPTIMA_CALCIFY_ANIMISMUS", precursor.c_str(), 1);
-            else unsetenv("OPUSOPTIMA_CALCIFY_ANIMISMUS");
-            if (present) setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", old.c_str(), 1);
-            else unsetenv("OPUSOPTIMA_SERIAL_ANIMISMUS");
+            if (hadPrecursor)
+                setenv("OPUSOPTIMA_CALCIFY_ANIMISMUS", precursor.c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_CALCIFY_ANIMISMUS");
+            if (present)
+                setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", old.c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_SERIAL_ANIMISMUS");
         }
     } environment;
     const auto material = solvers::SearchMaterialExecution(p);
@@ -180,7 +188,8 @@ TEST_F(DisassemblyVerifierTest, SerialCalcifyAnimismusBalancedCardinalSixProduct
     WritePuzzle(input, p);
     int candidates = 0;
     std::ofstream log(root / "native-candidates.log");
-    auto machine = solvers::CompileAcceptedSerialArmExecution(p, *material.plan,
+    auto machine = solvers::CompileAcceptedSerialArmExecution(
+        p, *material.plan,
         [&](const auto& candidate) {
             const auto output = root / ("candidate-" + std::to_string(candidates++) + ".solution");
             io::BinaryWriter::WriteSolutionFile(output, candidate);
@@ -190,7 +199,8 @@ TEST_F(DisassemblyVerifierTest, SerialCalcifyAnimismusBalancedCardinalSixProduct
                 << " coordinate=" << report.errorU << ',' << report.errorV
                 << " detail=" << report.detail << std::endl;
             return report.Passed();
-        }, [&](const auto& detail) { log << detail << std::endl; });
+        },
+        [&](const auto& detail) { log << detail << std::endl; });
     EXPECT_TRUE(machine) << "See native-candidates.log; candidates=" << candidates;
 }
 TEST_F(DisassemblyVerifierTest, AutomaticInventoryPreservesColoredFragmentWithoutBonder) {
@@ -1199,8 +1209,10 @@ TEST_F(DisassemblyVerifierTest, SerialArmIndependentFireOutputStation) {
     for (int mask : {2, 6, 14}) {
         SCOPED_TRACE(mask);
         io::PuzzleData p;
-        p.version = 3; p.name = "serial-independent-fire";
-        p.outputMultiplier = 1; p.permissionBits = ~0ULL;
+        p.version = 3;
+        p.name = "serial-independent-fire";
+        p.outputMultiplier = 1;
+        p.permissionBits = ~0ULL;
         p.inputs = {{{{T::Fire, {0, 0}}}, {}}, {{{T::Salt, {0, 0}}}, {}}};
         p.outputs = {{{{T::Fire, {0, 0}}, {T::Fire, {1, 0}}},
                       {{static_cast<std::uint8_t>(mask), {0, 0}, {1, 0}}}},
@@ -1217,22 +1229,24 @@ TEST_F(DisassemblyVerifierTest, SerialArmIndependentFireOutputStation) {
                 material.AppendFromTail(p, state, {K::Acquire, atom.type == T::Fire ? 0U : 1U});
                 material.AppendFromTail(p, state, {K::Relocate, 0, {id}, 0, 0, atom.position});
             }
-            material.AppendFromTail(p, state,
-                {K::Bond, 0, {first, first + 1}, p.outputs[output].bonds[0].bits});
+            material.AppendFromTail(
+                p, state, {K::Bond, 0, {first, first + 1}, p.outputs[output].bonds[0].bits});
             material.AppendFromTail(p, state, {K::Output, output, {first}});
         }
         const auto plan = solvers::MakeExecutionPlan(p, material);
         std::string errors;
-        auto machine = solvers::CompileAcceptedSerialArmExecution(p, plan,
+        auto machine = solvers::CompileAcceptedSerialArmExecution(
+            p, plan,
             [&](const auto& candidate) {
                 io::BinaryWriter::WriteSolutionFile(solution, candidate);
                 const auto report = io::VerifySolutionFiles(puzzle, solution, 150000, 10000);
                 errors += report.detail + " cycle=" + std::to_string(report.errorCycle) + "\n";
                 return report.Passed();
-            }, [&](const auto& error) { errors += error + "\n"; });
+            },
+            [&](const auto& error) { errors += error + "\n"; });
         ASSERT_TRUE(machine) << errors;
         EXPECT_TRUE(std::any_of(machine->objects.begin(), machine->objects.end(),
-            [](const auto& part) { return part.typeName == "bonder-prisma"; }));
+                                [](const auto& part) { return part.typeName == "bonder-prisma"; }));
         int period = 0;
         for (const auto& part : machine->objects)
             for (const auto& instruction : part.instructions)
@@ -1246,9 +1260,8 @@ TEST_F(DisassemblyVerifierTest, SerialArmIndependentFireOutputStation) {
         RecordProperty("mask_" + std::to_string(mask) + "_period", period);
         RecordProperty("mask_" + std::to_string(mask) + "_cycles", machine->metrics.cycles);
         auto missing = *machine;
-        std::erase_if(missing.objects, [](const auto& part) {
-            return part.typeName == "bonder-prisma";
-        });
+        std::erase_if(missing.objects,
+                      [](const auto& part) { return part.typeName == "bonder-prisma"; });
         io::BinaryWriter::WriteSolutionFile(solution, missing);
         EXPECT_FALSE(io::VerifySolutionFiles(puzzle, solution, 150000, 10000).Passed());
         if (mask == 14) {
@@ -1265,12 +1278,14 @@ TEST_F(DisassemblyVerifierTest, SerialArmClosedWheelMixedColoredOutput) {
     using IR = solvers::ExecutionIR;
     using K = IR::Kind;
     io::PuzzleData p;
-    p.version = 3; p.name = "closed-wheel-mixed-output";
-    p.outputMultiplier = 1; p.permissionBits = ~0ULL;
+    p.version = 3;
+    p.name = "closed-wheel-mixed-output";
+    p.outputMultiplier = 1;
+    p.permissionBits = ~0ULL;
     p.inputs = {{{{T::Earth, {0, 0}}, {T::Water, {1, 0}}, {T::Air, {2, 0}}},
-                  {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}}}};
+                 {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}}}};
     p.outputs = {{{{T::Fire, {0, 0}}, {T::Fire, {1, 0}}, {T::Salt, {2, 0}}, {T::Air, {0, 1}}},
-                   {{14, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}, {1, {0, 0}, {0, 1}}}}};
+                  {{14, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}, {1, {0, 0}, {0, 1}}}}};
     IR material;
     auto state = IR::Initial(p);
     auto append = [&](IR::Operation op) { material.AppendFromTail(p, state, op); };
@@ -1288,15 +1303,18 @@ TEST_F(DisassemblyVerifierTest, SerialArmClosedWheelMixedColoredOutput) {
         IR::Operation duplicate{K::Duplicate, 0, {salt}};
         duplicate.wheelCatalyst = IR::WheelCatalyst{0, element, 0};
         append(duplicate);
-        append({K::Relocate, 0, {product}, 0, 0,
-            core::Subtract(destination, state.atoms.at(product).position)});
+        append({K::Relocate,
+                0,
+                {product},
+                0,
+                0,
+                core::Subtract(destination, state.atoms.at(product).position)});
         return product;
     };
     const auto first = acquire();
     const auto salt = state.nextId;
     append({K::Calcify, 0, {first + 2}});
-    append({K::Relocate, 0, {salt}, 0, 0,
-        core::Subtract({2, 0}, state.atoms.at(salt).position)});
+    append({K::Relocate, 0, {salt}, 0, 0, core::Subtract({2, 0}, state.atoms.at(salt).position)});
     const auto fireA = convert(first, T::Fire, {0, 0});
     const auto fireB = convert(first + 1, T::Fire, {1, 0});
     const auto second = acquire();
@@ -1312,12 +1330,15 @@ TEST_F(DisassemblyVerifierTest, SerialArmClosedWheelMixedColoredOutput) {
     const auto plan = solvers::MakeExecutionPlan(p, material);
     WritePuzzle(puzzle, p);
     std::string errors;
-    auto machine = solvers::CompileAcceptedSerialArmExecution(p, plan, [&](const auto& candidate) {
-        io::BinaryWriter::WriteSolutionFile(solution, candidate);
-        const auto report = io::VerifySolutionFiles(puzzle, solution, 150000, 10000);
-        errors += report.detail + " cycle=" + std::to_string(report.errorCycle) + "\n";
-        return report.Passed();
-    }, [&](const auto& error) { errors += error + "\n"; });
+    auto machine = solvers::CompileAcceptedSerialArmExecution(
+        p, plan,
+        [&](const auto& candidate) {
+            io::BinaryWriter::WriteSolutionFile(solution, candidate);
+            const auto report = io::VerifySolutionFiles(puzzle, solution, 150000, 10000);
+            errors += report.detail + " cycle=" + std::to_string(report.errorCycle) + "\n";
+            return report.Passed();
+        },
+        [&](const auto& error) { errors += error + "\n"; });
     ASSERT_TRUE(machine) << errors;
     int period = 0;
     for (const auto& part : machine->objects)
@@ -1342,8 +1363,9 @@ TEST_F(DisassemblyVerifierTest, SerialArmClosedWheelMixedColoredOutput) {
 
 TEST_F(DisassemblyVerifierTest, OriginalClosedWheelMaterialCollection) {
     const auto root = opusoptima::test::RepoRoot(__FILE__);
-    const auto original = root / "result/solver-generalization-conserved-period-20261108/inputs/"
-        "1b47844e429729b179bf9b29d11b2d60dcd169a7c8d02ba53702f56bab8c18c5.puzzle";
+    const auto original = root /
+                          "result/solver-generalization-conserved-period-20261108/inputs/"
+                          "1b47844e429729b179bf9b29d11b2d60dcd169a7c8d02ba53702f56bab8c18c5.puzzle";
     if (!std::filesystem::exists(original)) GTEST_SKIP() << "Original verified input unavailable";
     ASSERT_EQ(io::CandidateSha256(io::BinaryParser::ReadAllBytes(original)),
               "1b47844e429729b179bf9b29d11b2d60dcd169a7c8d02ba53702f56bab8c18c5");
@@ -1361,15 +1383,16 @@ TEST_F(DisassemblyVerifierTest, OriginalClosedWheelMaterialCollection) {
         solvers::AssemblySolver solver;
         solver.SetDeadline(deadline);
         std::size_t submissions = 0;
-        const solvers::AssemblySolver::CandidateSink sink = [&](const auto& candidate, const auto& stage) {
+        const solvers::AssemblySolver::CandidateSink sink = [&](const auto& candidate,
+                                                                const auto& stage) {
             ++submissions;
             EXPECT_LE(submissions, solvers::AssemblySolver::MaxCandidateSubmissions);
             EXPECT_TRUE(stage == "shared-plan-wheel" ||
                         stage.starts_with("shared-plan-wheel:parent="));
             return archive.Submit(candidate, stage, deadline);
         };
-        const auto first = defaultLimit ? solver.CollectVerified(p, sink)
-                                       : solver.CollectVerified(p, sink, 1);
+        const auto first =
+            defaultLimit ? solver.CollectVerified(p, sink) : solver.CollectVerified(p, sink, 1);
         ASSERT_TRUE(archive.First());
         ASSERT_EQ(archive.First()->verification.authority, io::VerificationAuthority::LegacyGate);
         EXPECT_GE(submissions, 1U);
@@ -3666,12 +3689,14 @@ TEST_F(DisassemblyVerifierTest, RegisteredOrdinaryFragmentRound3) {
     p.name = "round3-two-dimers";
     p.outputMultiplier = 1;
     p.permissionBits = ~0ULL;
-    p.inputs = {{{{core::AtomType::Air, {0, 0}}, {core::AtomType::Salt, {1, 0}}},
-                 {{1, {0, 0}, {1, 0}}}},
-                {{{core::AtomType::Earth, {0, 0}}, {core::AtomType::Water, {1, 0}}},
-                 {{1, {0, 0}, {1, 0}}}}};
-    p.outputs = {{{{core::AtomType::Air, {0, 0}}, {core::AtomType::Salt, {1, 0}},
-                   {core::AtomType::Earth, {2, 0}}, {core::AtomType::Water, {3, 0}}},
+    p.inputs = {
+        {{{core::AtomType::Air, {0, 0}}, {core::AtomType::Salt, {1, 0}}}, {{1, {0, 0}, {1, 0}}}},
+        {{{core::AtomType::Earth, {0, 0}}, {core::AtomType::Water, {1, 0}}},
+         {{1, {0, 0}, {1, 0}}}}};
+    p.outputs = {{{{core::AtomType::Air, {0, 0}},
+                   {core::AtomType::Salt, {1, 0}},
+                   {core::AtomType::Earth, {2, 0}},
+                   {core::AtomType::Water, {3, 0}}},
                   {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}, {1, {2, 0}, {3, 0}}}}};
     const auto baseline = p;
     for (int variant = 0; variant < 18; ++variant) {
@@ -3694,7 +3719,8 @@ TEST_F(DisassemblyVerifierTest, RegisteredOrdinaryFragmentRound3) {
         }
         if (variant == 16) {
             const core::HexFrame frame{{-3, 4}, 2};
-            for (auto& atom : p.outputs[0].atoms) atom.position = frame.ToWorld(atom.position);
+            for (auto& atom : p.outputs[0].atoms)
+                atom.position = frame.ToWorld(atom.position);
             for (auto& bond : p.outputs[0].bonds) {
                 bond.from = frame.ToWorld(bond.from);
                 bond.to = frame.ToWorld(bond.to);
@@ -3703,7 +3729,8 @@ TEST_F(DisassemblyVerifierTest, RegisteredOrdinaryFragmentRound3) {
         if (variant < 12) {
             const core::HexFrame frame{{2, -3}, variant % 6};
             for (auto& molecule : p.inputs) {
-                for (auto& atom : molecule.atoms) atom.position = frame.ToWorld(atom.position);
+                for (auto& atom : molecule.atoms)
+                    atom.position = frame.ToWorld(atom.position);
                 for (auto& bond : molecule.bonds) {
                     bond.from = frame.ToWorld(bond.from);
                     bond.to = frame.ToWorld(bond.to);
@@ -3722,8 +3749,10 @@ TEST_F(DisassemblyVerifierTest, RegisteredOrdinaryFragmentRound3) {
                 cutRebond.Append(p, state, step.operation);
                 if (step.operation.kind == IR::Kind::Acquire) {
                     for (const auto& [edge, bits] : step.effects.bonds)
-                        if (edge.a >= step.preconditions.nextId && edge.b >= step.preconditions.nextId) {
-                            cutRebond.Append(p, state, {IR::Kind::Unbond, 0, {edge.a, edge.b}, bits});
+                        if (edge.a >= step.preconditions.nextId &&
+                            edge.b >= step.preconditions.nextId) {
+                            cutRebond.Append(p, state,
+                                             {IR::Kind::Unbond, 0, {edge.a, edge.b}, bits});
                             cutRebond.Append(p, state, {IR::Kind::Bond, 0, {edge.a, edge.b}, bits});
                         }
                 }
@@ -3743,9 +3772,11 @@ TEST_F(DisassemblyVerifierTest, RegisteredOrdinaryFragmentRound3) {
                 const auto directory = std::filesystem::path(std::getenv("OPUS_RETAINED_EVIDENCE"));
                 std::filesystem::copy_file(puzzle, directory / "two-dimers.puzzle",
                                            std::filesystem::copy_options::overwrite_existing);
-                std::filesystem::copy_file(solution, directory /
-                    (candidate.solutionName == "Shared-plan retained ordinary fragments"
-                         ? "two-dimers-retained.solution" : "two-dimers-parent.solution"),
+                std::filesystem::copy_file(
+                    solution,
+                    directory / (candidate.solutionName == "Shared-plan retained ordinary fragments"
+                                     ? "two-dimers-retained.solution"
+                                     : "two-dimers-parent.solution"),
                     std::filesystem::copy_options::overwrite_existing);
             }
             return report.Passed();
@@ -3762,7 +3793,8 @@ TEST_F(DisassemblyVerifierTest, RegisteredOrdinaryFragmentRound3) {
                             auto denied = p;
                             denied.permissionBits &= ~(1ULL << bit);
                             WritePuzzle(puzzle, denied);
-                            const auto report = io::VerifySolutionFiles(puzzle, solution, 150000, 10000);
+                            const auto report =
+                                io::VerifySolutionFiles(puzzle, solution, 150000, 10000);
                             EXPECT_FALSE(report.Passed()) << "permission=" << bit;
                             std::cout << "PERMISSION " << bit << " accepted=" << report.Passed()
                                       << " " << report.detail << '\n';
@@ -3773,8 +3805,8 @@ TEST_F(DisassemblyVerifierTest, RegisteredOrdinaryFragmentRound3) {
             });
         if (variant == 15 || variant == 17) {
             EXPECT_EQ(children, 0);
-            std::cout << "BOUNDED_REFUSAL variant=" << variant << " parent=" << bool(parent)
-                      << " " << failures;
+            std::cout << "BOUNDED_REFUSAL variant=" << variant << " parent=" << bool(parent) << " "
+                      << failures;
             continue;
         }
         ASSERT_TRUE(parent) << variant << " " << failures;

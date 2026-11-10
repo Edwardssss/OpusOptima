@@ -34,8 +34,7 @@ inline std::filesystem::path FindRepoRoot(std::filesystem::path start) {
     for (std::filesystem::path cursor = std::move(start);; cursor = cursor.parent_path()) {
         if (std::filesystem::exists(cursor / kRepoMarker, error)) return cursor;
         if (cursor.empty() || cursor == cursor.parent_path()) {
-            throw std::runtime_error("repository root (holding " +
-                                     std::string(kRepoMarker) +
+            throw std::runtime_error("repository root (holding " + std::string(kRepoMarker) +
                                      ") not found above the test source file");
         }
     }
@@ -52,4 +51,4 @@ inline std::filesystem::path RepoRoot(const char* sourceFile) {
     return FindRepoRoot(std::filesystem::path(sourceFile).parent_path());
 }
 
-}  // namespace opusoptima::test
+} // namespace opusoptima::test

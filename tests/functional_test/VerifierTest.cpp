@@ -12,14 +12,15 @@
 #include "CollisionLUT.hpp"
 #include "HexSimulator.hpp"
 #include "MachineState.hpp"
-#include "SingleAtomSolver.hpp"
 #include "RepoRoot.hpp"
+#include "SingleAtomSolver.hpp"
 
 #ifdef HAS_LIBVERIFY
 namespace {
 
 std::filesystem::path GetRepoRoot() {
-    return opusoptima::test::RepoRoot(__FILE__);}
+    return opusoptima::test::RepoRoot(__FILE__);
+}
 
 } // namespace
 

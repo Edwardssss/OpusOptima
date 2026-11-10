@@ -9,11 +9,12 @@
 namespace opusoptima::solvers {
 bool SupportsOrdinarySourceCutLowering(const io::PuzzleData& p) {
     if (p.productionInfo || p.inputs.empty() || p.outputs.empty() ||
-        !(p.permissionBits & (1ULL << 8))) return false;
+        !(p.permissionBits & (1ULL << 8)))
+        return false;
     for (const auto& input : p.inputs) {
         if (input.atoms.size() == 1 && input.bonds.empty()) continue;
-        if (input.atoms.size() != 2 || input.bonds.size() != 1 ||
-            !(p.permissionBits & (1ULL << 9))) return false;
+        if (input.atoms.size() != 2 || input.bonds.size() != 1 || !(p.permissionBits & (1ULL << 9)))
+            return false;
         const auto& bond = input.bonds.front();
         const auto a = input.atoms[0].position, b = input.atoms[1].position;
         if (a == b || bond.bits != 1 ||
@@ -22,16 +23,16 @@ bool SupportsOrdinarySourceCutLowering(const io::PuzzleData& p) {
     }
     return std::all_of(p.outputs.begin(), p.outputs.end(), [](const auto& output) {
         return output.atoms.size() > 1 && !output.bonds.empty() &&
-            std::all_of(output.bonds.begin(), output.bonds.end(),
-                        [](const auto& bond) { return bond.bits == 1; });
+               std::all_of(output.bonds.begin(), output.bonds.end(),
+                           [](const auto& bond) { return bond.bits == 1; });
     });
 }
 bool SupportsClosedCardinalLife(const io::PuzzleData& p) {
     using T = core::AtomType;
-    constexpr auto permissions = (1ULL << 0) | (1ULL << 8) | (1ULL << 9) |
-        (1ULL << 12) | (1ULL << 16) | (1ULL << 22) | (1ULL << 23) | (1ULL << 25);
-    if (p.version != 3 || p.productionInfo || p.outputMultiplier != 1 ||
-        p.inputs.empty() || p.inputs.size() > 4 || p.outputs.size() != 1 ||
+    constexpr auto permissions = (1ULL << 0) | (1ULL << 8) | (1ULL << 9) | (1ULL << 12) |
+                                 (1ULL << 16) | (1ULL << 22) | (1ULL << 23) | (1ULL << 25);
+    if (p.version != 3 || p.productionInfo || p.outputMultiplier != 1 || p.inputs.empty() ||
+        p.inputs.size() > 4 || p.outputs.size() != 1 ||
         (p.permissionBits & permissions) != permissions)
         return false;
     const auto cardinal = [](T t) {
@@ -51,14 +52,15 @@ bool SupportsClosedCardinalLife(const io::PuzzleData& p) {
     }
     const auto& output = p.outputs.front();
     if (!dimer || output.atoms.size() < 2 || output.atoms.size() > 16 ||
-        output.bonds.size() > 3 * output.atoms.size() ||
-        !SupportsOrdinarySourceCutLowering(p)) return false;
+        output.bonds.size() > 3 * output.atoms.size() || !SupportsOrdinarySourceCutLowering(p))
+        return false;
     std::size_t vitae = 0, mors = 0;
     for (const auto& atom : output.atoms) {
         vitae += atom.type == T::Vitae;
         mors += atom.type == T::Mors;
         if (atom.type != T::Vitae && atom.type != T::Mors && atom.type != T::Salt &&
-            !available.contains(atom.type)) return false;
+            !available.contains(atom.type))
+            return false;
     }
     if (!vitae || vitae != mors) return false;
     try {
@@ -78,10 +80,12 @@ ExecutionIR BuildPeriod(const io::PuzzleData& p, const JointSupplyPlan& supply,
         throw ExecutionIR::Unsupported("closed cardinal life domain required");
     const bool cutSources = policy != SupplyMaterialLoweringPolicy::PreserveCompatible;
     if (cutSources && (!SupportsOrdinarySourceCutLowering(p) ||
-        std::any_of(supply.steps.begin(), supply.steps.end(), [](const auto& step) {
-            return step.supply.retainProduct || step.supply.wheelCatalyst.has_value();
-        })))
-        throw ExecutionIR::Unsupported("ordinary source cut lowering requires unretained singleton/dimer temporal supply");
+                       std::any_of(supply.steps.begin(), supply.steps.end(), [](const auto& step) {
+                           return step.supply.retainProduct ||
+                                  step.supply.wheelCatalyst.has_value();
+                       })))
+        throw ExecutionIR::Unsupported(
+            "ordinary source cut lowering requires unretained singleton/dimer temporal supply");
     if (p.outputs.empty() || (!outputFrames.empty() && outputFrames.size() != p.outputs.size()))
         throw ExecutionIR::Error("output frame dimension mismatch");
     if (!inputFrames.empty() && inputFrames.size() != p.inputs.size())
@@ -544,13 +548,15 @@ ExecutionIR BuildSupplyExecutionIR(const io::PuzzleData& p, const AssemblyPlan& 
                                    const SupplyPlan& supply, core::HexFrame outputFrame,
                                    const std::vector<core::HexFrame>& inputFrames) {
     return BuildSupplyExecutionIRWithPolicy(p, assembly, supply,
-        SupplyMaterialLoweringPolicy::PreserveCompatible, outputFrame, inputFrames);
+                                            SupplyMaterialLoweringPolicy::PreserveCompatible,
+                                            outputFrame, inputFrames);
 }
 
-ExecutionIR BuildSupplyExecutionIRWithPolicy(
-    const io::PuzzleData& p, const AssemblyPlan& assembly, const SupplyPlan& supply,
-    SupplyMaterialLoweringPolicy policy, core::HexFrame outputFrame,
-    const std::vector<core::HexFrame>& inputFrames) {
+ExecutionIR BuildSupplyExecutionIRWithPolicy(const io::PuzzleData& p, const AssemblyPlan& assembly,
+                                             const SupplyPlan& supply,
+                                             SupplyMaterialLoweringPolicy policy,
+                                             core::HexFrame outputFrame,
+                                             const std::vector<core::HexFrame>& inputFrames) {
     AssemblyPlanner::Validate(p, assembly);
     JointSupplyPlan joint;
     joint.usage = supply.usage;
@@ -564,14 +570,15 @@ ExecutionIR BuildSupplyExecutionIRWithPolicy(
 ExecutionIR BuildJointSupplyExecutionIR(const io::PuzzleData& p, const JointSupplyPlan& supply,
                                         const std::vector<core::HexFrame>& outputFrames,
                                         const std::vector<core::HexFrame>& inputFrames) {
-    return BuildJointSupplyExecutionIRWithPolicy(p, supply,
-        SupplyMaterialLoweringPolicy::PreserveCompatible, outputFrames, inputFrames);
+    return BuildJointSupplyExecutionIRWithPolicy(
+        p, supply, SupplyMaterialLoweringPolicy::PreserveCompatible, outputFrames, inputFrames);
 }
 
-ExecutionIR BuildJointSupplyExecutionIRWithPolicy(
-    const io::PuzzleData& p, const JointSupplyPlan& supply, SupplyMaterialLoweringPolicy policy,
-    const std::vector<core::HexFrame>& outputFrames,
-    const std::vector<core::HexFrame>& inputFrames) {
+ExecutionIR BuildJointSupplyExecutionIRWithPolicy(const io::PuzzleData& p,
+                                                  const JointSupplyPlan& supply,
+                                                  SupplyMaterialLoweringPolicy policy,
+                                                  const std::vector<core::HexFrame>& outputFrames,
+                                                  const std::vector<core::HexFrame>& inputFrames) {
     return BuildPeriod(p, supply, outputFrames, inputFrames, policy);
 }
 } // namespace opusoptima::solvers

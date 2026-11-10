@@ -1,17 +1,16 @@
 #pragma once
 
+#include "RepoRoot.hpp"
 #include <filesystem>
+#include <gtest/gtest.h>
 #include <random>
 #include <stdexcept>
-#include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 
 namespace opusoptima::test {
 class ScopedTestDirectory {
-public:
+    public:
     ScopedTestDirectory() {
-        const auto base = opusoptima::test::RepoRoot(__FILE__) /
-                          "build/test-output/integration";
+        const auto base = opusoptima::test::RepoRoot(__FILE__) / "build/test-output/integration";
         std::filesystem::create_directories(base);
         std::random_device random;
         for (int attempt = 0; attempt < 64; ++attempt) {
@@ -27,8 +26,11 @@ public:
     }
     ScopedTestDirectory(const ScopedTestDirectory&) = delete;
     ScopedTestDirectory& operator=(const ScopedTestDirectory&) = delete;
-    const std::filesystem::path& Path() const { return path_; }
-private:
+    const std::filesystem::path& Path() const {
+        return path_;
+    }
+
+    private:
     std::filesystem::path path_;
 };
 } // namespace opusoptima::test

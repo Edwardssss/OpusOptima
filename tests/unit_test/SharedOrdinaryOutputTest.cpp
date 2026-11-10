@@ -1,7 +1,8 @@
 #include "IO/BinaryWriter.hpp"
 #include "IO/SolutionVerifier.hpp"
-#include "RowAssembly.hpp"
 #include "LifeDeath.hpp"
+#include "RepoRoot.hpp"
+#include "RowAssembly.hpp"
 #include "Verification/StaticProductionVerifier.hpp"
 #include <algorithm>
 #include <filesystem>
@@ -10,13 +11,13 @@
 #include <random>
 #include <set>
 #include <stdexcept>
-#include "RepoRoot.hpp"
 
-namespace opusoptima::solvers { namespace {
+namespace opusoptima::solvers {
+namespace {
 const auto root = opusoptima::test::RepoRoot(__FILE__);
 
 class ScopedTestDirectory {
-public:
+    public:
     ScopedTestDirectory() {
         const auto base = root / "build/test-output/shared-ordinary";
         std::filesystem::create_directories(base);
@@ -34,8 +35,11 @@ public:
     }
     ScopedTestDirectory(const ScopedTestDirectory&) = delete;
     ScopedTestDirectory& operator=(const ScopedTestDirectory&) = delete;
-    const std::filesystem::path& Path() const { return path_; }
-private:
+    const std::filesystem::path& Path() const {
+        return path_;
+    }
+
+    private:
     std::filesystem::path path_;
 };
 const auto input = root / "asset/puzzle/workshop-versions/w2788066950.puzzle";
@@ -55,9 +59,11 @@ void RunMixedInventoryOriginalCompleteGate(bool nativeGate) {
                 auto transform = [](core::HexCoord c) {
                     return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
                 };
-                for (auto& atom : input.atoms) atom.position = transform(atom.position);
+                for (auto& atom : input.atoms)
+                    atom.position = transform(atom.position);
                 for (auto& bond : input.bonds) {
-                    bond.from = transform(bond.from); bond.to = transform(bond.to);
+                    bond.from = transform(bond.from);
+                    bond.to = transform(bond.to);
                 }
                 std::reverse(input.atoms.begin(), input.atoms.end());
             }
@@ -65,27 +71,35 @@ void RunMixedInventoryOriginalCompleteGate(bool nativeGate) {
             puzzlePath = dir / "transformed.puzzle";
             std::ofstream out(puzzlePath, std::ios::binary);
             auto word = [&](std::uint64_t v, int bytes) {
-                for (int i = 0; i < bytes; ++i) out.put(static_cast<char>(v >> (8 * i)));
+                for (int i = 0; i < bytes; ++i)
+                    out.put(static_cast<char>(v >> (8 * i)));
             };
-            word(3, 4); word(puzzle.name.size(), 1);
+            word(3, 4);
+            word(puzzle.name.size(), 1);
             out.write(puzzle.name.data(), puzzle.name.size());
-            word(0, 8); word(puzzle.permissionBits, 8);
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
             for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
                 word(list->size(), 4);
                 for (const auto& molecule : *list) {
                     word(molecule.atoms.size(), 4);
                     for (const auto& atom : molecule.atoms) {
                         word(static_cast<std::uint8_t>(atom.type), 1);
-                        word(atom.position.q, 1); word(atom.position.r, 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
                     }
                     word(molecule.bonds.size(), 4);
                     for (const auto& bond : molecule.bonds) {
-                        word(bond.bits, 1); word(bond.from.q, 1); word(bond.from.r, 1);
-                        word(bond.to.q, 1); word(bond.to.r, 1);
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
             }
-            word(1, 4); word(0, 1);
+            word(1, 4);
+            word(0, 1);
         }
         const auto batch = CompileMixedInventoryAssembly(puzzle);
         const auto state = batch.ledger.Replay(puzzle);
@@ -104,44 +118,55 @@ void RunMixedInventoryOriginalCompleteGate(bool nativeGate) {
         io::BinaryWriter::WriteSolutionFile(solutionPath, batch.solution);
         if (nativeGate) {
             for (int pass = 0; pass < 2; ++pass) {
-                const auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 150000, 10000);
+                const auto report =
+                    io::VerifySolutionFiles(puzzlePath, solutionPath, 150000, 10000);
                 std::ofstream(dir / (stem + "-gate-" + std::to_string(pass) + ".txt"))
                     << "passed=" << report.Passed() << " cost=" << report.metrics.cost
                     << " cycles=" << report.metrics.cycles << " area=" << report.metrics.area
-                    << "\n" << report.detail << " cycle=" << report.errorCycle
-                    << " cell=" << report.errorU << ',' << report.errorV << '\n';
+                    << "\n"
+                    << report.detail << " cycle=" << report.errorCycle << " cell=" << report.errorU
+                    << ',' << report.errorV << '\n';
                 ASSERT_TRUE(report.Passed()) << report.detail;
             }
         }
         if (!variant) {
             for (int bit : {2, 3, 9, 12, 16}) {
-                auto denied = puzzle; denied.permissionBits &= ~(1ULL << bit);
+                auto denied = puzzle;
+                denied.permissionBits &= ~(1ULL << bit);
                 EXPECT_THROW(CompileMixedInventoryAssembly(denied), std::invalid_argument);
             }
             auto noDisposal = puzzle;
             noDisposal.permissionBits &= ~(1ULL << 17);
             const auto closed = CompileMixedInventoryAssembly(noDisposal);
             ExecutionIR::RequireComplete(closed.ledger.Replay(noDisposal), {6, 6});
-            EXPECT_TRUE(std::none_of(closed.solution.objects.begin(), closed.solution.objects.end(),
+            EXPECT_TRUE(std::none_of(
+                closed.solution.objects.begin(), closed.solution.objects.end(),
                 [](const auto& object) { return object.typeName == "glyph-disposal"; }));
             auto broken = batch.solution;
             for (auto& object : broken.objects)
                 if (object.typeName == "piston" && object.position.r == 3) {
-                    object.instructions.clear(); break;
+                    object.instructions.clear();
+                    break;
                 }
             const auto brokenPath = dir / "broken-buffer.solution";
             io::BinaryWriter::WriteSolutionFile(brokenPath, broken);
             if (nativeGate) {
-                const auto rejected = io::VerifySolutionFiles(puzzlePath, brokenPath, 150000, 10000);
-                std::ofstream(dir / "broken-buffer-gate.txt") << rejected.detail << " cycle=" << rejected.errorCycle;
+                const auto rejected =
+                    io::VerifySolutionFiles(puzzlePath, brokenPath, 150000, 10000);
+                std::ofstream(dir / "broken-buffer-gate.txt")
+                    << rejected.detail << " cycle=" << rejected.errorCycle;
                 EXPECT_FALSE(rejected.Passed());
             }
         }
     }
 }
-TEST(SharedOrdinaryOutputTest, MixedInventoryOriginalCompleteGateSemantics) { RunMixedInventoryOriginalCompleteGate(false); }
+TEST(SharedOrdinaryOutputTest, MixedInventoryOriginalCompleteGateSemantics) {
+    RunMixedInventoryOriginalCompleteGate(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, MixedInventoryOriginalCompleteGate) { RunMixedInventoryOriginalCompleteGate(true); }
+TEST(SharedOrdinaryOutputTest, MixedInventoryOriginalCompleteGate) {
+    RunMixedInventoryOriginalCompleteGate(true);
+}
 #endif
 
 void RunMixedInventoryCompactBufferCompleteGate(bool nativeGate) {
@@ -152,13 +177,19 @@ void RunMixedInventoryCompactBufferCompleteGate(bool nativeGate) {
     for (int variant = 0; variant < 4; ++variant) {
         auto puzzle = original;
         auto puzzlePath = originalPath;
-        const std::string stem = variant == 3 ? "demand-permutation" : variant == 2 ? "holdout" : variant ? "transformed" : "original";
+        const std::string stem = variant == 3   ? "demand-permutation"
+                                 : variant == 2 ? "holdout"
+                                 : variant      ? "transformed"
+                                                : "original";
         if (variant) {
             if (variant == 3) {
-                for (auto& output : puzzle.outputs) for (auto& atom : output.atoms) {
-                    if (atom.type == core::AtomType::Vitae) atom.type = core::AtomType::Mors;
-                    else if (atom.type == core::AtomType::Mors) atom.type = core::AtomType::Vitae;
-                }
+                for (auto& output : puzzle.outputs)
+                    for (auto& atom : output.atoms) {
+                        if (atom.type == core::AtomType::Vitae)
+                            atom.type = core::AtomType::Mors;
+                        else if (atom.type == core::AtomType::Mors)
+                            atom.type = core::AtomType::Vitae;
+                    }
             } else if (variant == 2) {
                 std::reverse(puzzle.inputs.begin(), puzzle.inputs.end());
                 for (auto& output : puzzle.outputs) {
@@ -166,43 +197,53 @@ void RunMixedInventoryCompactBufferCompleteGate(bool nativeGate) {
                     std::reverse(output.bonds.begin(), output.bonds.end());
                 }
             } else {
-            puzzle.name += " transformed";
-            for (auto& input : puzzle.inputs) {
-                auto transform = [](core::HexCoord c) {
-                    return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
-                };
-                for (auto& atom : input.atoms) atom.position = transform(atom.position);
-                for (auto& bond : input.bonds) {
-                    bond.from = transform(bond.from); bond.to = transform(bond.to);
+                puzzle.name += " transformed";
+                for (auto& input : puzzle.inputs) {
+                    auto transform = [](core::HexCoord c) {
+                        return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
+                    };
+                    for (auto& atom : input.atoms)
+                        atom.position = transform(atom.position);
+                    for (auto& bond : input.bonds) {
+                        bond.from = transform(bond.from);
+                        bond.to = transform(bond.to);
+                    }
+                    std::reverse(input.atoms.begin(), input.atoms.end());
                 }
-                std::reverse(input.atoms.begin(), input.atoms.end());
-            }
-            std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
+                std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
             }
             puzzlePath = dir / (stem + ".puzzle");
             std::ofstream out(puzzlePath, std::ios::binary);
             auto word = [&](std::uint64_t v, int bytes) {
-                for (int i = 0; i < bytes; ++i) out.put(static_cast<char>(v >> (8 * i)));
+                for (int i = 0; i < bytes; ++i)
+                    out.put(static_cast<char>(v >> (8 * i)));
             };
-            word(3, 4); word(puzzle.name.size(), 1);
+            word(3, 4);
+            word(puzzle.name.size(), 1);
             out.write(puzzle.name.data(), puzzle.name.size());
-            word(0, 8); word(puzzle.permissionBits, 8);
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
             for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
                 word(list->size(), 4);
                 for (const auto& molecule : *list) {
                     word(molecule.atoms.size(), 4);
                     for (const auto& atom : molecule.atoms) {
                         word(static_cast<std::uint8_t>(atom.type), 1);
-                        word(atom.position.q, 1); word(atom.position.r, 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
                     }
                     word(molecule.bonds.size(), 4);
                     for (const auto& bond : molecule.bonds) {
-                        word(bond.bits, 1); word(bond.from.q, 1); word(bond.from.r, 1);
-                        word(bond.to.q, 1); word(bond.to.r, 1);
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
             }
-            word(1, 4); word(0, 1);
+            word(1, 4);
+            word(0, 1);
         }
         for (bool compact : {false, true}) {
             const std::string mode = compact ? "-on" : "-off";
@@ -212,48 +253,65 @@ void RunMixedInventoryCompactBufferCompleteGate(bool nativeGate) {
             EXPECT_TRUE(state.stored.empty());
             EXPECT_EQ(state.discarded, 0);
             std::set<ExecutionIR::AtomId> ids;
-            for (const auto& emission : batch.emissions) EXPECT_TRUE(ids.insert(emission.atom).second);
+            for (const auto& emission : batch.emissions)
+                EXPECT_TRUE(ids.insert(emission.atom).second);
             EXPECT_EQ(ids.size(), 60);
             std::ofstream phases(dir / (stem + mode + "-phases.csv"));
             phases << "product,phase,begin,end\n";
             for (const auto& phase : batch.phases)
-                phases << phase.product << ',' << phase.phase << ',' << phase.begin << ',' << phase.end << '\n';
+                phases << phase.product << ',' << phase.phase << ',' << phase.begin << ','
+                       << phase.end << '\n';
             phases << "-1,total,0," << batch.solution.metrics.cycles << '\n';
             const auto path = dir / (stem + mode + ".solution");
             io::BinaryWriter::WriteSolutionFile(path, batch.solution);
             if (nativeGate) {
                 const auto report = io::VerifySolutionFiles(puzzlePath, path, 150000, 10000);
-                std::ofstream(dir / (stem + mode + "-gate.txt")) << "passed=" << report.Passed()
-                    << " cost=" << report.metrics.cost << " cycles=" << report.metrics.cycles
-                    << " area=" << report.metrics.area << " " << report.detail
-                    << " cycle=" << report.errorCycle << " cell=" << report.errorU << ',' << report.errorV << '\n';
+                std::ofstream(dir / (stem + mode + "-gate.txt"))
+                    << "passed=" << report.Passed() << " cost=" << report.metrics.cost
+                    << " cycles=" << report.metrics.cycles << " area=" << report.metrics.area << " "
+                    << report.detail << " cycle=" << report.errorCycle << " cell=" << report.errorU
+                    << ',' << report.errorV << '\n';
                 EXPECT_TRUE(report.Passed()) << stem << mode << report.detail;
             }
             if (!variant && compact) {
                 for (const int bit : {2, 3, 9, 12, 16}) {
-                    auto denied = puzzle; denied.permissionBits &= ~(std::uint64_t{1} << bit);
-                    EXPECT_THROW(CompileMixedInventoryAssembly(denied, true, true), std::invalid_argument);
+                    auto denied = puzzle;
+                    denied.permissionBits &= ~(std::uint64_t{1} << bit);
+                    EXPECT_THROW(CompileMixedInventoryAssembly(denied, true, true),
+                                 std::invalid_argument);
                 }
                 auto broken = batch.solution;
-                for (auto& obj : broken.objects) if (obj.typeName == "piston" && obj.position.r == 3) {
-                    for (auto& ins : obj.instructions) if (ins.action == 'a') { ins.action = 'A'; break; }
-                    break;
-                }
+                for (auto& obj : broken.objects)
+                    if (obj.typeName == "piston" && obj.position.r == 3) {
+                        for (auto& ins : obj.instructions)
+                            if (ins.action == 'a') {
+                                ins.action = 'A';
+                                break;
+                            }
+                        break;
+                    }
                 const auto negative = dir / "collision-negative.solution";
                 io::BinaryWriter::WriteSolutionFile(negative, broken);
                 if (nativeGate) {
-                    const auto rejected = io::VerifySolutionFiles(puzzlePath, negative, 150000, 10000);
-                    std::ofstream(dir / "collision-negative.txt") << rejected.Passed() << ' ' << rejected.detail
-                        << " cycle=" << rejected.errorCycle << " cell=" << rejected.errorU << ',' << rejected.errorV << '\n';
+                    const auto rejected =
+                        io::VerifySolutionFiles(puzzlePath, negative, 150000, 10000);
+                    std::ofstream(dir / "collision-negative.txt")
+                        << rejected.Passed() << ' ' << rejected.detail
+                        << " cycle=" << rejected.errorCycle << " cell=" << rejected.errorU << ','
+                        << rejected.errorV << '\n';
                     EXPECT_FALSE(rejected.Passed());
                 }
             }
         }
     }
 }
-TEST(SharedOrdinaryOutputTest, MixedInventoryCompactBufferCompleteGateSemantics) { RunMixedInventoryCompactBufferCompleteGate(false); }
+TEST(SharedOrdinaryOutputTest, MixedInventoryCompactBufferCompleteGateSemantics) {
+    RunMixedInventoryCompactBufferCompleteGate(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, MixedInventoryCompactBufferCompleteGate) { RunMixedInventoryCompactBufferCompleteGate(true); }
+TEST(SharedOrdinaryOutputTest, MixedInventoryCompactBufferCompleteGate) {
+    RunMixedInventoryCompactBufferCompleteGate(true);
+}
 #endif
 
 void RunMixedInventoryBatchConsumerCompleteGate(bool nativeGate) {
@@ -264,22 +322,35 @@ void RunMixedInventoryBatchConsumerCompleteGate(bool nativeGate) {
     for (int variant = 0; variant < 5; ++variant) {
         auto puzzle = original;
         auto puzzlePath = originalPath;
-        const std::string stem = variant == 4 ? "new-holdout" : variant == 3 ? "demand-permutation" : variant == 2 ? "holdout" : variant ? "transformed" : "original";
+        const std::string stem = variant == 4   ? "new-holdout"
+                                 : variant == 3 ? "demand-permutation"
+                                 : variant == 2 ? "holdout"
+                                 : variant      ? "transformed"
+                                                : "original";
         if (variant) {
             if (variant == 4) {
                 std::reverse(puzzle.inputs.begin(), puzzle.inputs.end());
                 for (auto& input : puzzle.inputs) {
-                    auto transform = [](core::HexCoord c) { return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3,-2}); };
-                    for (auto& atom : input.atoms) atom.position = transform(atom.position);
-                    for (auto& bond : input.bonds) { bond.from=transform(bond.from); bond.to=transform(bond.to); }
+                    auto transform = [](core::HexCoord c) {
+                        return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
+                    };
+                    for (auto& atom : input.atoms)
+                        atom.position = transform(atom.position);
+                    for (auto& bond : input.bonds) {
+                        bond.from = transform(bond.from);
+                        bond.to = transform(bond.to);
+                    }
                     std::reverse(input.atoms.begin(), input.atoms.end());
                 }
                 std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
             } else if (variant == 3) {
-                for (auto& output : puzzle.outputs) for (auto& atom : output.atoms) {
-                    if (atom.type == core::AtomType::Vitae) atom.type = core::AtomType::Mors;
-                    else if (atom.type == core::AtomType::Mors) atom.type = core::AtomType::Vitae;
-                }
+                for (auto& output : puzzle.outputs)
+                    for (auto& atom : output.atoms) {
+                        if (atom.type == core::AtomType::Vitae)
+                            atom.type = core::AtomType::Mors;
+                        else if (atom.type == core::AtomType::Mors)
+                            atom.type = core::AtomType::Vitae;
+                    }
             } else if (variant == 2) {
                 std::reverse(puzzle.inputs.begin(), puzzle.inputs.end());
                 for (auto& output : puzzle.outputs) {
@@ -287,43 +358,53 @@ void RunMixedInventoryBatchConsumerCompleteGate(bool nativeGate) {
                     std::reverse(output.bonds.begin(), output.bonds.end());
                 }
             } else {
-            puzzle.name += " transformed";
-            for (auto& input : puzzle.inputs) {
-                auto transform = [](core::HexCoord c) {
-                    return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
-                };
-                for (auto& atom : input.atoms) atom.position = transform(atom.position);
-                for (auto& bond : input.bonds) {
-                    bond.from = transform(bond.from); bond.to = transform(bond.to);
+                puzzle.name += " transformed";
+                for (auto& input : puzzle.inputs) {
+                    auto transform = [](core::HexCoord c) {
+                        return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
+                    };
+                    for (auto& atom : input.atoms)
+                        atom.position = transform(atom.position);
+                    for (auto& bond : input.bonds) {
+                        bond.from = transform(bond.from);
+                        bond.to = transform(bond.to);
+                    }
+                    std::reverse(input.atoms.begin(), input.atoms.end());
                 }
-                std::reverse(input.atoms.begin(), input.atoms.end());
-            }
-            std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
+                std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
             }
             puzzlePath = dir / (stem + ".puzzle");
             std::ofstream out(puzzlePath, std::ios::binary);
             auto word = [&](std::uint64_t v, int bytes) {
-                for (int i = 0; i < bytes; ++i) out.put(static_cast<char>(v >> (8 * i)));
+                for (int i = 0; i < bytes; ++i)
+                    out.put(static_cast<char>(v >> (8 * i)));
             };
-            word(3, 4); word(puzzle.name.size(), 1);
+            word(3, 4);
+            word(puzzle.name.size(), 1);
             out.write(puzzle.name.data(), puzzle.name.size());
-            word(0, 8); word(puzzle.permissionBits, 8);
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
             for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
                 word(list->size(), 4);
                 for (const auto& molecule : *list) {
                     word(molecule.atoms.size(), 4);
                     for (const auto& atom : molecule.atoms) {
                         word(static_cast<std::uint8_t>(atom.type), 1);
-                        word(atom.position.q, 1); word(atom.position.r, 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
                     }
                     word(molecule.bonds.size(), 4);
                     for (const auto& bond : molecule.bonds) {
-                        word(bond.bits, 1); word(bond.from.q, 1); word(bond.from.r, 1);
-                        word(bond.to.q, 1); word(bond.to.r, 1);
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
             }
-            word(1, 4); word(0, 1);
+            word(1, 4);
+            word(0, 1);
         }
         for (bool bypass : {false, true}) {
             const std::string mode = bypass ? "-on" : "-off";
@@ -336,7 +417,7 @@ void RunMixedInventoryBatchConsumerCompleteGate(bool nativeGate) {
             using K = ExecutionIR::Kind;
             const auto count = [&](K kind) {
                 return std::count_if(batch.ledger.steps.begin(), batch.ledger.steps.end(),
-                    [&](const auto& step) { return step.operation.kind == kind; });
+                                     [&](const auto& step) { return step.operation.kind == kind; });
             };
             EXPECT_EQ(count(K::Acquire), 24);
             EXPECT_EQ(count(K::Animismus), 18);
@@ -352,74 +433,105 @@ void RunMixedInventoryBatchConsumerCompleteGate(bool nativeGate) {
             std::ofstream phases(dir / (stem + mode + "-phases.csv"));
             phases << "product,phase,begin,end\n";
             for (const auto& phase : batch.phases)
-                phases << phase.product << ',' << phase.phase << ',' << phase.begin << ',' << phase.end << '\n';
+                phases << phase.product << ',' << phase.phase << ',' << phase.begin << ','
+                       << phase.end << '\n';
             phases << "-1,total,0," << batch.solution.metrics.cycles << '\n';
             const auto path = dir / (stem + mode + ".solution");
             io::BinaryWriter::WriteSolutionFile(path, batch.solution);
             if (nativeGate) {
                 const auto report = io::VerifySolutionFiles(puzzlePath, path, 150000, 10000);
-                std::ofstream(dir / (stem + mode + "-gate.txt")) << "passed=" << report.Passed()
-                    << " cost=" << report.metrics.cost << " cycles=" << report.metrics.cycles
-                    << " area=" << report.metrics.area << " " << report.detail
-                    << " cycle=" << report.errorCycle << " cell=" << report.errorU << ',' << report.errorV << '\n';
+                std::ofstream(dir / (stem + mode + "-gate.txt"))
+                    << "passed=" << report.Passed() << " cost=" << report.metrics.cost
+                    << " cycles=" << report.metrics.cycles << " area=" << report.metrics.area << " "
+                    << report.detail << " cycle=" << report.errorCycle << " cell=" << report.errorU
+                    << ',' << report.errorV << '\n';
                 EXPECT_TRUE(report.Passed()) << stem << mode << report.detail;
             }
             if (!variant && bypass) {
                 for (const int bit : {2, 3, 9, 12, 16}) {
-                    auto denied = puzzle; denied.permissionBits &= ~(std::uint64_t{1} << bit);
-                    EXPECT_THROW(CompileMixedInventoryAssembly(denied, true, true, true), std::invalid_argument);
+                    auto denied = puzzle;
+                    denied.permissionBits &= ~(std::uint64_t{1} << bit);
+                    EXPECT_THROW(CompileMixedInventoryAssembly(denied, true, true, true),
+                                 std::invalid_argument);
                 }
                 auto invalid = puzzle;
                 invalid.outputMultiplier = 2;
-                EXPECT_THROW(CompileMixedInventoryAssembly(invalid, true, true, true), std::invalid_argument);
+                EXPECT_THROW(CompileMixedInventoryAssembly(invalid, true, true, true),
+                             std::invalid_argument);
                 invalid = puzzle;
                 invalid.inputs[0].atoms[0].type = core::AtomType::Vitae;
-                EXPECT_THROW(CompileMixedInventoryAssembly(invalid, true, true, true), std::invalid_argument);
+                EXPECT_THROW(CompileMixedInventoryAssembly(invalid, true, true, true),
+                             std::invalid_argument);
                 auto broken = batch.solution;
-                for (auto& obj : broken.objects) if (obj.typeName == "piston" && obj.position.r == 3) {
-                    for (auto& ins : obj.instructions) if (ins.action == 'a') { ins.action = 'A'; break; }
-                    break;
-                }
+                for (auto& obj : broken.objects)
+                    if (obj.typeName == "piston" && obj.position.r == 3) {
+                        for (auto& ins : obj.instructions)
+                            if (ins.action == 'a') {
+                                ins.action = 'A';
+                                break;
+                            }
+                        break;
+                    }
                 const auto negative = dir / "collision-negative.solution";
                 io::BinaryWriter::WriteSolutionFile(negative, broken);
                 if (nativeGate) {
-                    const auto rejected = io::VerifySolutionFiles(puzzlePath, negative, 150000, 10000);
-                    std::ofstream(dir / "collision-negative.txt") << rejected.Passed() << ' ' << rejected.detail
-                        << " cycle=" << rejected.errorCycle << " cell=" << rejected.errorU << ',' << rejected.errorV << '\n';
+                    const auto rejected =
+                        io::VerifySolutionFiles(puzzlePath, negative, 150000, 10000);
+                    std::ofstream(dir / "collision-negative.txt")
+                        << rejected.Passed() << ' ' << rejected.detail
+                        << " cycle=" << rejected.errorCycle << " cell=" << rejected.errorU << ','
+                        << rejected.errorV << '\n';
                     EXPECT_FALSE(rejected.Passed());
                 }
             }
         }
     }
 }
-TEST(SharedOrdinaryOutputTest, MixedInventoryBatchConsumerCompleteGateSemantics) { RunMixedInventoryBatchConsumerCompleteGate(false); }
+TEST(SharedOrdinaryOutputTest, MixedInventoryBatchConsumerCompleteGateSemantics) {
+    RunMixedInventoryBatchConsumerCompleteGate(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, MixedInventoryBatchConsumerCompleteGate) { RunMixedInventoryBatchConsumerCompleteGate(true); }
+TEST(SharedOrdinaryOutputTest, MixedInventoryBatchConsumerCompleteGate) {
+    RunMixedInventoryBatchConsumerCompleteGate(true);
+}
 #endif
 
 void RunNearCacheSwitchMatrix(bool nativeGate) {
-    const auto puzzle = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal8/P102.puzzle");
+    const auto puzzle =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal8/P102.puzzle");
     const ScopedTestDirectory scratch;
     const auto& dir = scratch.Path();
-    for (bool scheduling : {false, true}) for (bool compact : {false, true})
-        for (bool bypass : {false, true}) for (bool cache : {false, true}) {
-            if (cache && !compact) {
-                EXPECT_THROW(CompileMixedInventoryAssembly(puzzle, scheduling, compact, bypass, cache), std::invalid_argument);
-                continue;
-            }
-            auto batch = CompileMixedInventoryAssembly(puzzle, scheduling, compact, bypass, cache);
-            const auto path = dir / ("switch-" + std::to_string(scheduling) + std::to_string(compact) +
-                std::to_string(bypass) + std::to_string(cache) + ".solution");
-            io::BinaryWriter::WriteSolutionFile(path, batch.solution);
-            if (nativeGate) {
-                const auto report = io::VerifySolutionFiles(root / "asset/puzzle/journal/journal8/P102.puzzle", path, 150000, 10000);
-                EXPECT_TRUE(report.Passed()) << path << report.detail;
-            }
-        }
+    for (bool scheduling : {false, true})
+        for (bool compact : {false, true})
+            for (bool bypass : {false, true})
+                for (bool cache : {false, true}) {
+                    if (cache && !compact) {
+                        EXPECT_THROW(CompileMixedInventoryAssembly(puzzle, scheduling, compact,
+                                                                   bypass, cache),
+                                     std::invalid_argument);
+                        continue;
+                    }
+                    auto batch =
+                        CompileMixedInventoryAssembly(puzzle, scheduling, compact, bypass, cache);
+                    const auto path =
+                        dir / ("switch-" + std::to_string(scheduling) + std::to_string(compact) +
+                               std::to_string(bypass) + std::to_string(cache) + ".solution");
+                    io::BinaryWriter::WriteSolutionFile(path, batch.solution);
+                    if (nativeGate) {
+                        const auto report = io::VerifySolutionFiles(
+                            root / "asset/puzzle/journal/journal8/P102.puzzle", path, 150000,
+                            10000);
+                        EXPECT_TRUE(report.Passed()) << path << report.detail;
+                    }
+                }
 }
-TEST(SharedOrdinaryOutputTest, NearCacheSwitchMatrixSemantics) { RunNearCacheSwitchMatrix(false); }
+TEST(SharedOrdinaryOutputTest, NearCacheSwitchMatrixSemantics) {
+    RunNearCacheSwitchMatrix(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, NearCacheSwitchMatrix) { RunNearCacheSwitchMatrix(true); }
+TEST(SharedOrdinaryOutputTest, NearCacheSwitchMatrix) {
+    RunNearCacheSwitchMatrix(true);
+}
 #endif
 
 void RunMixedInventoryNearCacheCompleteGate(bool nativeGate) {
@@ -430,24 +542,38 @@ void RunMixedInventoryNearCacheCompleteGate(bool nativeGate) {
     for (int variant = 0; variant < 6; ++variant) {
         auto puzzle = original;
         auto puzzlePath = originalPath;
-        const std::string stem = variant == 5 ? "structural-holdout" : variant == 4 ? "new-holdout" : variant == 3 ? "demand-permutation" : variant == 2 ? "holdout" : variant ? "transformed" : "original";
+        const std::string stem = variant == 5   ? "structural-holdout"
+                                 : variant == 4 ? "new-holdout"
+                                 : variant == 3 ? "demand-permutation"
+                                 : variant == 2 ? "holdout"
+                                 : variant      ? "transformed"
+                                                : "original";
         if (variant) {
             if (variant == 5) {
                 std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
             } else if (variant == 4) {
                 std::reverse(puzzle.inputs.begin(), puzzle.inputs.end());
                 for (auto& input : puzzle.inputs) {
-                    auto transform = [](core::HexCoord c) { return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3,-2}); };
-                    for (auto& atom : input.atoms) atom.position = transform(atom.position);
-                    for (auto& bond : input.bonds) { bond.from=transform(bond.from); bond.to=transform(bond.to); }
+                    auto transform = [](core::HexCoord c) {
+                        return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
+                    };
+                    for (auto& atom : input.atoms)
+                        atom.position = transform(atom.position);
+                    for (auto& bond : input.bonds) {
+                        bond.from = transform(bond.from);
+                        bond.to = transform(bond.to);
+                    }
                     std::reverse(input.atoms.begin(), input.atoms.end());
                 }
                 std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
             } else if (variant == 3) {
-                for (auto& output : puzzle.outputs) for (auto& atom : output.atoms) {
-                    if (atom.type == core::AtomType::Vitae) atom.type = core::AtomType::Mors;
-                    else if (atom.type == core::AtomType::Mors) atom.type = core::AtomType::Vitae;
-                }
+                for (auto& output : puzzle.outputs)
+                    for (auto& atom : output.atoms) {
+                        if (atom.type == core::AtomType::Vitae)
+                            atom.type = core::AtomType::Mors;
+                        else if (atom.type == core::AtomType::Mors)
+                            atom.type = core::AtomType::Vitae;
+                    }
             } else if (variant == 2) {
                 std::reverse(puzzle.inputs.begin(), puzzle.inputs.end());
                 for (auto& output : puzzle.outputs) {
@@ -455,43 +581,53 @@ void RunMixedInventoryNearCacheCompleteGate(bool nativeGate) {
                     std::reverse(output.bonds.begin(), output.bonds.end());
                 }
             } else {
-            puzzle.name += " transformed";
-            for (auto& input : puzzle.inputs) {
-                auto transform = [](core::HexCoord c) {
-                    return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
-                };
-                for (auto& atom : input.atoms) atom.position = transform(atom.position);
-                for (auto& bond : input.bonds) {
-                    bond.from = transform(bond.from); bond.to = transform(bond.to);
+                puzzle.name += " transformed";
+                for (auto& input : puzzle.inputs) {
+                    auto transform = [](core::HexCoord c) {
+                        return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
+                    };
+                    for (auto& atom : input.atoms)
+                        atom.position = transform(atom.position);
+                    for (auto& bond : input.bonds) {
+                        bond.from = transform(bond.from);
+                        bond.to = transform(bond.to);
+                    }
+                    std::reverse(input.atoms.begin(), input.atoms.end());
                 }
-                std::reverse(input.atoms.begin(), input.atoms.end());
-            }
-            std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
+                std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
             }
             puzzlePath = dir / (stem + ".puzzle");
             std::ofstream out(puzzlePath, std::ios::binary);
             auto word = [&](std::uint64_t v, int bytes) {
-                for (int i = 0; i < bytes; ++i) out.put(static_cast<char>(v >> (8 * i)));
+                for (int i = 0; i < bytes; ++i)
+                    out.put(static_cast<char>(v >> (8 * i)));
             };
-            word(3, 4); word(puzzle.name.size(), 1);
+            word(3, 4);
+            word(puzzle.name.size(), 1);
             out.write(puzzle.name.data(), puzzle.name.size());
-            word(0, 8); word(puzzle.permissionBits, 8);
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
             for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
                 word(list->size(), 4);
                 for (const auto& molecule : *list) {
                     word(molecule.atoms.size(), 4);
                     for (const auto& atom : molecule.atoms) {
                         word(static_cast<std::uint8_t>(atom.type), 1);
-                        word(atom.position.q, 1); word(atom.position.r, 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
                     }
                     word(molecule.bonds.size(), 4);
                     for (const auto& bond : molecule.bonds) {
-                        word(bond.bits, 1); word(bond.from.q, 1); word(bond.from.r, 1);
-                        word(bond.to.q, 1); word(bond.to.r, 1);
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
             }
-            word(1, 4); word(0, 1);
+            word(1, 4);
+            word(0, 1);
         }
         for (bool nearCache : {false, true}) {
             const bool bypass = true;
@@ -505,7 +641,7 @@ void RunMixedInventoryNearCacheCompleteGate(bool nativeGate) {
             using K = ExecutionIR::Kind;
             const auto count = [&](K kind) {
                 return std::count_if(batch.ledger.steps.begin(), batch.ledger.steps.end(),
-                    [&](const auto& step) { return step.operation.kind == kind; });
+                                     [&](const auto& step) { return step.operation.kind == kind; });
             };
             EXPECT_EQ(count(K::Acquire), 24);
             EXPECT_EQ(count(K::Animismus), 18);
@@ -521,16 +657,18 @@ void RunMixedInventoryNearCacheCompleteGate(bool nativeGate) {
             std::ofstream phases(dir / (stem + mode + "-phases.csv"));
             phases << "product,phase,begin,end\n";
             for (const auto& phase : batch.phases)
-                phases << phase.product << ',' << phase.phase << ',' << phase.begin << ',' << phase.end << '\n';
+                phases << phase.product << ',' << phase.phase << ',' << phase.begin << ','
+                       << phase.end << '\n';
             phases << "-1,total,0," << batch.solution.metrics.cycles << '\n';
             const auto path = dir / (stem + mode + ".solution");
             io::BinaryWriter::WriteSolutionFile(path, batch.solution);
             if (nativeGate) {
                 const auto report = io::VerifySolutionFiles(puzzlePath, path, 150000, 10000);
-                std::ofstream(dir / (stem + mode + "-gate.txt")) << "passed=" << report.Passed()
-                    << " cost=" << report.metrics.cost << " cycles=" << report.metrics.cycles
-                    << " area=" << report.metrics.area << " " << report.detail
-                    << " cycle=" << report.errorCycle << " cell=" << report.errorU << ',' << report.errorV << '\n';
+                std::ofstream(dir / (stem + mode + "-gate.txt"))
+                    << "passed=" << report.Passed() << " cost=" << report.metrics.cost
+                    << " cycles=" << report.metrics.cycles << " area=" << report.metrics.area << " "
+                    << report.detail << " cycle=" << report.errorCycle << " cell=" << report.errorU
+                    << ',' << report.errorV << '\n';
                 EXPECT_TRUE(report.Passed()) << stem << mode << report.detail;
             }
             if (!variant && nearCache) {
@@ -542,37 +680,54 @@ void RunMixedInventoryNearCacheCompleteGate(bool nativeGate) {
                 }
                 auto expanded = puzzle;
                 expanded.inputs[0].atoms[0].position = {0, 20};
-                EXPECT_THROW(CompileMixedInventoryAssembly(expanded, true, true, true, true), std::invalid_argument);
+                EXPECT_THROW(CompileMixedInventoryAssembly(expanded, true, true, true, true),
+                             std::invalid_argument);
                 for (const int bit : {2, 3, 9, 12, 16}) {
-                    auto denied = puzzle; denied.permissionBits &= ~(std::uint64_t{1} << bit);
-                    EXPECT_THROW(CompileMixedInventoryAssembly(denied, true, true, true, true), std::invalid_argument);
+                    auto denied = puzzle;
+                    denied.permissionBits &= ~(std::uint64_t{1} << bit);
+                    EXPECT_THROW(CompileMixedInventoryAssembly(denied, true, true, true, true),
+                                 std::invalid_argument);
                 }
                 auto invalid = puzzle;
                 invalid.outputMultiplier = 2;
-                EXPECT_THROW(CompileMixedInventoryAssembly(invalid, true, true, true, true), std::invalid_argument);
+                EXPECT_THROW(CompileMixedInventoryAssembly(invalid, true, true, true, true),
+                             std::invalid_argument);
                 invalid = puzzle;
                 invalid.inputs[0].atoms[0].type = core::AtomType::Vitae;
-                EXPECT_THROW(CompileMixedInventoryAssembly(invalid, true, true, true, true), std::invalid_argument);
+                EXPECT_THROW(CompileMixedInventoryAssembly(invalid, true, true, true, true),
+                             std::invalid_argument);
                 auto broken = batch.solution;
-                for (auto& obj : broken.objects) if (obj.typeName == "piston" && obj.position.r == 3) {
-                    for (auto& ins : obj.instructions) if (ins.action == 'a') { ins.action = 'A'; break; }
-                    break;
-                }
+                for (auto& obj : broken.objects)
+                    if (obj.typeName == "piston" && obj.position.r == 3) {
+                        for (auto& ins : obj.instructions)
+                            if (ins.action == 'a') {
+                                ins.action = 'A';
+                                break;
+                            }
+                        break;
+                    }
                 const auto negative = dir / "collision-negative.solution";
                 io::BinaryWriter::WriteSolutionFile(negative, broken);
                 if (nativeGate) {
-                    const auto rejected = io::VerifySolutionFiles(puzzlePath, negative, 150000, 10000);
-                    std::ofstream(dir / "collision-negative.txt") << rejected.Passed() << ' ' << rejected.detail
-                        << " cycle=" << rejected.errorCycle << " cell=" << rejected.errorU << ',' << rejected.errorV << '\n';
+                    const auto rejected =
+                        io::VerifySolutionFiles(puzzlePath, negative, 150000, 10000);
+                    std::ofstream(dir / "collision-negative.txt")
+                        << rejected.Passed() << ' ' << rejected.detail
+                        << " cycle=" << rejected.errorCycle << " cell=" << rejected.errorU << ','
+                        << rejected.errorV << '\n';
                     EXPECT_FALSE(rejected.Passed());
                 }
             }
         }
     }
 }
-TEST(SharedOrdinaryOutputTest, MixedInventoryNearCacheCompleteGateSemantics) { RunMixedInventoryNearCacheCompleteGate(false); }
+TEST(SharedOrdinaryOutputTest, MixedInventoryNearCacheCompleteGateSemantics) {
+    RunMixedInventoryNearCacheCompleteGate(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, MixedInventoryNearCacheCompleteGate) { RunMixedInventoryNearCacheCompleteGate(true); }
+TEST(SharedOrdinaryOutputTest, MixedInventoryNearCacheCompleteGate) {
+    RunMixedInventoryNearCacheCompleteGate(true);
+}
 #endif
 
 void RunMixedInventorySchedulingCompleteGate(bool nativeGate) {
@@ -592,146 +747,178 @@ void RunMixedInventorySchedulingCompleteGate(bool nativeGate) {
                     std::reverse(output.bonds.begin(), output.bonds.end());
                 }
             } else {
-            puzzle.name += " transformed";
-            for (auto& input : puzzle.inputs) {
-                auto transform = [](core::HexCoord c) {
-                    return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
-                };
-                for (auto& atom : input.atoms) atom.position = transform(atom.position);
-                for (auto& bond : input.bonds) {
-                    bond.from = transform(bond.from); bond.to = transform(bond.to);
+                puzzle.name += " transformed";
+                for (auto& input : puzzle.inputs) {
+                    auto transform = [](core::HexCoord c) {
+                        return core::Add(core::RotateClockwise(core::RotateClockwise(c)), {3, -2});
+                    };
+                    for (auto& atom : input.atoms)
+                        atom.position = transform(atom.position);
+                    for (auto& bond : input.bonds) {
+                        bond.from = transform(bond.from);
+                        bond.to = transform(bond.to);
+                    }
+                    std::reverse(input.atoms.begin(), input.atoms.end());
                 }
-                std::reverse(input.atoms.begin(), input.atoms.end());
-            }
-            std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
+                std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
             }
             puzzlePath = dir / (stem + ".puzzle");
             std::ofstream out(puzzlePath, std::ios::binary);
             auto word = [&](std::uint64_t v, int bytes) {
-                for (int i = 0; i < bytes; ++i) out.put(static_cast<char>(v >> (8 * i)));
+                for (int i = 0; i < bytes; ++i)
+                    out.put(static_cast<char>(v >> (8 * i)));
             };
-            word(3, 4); word(puzzle.name.size(), 1);
+            word(3, 4);
+            word(puzzle.name.size(), 1);
             out.write(puzzle.name.data(), puzzle.name.size());
-            word(0, 8); word(puzzle.permissionBits, 8);
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
             for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
                 word(list->size(), 4);
                 for (const auto& molecule : *list) {
                     word(molecule.atoms.size(), 4);
                     for (const auto& atom : molecule.atoms) {
                         word(static_cast<std::uint8_t>(atom.type), 1);
-                        word(atom.position.q, 1); word(atom.position.r, 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
                     }
                     word(molecule.bonds.size(), 4);
                     for (const auto& bond : molecule.bonds) {
-                        word(bond.bits, 1); word(bond.from.q, 1); word(bond.from.r, 1);
-                        word(bond.to.q, 1); word(bond.to.r, 1);
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
             }
-            word(1, 4); word(0, 1);
+            word(1, 4);
+            word(0, 1);
         }
         for (bool scheduled : {false, true}) {
-        const std::string mode = scheduled ? "-on" : "-off";
-        const auto baseline = CompileMixedInventoryAssembly(puzzle);
-        const auto batch = CompileMixedInventoryAssembly(puzzle, scheduled);
-        EXPECT_EQ(batch.solution.objects.size(), baseline.solution.objects.size());
-        for (std::size_t i = 0; i < baseline.solution.objects.size(); ++i) {
-            EXPECT_EQ(batch.solution.objects[i].typeName, baseline.solution.objects[i].typeName);
-            EXPECT_EQ(batch.solution.objects[i].position, baseline.solution.objects[i].position);
-            EXPECT_EQ(batch.solution.objects[i].bodyData, baseline.solution.objects[i].bodyData);
-            EXPECT_EQ(batch.solution.objects[i].instructions.size(), baseline.solution.objects[i].instructions.size());
-            for (std::size_t j = 0; j < baseline.solution.objects[i].instructions.size(); ++j)
-                EXPECT_EQ(batch.solution.objects[i].instructions[j].action, baseline.solution.objects[i].instructions[j].action);
-        }
-        if (scheduled) EXPECT_LT(batch.solution.metrics.cycles, baseline.solution.metrics.cycles);
-        std::ofstream(dir / (stem + mode + "-time-ledger.txt"))
-            << "serial=" << baseline.solution.metrics.cycles
-            << " scheduled=" << batch.solution.metrics.cycles
-            << " empty_return_tasks=" << batch.emptyReturnTasks
-            << " empty_return_cycles=" << batch.emptyReturnCycles
-            << " overlap=" << baseline.solution.metrics.cycles - batch.solution.metrics.cycles << '\n';
-        const auto state = batch.ledger.Replay(puzzle);
-        ExecutionIR::RequireComplete(state, {6, 6});
-        EXPECT_EQ(state.batches, (std::vector<std::size_t>{12, 12}));
-        EXPECT_EQ(state.discarded, 0);
-        EXPECT_TRUE(state.stored.empty());
-        EXPECT_EQ(batch.emissions.size(), 60);
-        std::set<ExecutionIR::AtomId> identities;
-        for (const auto& emission : batch.emissions) {
-            EXPECT_TRUE(identities.insert(emission.atom).second);
-            EXPECT_TRUE(emission.sourceIdentity || emission.reactionInputs[0]);
-            EXPECT_LT(emission.readyCycle, emission.releaseCycle);
-        }
-        const auto solutionPath = dir / (stem + mode + ".solution");
-        io::BinaryWriter::WriteSolutionFile(solutionPath, batch.solution);
-        for (int pass = 0; pass < 2; ++pass) {
-            if (nativeGate) {
-                const auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 150000, 10000);
-                std::ofstream(dir / (stem + mode + "-gate-" + std::to_string(pass) + ".txt"))
-                    << "passed=" << report.Passed() << " cost=" << report.metrics.cost
-                    << " cycles=" << report.metrics.cycles << " area=" << report.metrics.area
-                    << "\n" << report.detail << " cycle=" << report.errorCycle
-                    << " cell=" << report.errorU << ',' << report.errorV << '\n';
-                ASSERT_TRUE(report.Passed()) << report.detail;
+            const std::string mode = scheduled ? "-on" : "-off";
+            const auto baseline = CompileMixedInventoryAssembly(puzzle);
+            const auto batch = CompileMixedInventoryAssembly(puzzle, scheduled);
+            EXPECT_EQ(batch.solution.objects.size(), baseline.solution.objects.size());
+            for (std::size_t i = 0; i < baseline.solution.objects.size(); ++i) {
+                EXPECT_EQ(batch.solution.objects[i].typeName,
+                          baseline.solution.objects[i].typeName);
+                EXPECT_EQ(batch.solution.objects[i].position,
+                          baseline.solution.objects[i].position);
+                EXPECT_EQ(batch.solution.objects[i].bodyData,
+                          baseline.solution.objects[i].bodyData);
+                EXPECT_EQ(batch.solution.objects[i].instructions.size(),
+                          baseline.solution.objects[i].instructions.size());
+                for (std::size_t j = 0; j < baseline.solution.objects[i].instructions.size(); ++j)
+                    EXPECT_EQ(batch.solution.objects[i].instructions[j].action,
+                              baseline.solution.objects[i].instructions[j].action);
             }
-        }
-        if (!variant && scheduled) {
-            auto brokenReturn = batch.solution;
-            bool changed = false;
-            for (auto& object : brokenReturn.objects)
-                if (object.typeName == "piston" && object.position.r == 3) {
-                    for (auto& instruction : object.instructions)
-                        if (instruction.action == 'a') {
-                            instruction.action = 'A'; changed = true; break;
-                        }
-                    break;
+            if (scheduled)
+                EXPECT_LT(batch.solution.metrics.cycles, baseline.solution.metrics.cycles);
+            std::ofstream(dir / (stem + mode + "-time-ledger.txt"))
+                << "serial=" << baseline.solution.metrics.cycles
+                << " scheduled=" << batch.solution.metrics.cycles
+                << " empty_return_tasks=" << batch.emptyReturnTasks
+                << " empty_return_cycles=" << batch.emptyReturnCycles
+                << " overlap=" << baseline.solution.metrics.cycles - batch.solution.metrics.cycles
+                << '\n';
+            const auto state = batch.ledger.Replay(puzzle);
+            ExecutionIR::RequireComplete(state, {6, 6});
+            EXPECT_EQ(state.batches, (std::vector<std::size_t>{12, 12}));
+            EXPECT_EQ(state.discarded, 0);
+            EXPECT_TRUE(state.stored.empty());
+            EXPECT_EQ(batch.emissions.size(), 60);
+            std::set<ExecutionIR::AtomId> identities;
+            for (const auto& emission : batch.emissions) {
+                EXPECT_TRUE(identities.insert(emission.atom).second);
+                EXPECT_TRUE(emission.sourceIdentity || emission.reactionInputs[0]);
+                EXPECT_LT(emission.readyCycle, emission.releaseCycle);
+            }
+            const auto solutionPath = dir / (stem + mode + ".solution");
+            io::BinaryWriter::WriteSolutionFile(solutionPath, batch.solution);
+            for (int pass = 0; pass < 2; ++pass) {
+                if (nativeGate) {
+                    const auto report =
+                        io::VerifySolutionFiles(puzzlePath, solutionPath, 150000, 10000);
+                    std::ofstream(dir / (stem + mode + "-gate-" + std::to_string(pass) + ".txt"))
+                        << "passed=" << report.Passed() << " cost=" << report.metrics.cost
+                        << " cycles=" << report.metrics.cycles << " area=" << report.metrics.area
+                        << "\n"
+                        << report.detail << " cycle=" << report.errorCycle
+                        << " cell=" << report.errorU << ',' << report.errorV << '\n';
+                    ASSERT_TRUE(report.Passed()) << report.detail;
                 }
-            ASSERT_TRUE(changed);
-            const auto path = dir / "broken-return.solution";
-            io::BinaryWriter::WriteSolutionFile(path, brokenReturn);
-            if (nativeGate) {
-                const auto rejected = io::VerifySolutionFiles(puzzlePath, path, 150000, 10000);
-                std::ofstream(dir / "broken-return-gate.txt") << "passed=" << rejected.Passed()
-                    << " " << rejected.detail << " cycle=" << rejected.errorCycle
-                    << " cell=" << rejected.errorU << ',' << rejected.errorV;
-                EXPECT_FALSE(rejected.Passed());
             }
-        }
-        if (!variant) {
-            for (int bit : {2, 3, 9, 12, 16}) {
-                auto denied = puzzle; denied.permissionBits &= ~(1ULL << bit);
-                EXPECT_THROW(CompileMixedInventoryAssembly(denied), std::invalid_argument);
-            }
-            auto noDisposal = puzzle;
-            noDisposal.permissionBits &= ~(1ULL << 17);
-            const auto closed = CompileMixedInventoryAssembly(noDisposal);
-            ExecutionIR::RequireComplete(closed.ledger.Replay(noDisposal), {6, 6});
-            EXPECT_TRUE(std::none_of(closed.solution.objects.begin(), closed.solution.objects.end(),
-                [](const auto& object) { return object.typeName == "glyph-disposal"; }));
-            auto broken = batch.solution;
-            for (auto& object : broken.objects)
-                if (object.typeName == "piston" && object.position.r == 3) {
-                    object.instructions.clear(); break;
+            if (!variant && scheduled) {
+                auto brokenReturn = batch.solution;
+                bool changed = false;
+                for (auto& object : brokenReturn.objects)
+                    if (object.typeName == "piston" && object.position.r == 3) {
+                        for (auto& instruction : object.instructions)
+                            if (instruction.action == 'a') {
+                                instruction.action = 'A';
+                                changed = true;
+                                break;
+                            }
+                        break;
+                    }
+                ASSERT_TRUE(changed);
+                const auto path = dir / "broken-return.solution";
+                io::BinaryWriter::WriteSolutionFile(path, brokenReturn);
+                if (nativeGate) {
+                    const auto rejected = io::VerifySolutionFiles(puzzlePath, path, 150000, 10000);
+                    std::ofstream(dir / "broken-return-gate.txt")
+                        << "passed=" << rejected.Passed() << " " << rejected.detail
+                        << " cycle=" << rejected.errorCycle << " cell=" << rejected.errorU << ','
+                        << rejected.errorV;
+                    EXPECT_FALSE(rejected.Passed());
                 }
-            const auto brokenPath = dir / "broken-buffer.solution";
-            io::BinaryWriter::WriteSolutionFile(brokenPath, broken);
-            if (nativeGate) {
-                const auto rejected = io::VerifySolutionFiles(puzzlePath, brokenPath, 150000, 10000);
-                std::ofstream(dir / "broken-buffer-gate.txt") << rejected.detail << " cycle=" << rejected.errorCycle;
-                EXPECT_FALSE(rejected.Passed());
             }
-        }
+            if (!variant) {
+                for (int bit : {2, 3, 9, 12, 16}) {
+                    auto denied = puzzle;
+                    denied.permissionBits &= ~(1ULL << bit);
+                    EXPECT_THROW(CompileMixedInventoryAssembly(denied), std::invalid_argument);
+                }
+                auto noDisposal = puzzle;
+                noDisposal.permissionBits &= ~(1ULL << 17);
+                const auto closed = CompileMixedInventoryAssembly(noDisposal);
+                ExecutionIR::RequireComplete(closed.ledger.Replay(noDisposal), {6, 6});
+                EXPECT_TRUE(std::none_of(
+                    closed.solution.objects.begin(), closed.solution.objects.end(),
+                    [](const auto& object) { return object.typeName == "glyph-disposal"; }));
+                auto broken = batch.solution;
+                for (auto& object : broken.objects)
+                    if (object.typeName == "piston" && object.position.r == 3) {
+                        object.instructions.clear();
+                        break;
+                    }
+                const auto brokenPath = dir / "broken-buffer.solution";
+                io::BinaryWriter::WriteSolutionFile(brokenPath, broken);
+                if (nativeGate) {
+                    const auto rejected =
+                        io::VerifySolutionFiles(puzzlePath, brokenPath, 150000, 10000);
+                    std::ofstream(dir / "broken-buffer-gate.txt")
+                        << rejected.detail << " cycle=" << rejected.errorCycle;
+                    EXPECT_FALSE(rejected.Passed());
+                }
+            }
         }
     }
 }
-TEST(SharedOrdinaryOutputTest, MixedInventorySchedulingCompleteGateSemantics) { RunMixedInventorySchedulingCompleteGate(false); }
+TEST(SharedOrdinaryOutputTest, MixedInventorySchedulingCompleteGateSemantics) {
+    RunMixedInventorySchedulingCompleteGate(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, MixedInventorySchedulingCompleteGate) { RunMixedInventorySchedulingCompleteGate(true); }
+TEST(SharedOrdinaryOutputTest, MixedInventorySchedulingCompleteGate) {
+    RunMixedInventorySchedulingCompleteGate(true);
+}
 #endif
 
 void RunRealMixedFragmentConsumption(bool nativeGate) {
     using T = core::AtomType;
-    const auto original = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal8/P102.puzzle");
+    const auto original =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/journal/journal8/P102.puzzle");
     const ScopedTestDirectory scratch;
     const auto& dir = scratch.Path();
     for (int variant = 0; variant < 4; ++variant) {
@@ -744,9 +931,11 @@ void RunRealMixedFragmentConsumption(bool nativeGate) {
         puzzle.outputs[1].bonds.clear();
         if (variant == 1) {
             for (auto& atom : puzzle.inputs[0].atoms)
-                atom.position = core::Add(core::RotateClockwise(core::RotateClockwise(atom.position)), {3, -2});
+                atom.position =
+                    core::Add(core::RotateClockwise(core::RotateClockwise(atom.position)), {3, -2});
             for (auto& bond : puzzle.inputs[0].bonds) {
-                bond.from = core::Add(core::RotateClockwise(core::RotateClockwise(bond.from)), {3, -2});
+                bond.from =
+                    core::Add(core::RotateClockwise(core::RotateClockwise(bond.from)), {3, -2});
                 bond.to = core::Add(core::RotateClockwise(core::RotateClockwise(bond.to)), {3, -2});
             }
             std::reverse(puzzle.inputs[0].atoms.begin(), puzzle.inputs[0].atoms.end());
@@ -781,58 +970,73 @@ void RunRealMixedFragmentConsumption(bool nativeGate) {
         const auto solutionPath = dir / (puzzle.name + ".solution");
         {
             std::ofstream trace(dir / (puzzle.name + ".emissions.csv"));
-            trace << "sourceBatch,sourceInput,sourceAtom,sourceIdentity,remaining,atom,type,output,outputAtom,product,begin,holderRelease,ready,release,reservationEnd\n";
+            trace << "sourceBatch,sourceInput,sourceAtom,sourceIdentity,remaining,atom,type,output,"
+                     "outputAtom,product,begin,holderRelease,ready,release,reservationEnd\n";
             for (const auto& e : batch.emissions)
                 trace << e.sourceBatch << ',' << e.sourceInput << ',' << e.sourceAtom << ','
                       << e.sourceIdentity << ',' << e.sourceRemainder << ',' << e.atom << ','
-                      << static_cast<int>(e.type) << ',' << e.consumer.output << ',' << e.consumer.atom
-                      << ',' << e.product << ',' << e.beginCycle << ',' << e.holderReleaseCycle
-                      << ',' << e.readyCycle << ',' << e.releaseCycle << ',' << e.reservationEnd << '\n';
+                      << static_cast<int>(e.type) << ',' << e.consumer.output << ','
+                      << e.consumer.atom << ',' << e.product << ',' << e.beginCycle << ','
+                      << e.holderReleaseCycle << ',' << e.readyCycle << ',' << e.releaseCycle << ','
+                      << e.reservationEnd << '\n';
         }
         {
             std::ofstream out(path, std::ios::binary);
             auto word = [&](std::uint64_t value, int n) {
-                for (int i = 0; i < n; ++i) out.put(static_cast<char>(value >> (8 * i)));
+                for (int i = 0; i < n; ++i)
+                    out.put(static_cast<char>(value >> (8 * i)));
             };
-            word(3, 4); word(puzzle.name.size(), 1);
+            word(3, 4);
+            word(puzzle.name.size(), 1);
             out.write(puzzle.name.data(), puzzle.name.size());
-            word(0, 8); word(puzzle.permissionBits, 8);
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
             for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
                 word(list->size(), 4);
                 for (const auto& molecule : *list) {
                     word(molecule.atoms.size(), 4);
                     for (const auto& atom : molecule.atoms) {
                         word(static_cast<std::uint8_t>(atom.type), 1);
-                        word(atom.position.q, 1); word(atom.position.r, 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
                     }
                     word(molecule.bonds.size(), 4);
                     for (const auto& bond : molecule.bonds) {
-                        word(bond.bits, 1); word(bond.from.q, 1); word(bond.from.r, 1);
-                        word(bond.to.q, 1); word(bond.to.r, 1);
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
             }
-            word(1, 4); word(0, 1);
+            word(1, 4);
+            word(0, 1);
         }
         auto solution = batch.solution;
         io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
         if (nativeGate) {
             const auto report = io::VerifySolutionFiles(path, solutionPath, 150000, 10000);
             solution.metrics = report.metrics;
-            ASSERT_TRUE(report.Passed()) << "variant=" << variant << " " << report.detail
-                                       << " cycle=" << report.errorCycle;
+            ASSERT_TRUE(report.Passed())
+                << "variant=" << variant << " " << report.detail << " cycle=" << report.errorCycle;
             solution.metrics = report.metrics;
             io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
             EXPECT_TRUE(io::VerifySolutionFiles(path, solutionPath, 150000, 10000).Passed());
-            std::cout << "REAL-MIXED-FRAGMENT variant=" << variant << " cost=" << report.metrics.cost
-                      << " cycles=" << report.metrics.cycles << " area=" << report.metrics.area << '\n';
+            std::cout << "REAL-MIXED-FRAGMENT variant=" << variant
+                      << " cost=" << report.metrics.cost << " cycles=" << report.metrics.cycles
+                      << " area=" << report.metrics.area << '\n';
         }
     }
     EXPECT_THROW(CompileMolecularFragmentSupplyBatch(original), std::invalid_argument);
 }
-TEST(SharedOrdinaryOutputTest, RealMixedFragmentConsumptionSemantics) { RunRealMixedFragmentConsumption(false); }
+TEST(SharedOrdinaryOutputTest, RealMixedFragmentConsumptionSemantics) {
+    RunRealMixedFragmentConsumption(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, RealMixedFragmentConsumption) { RunRealMixedFragmentConsumption(true); }
+TEST(SharedOrdinaryOutputTest, RealMixedFragmentConsumption) {
+    RunRealMixedFragmentConsumption(true);
+}
 #endif
 
 TEST(SharedOrdinaryOutputTest, MolecularBatchBoundariesAreExclusiveAndIncludeCleanup) {
@@ -1020,8 +1224,8 @@ TEST(SharedOrdinaryOutputTest, UnequalHeightsVerifyTwice) {
 
 TEST(SharedOrdinaryOutputTest, MolecularSupplyActualSource) {
     using K = ExecutionIR::Kind;
-    const auto original = io::BinaryParser::ParsePuzzleFile(root /
-        "asset/puzzle/tourney-2021/OM2021_W7.puzzle");
+    const auto original =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/tourney-2021/OM2021_W7.puzzle");
     ASSERT_TRUE(SupportsMolecularSupplySource(original.inputs[0]));
     const auto embedded = CompileMolecularRecipeSupply(original, 0, {{0, 3}, {1, 2}});
     EXPECT_EQ(embedded.consumers[0].output, 0);
@@ -1067,8 +1271,11 @@ TEST(SharedOrdinaryOutputTest, MolecularSupplyActualSource) {
         if (variant == 2) {
             std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
             // Exact rigid transform of the real feed, not a replacement molecule.
-            auto transform = [](core::HexCoord p) { return core::HexCoord{-p.r + 2, p.q + p.r - 1}; };
-            for (auto& atom : puzzle.inputs[0].atoms) atom.position = transform(atom.position);
+            auto transform = [](core::HexCoord p) {
+                return core::HexCoord{-p.r + 2, p.q + p.r - 1};
+            };
+            for (auto& atom : puzzle.inputs[0].atoms)
+                atom.position = transform(atom.position);
             for (auto& bond : puzzle.inputs[0].bonds) {
                 bond.from = transform(bond.from);
                 bond.to = transform(bond.to);
@@ -1097,23 +1304,27 @@ TEST(SharedOrdinaryOutputTest, MolecularSupplyActualSource) {
         EXPECT_EQ(batch.emissions.size(), 12);
         for (const auto kind : {K::Acquire, K::Unbond})
             EXPECT_EQ(std::count_if(batch.ledger.steps.begin(), batch.ledger.steps.end(),
-                [&](const auto& step) { return step.operation.kind == kind; }), 6);
+                                    [&](const auto& step) { return step.operation.kind == kind; }),
+                      6);
         std::set<ExecutionIR::AtomId> emitted;
-        for (const auto& event : batch.emissions) EXPECT_TRUE(emitted.insert(event.atom).second);
+        for (const auto& event : batch.emissions)
+            EXPECT_TRUE(emitted.insert(event.atom).second);
         std::set<ExecutionIR::AtomId> sourceIdentities;
         const ScopedTestDirectory scratch;
-        std::ofstream trace(scratch.Path() / ("molecular-supply-round13-" + std::to_string(variant) + ".trace"));
-        trace << "batch sourceAtom acquiredId emittedId output atom remainder begin holderRelease ready release reservationEnd\n";
+        std::ofstream trace(scratch.Path() /
+                            ("molecular-supply-round13-" + std::to_string(variant) + ".trace"));
+        trace << "batch sourceAtom acquiredId emittedId output atom remainder begin holderRelease "
+                 "ready release reservationEnd\n";
         for (std::size_t i = 0; i < batch.emissions.size(); ++i) {
             const auto& e = batch.emissions[i];
             EXPECT_TRUE(sourceIdentities.insert(e.sourceIdentity).second);
             EXPECT_EQ(e.sourceBatch, i / 2);
             EXPECT_EQ(e.sourceRemainder, 1 - i % 2);
             EXPECT_EQ(e.sourceInput, 0);
-            trace << e.sourceBatch << ' ' << e.sourceAtom << ' ' << e.sourceIdentity << ' ' << e.atom << ' '
-                  << e.consumer.output << ' ' << e.consumer.atom << ' ' << e.sourceRemainder << ' '
-                  << e.beginCycle << ' ' << e.holderReleaseCycle << ' ' << e.readyCycle << ' '
-                  << e.releaseCycle << ' ' << e.reservationEnd << '\n';
+            trace << e.sourceBatch << ' ' << e.sourceAtom << ' ' << e.sourceIdentity << ' '
+                  << e.atom << ' ' << e.consumer.output << ' ' << e.consumer.atom << ' '
+                  << e.sourceRemainder << ' ' << e.beginCycle << ' ' << e.holderReleaseCycle << ' '
+                  << e.readyCycle << ' ' << e.releaseCycle << ' ' << e.reservationEnd << '\n';
         }
         ExecutionIR prefix;
         auto tail = ExecutionIR::Initial(puzzle);
@@ -1130,43 +1341,44 @@ TEST(SharedOrdinaryOutputTest, MolecularSupplyActualSource) {
         ExecutionIR::RequireComplete(batch.ledger.Replay(puzzle), {6, 6});
         const auto path = scratch.Path() / (puzzle.name + ".puzzle");
         const auto solutionPath = scratch.Path() / (puzzle.name + ".solution");
-            {
-                std::ofstream out(path, std::ios::binary);
-                auto word = [&](std::uint64_t v, int n) {
-                    for (int i = 0; i < n; ++i)
-                        out.put(static_cast<char>(v >> (8 * i)));
-                };
-                word(3, 4);
-                word(puzzle.name.size(), 1);
-                out.write(puzzle.name.data(), puzzle.name.size());
-                word(0, 8);
-                word(puzzle.permissionBits, 8);
-                for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
-                    word(list->size(), 4);
-                    for (const auto& molecule : *list) {
-                        word(molecule.atoms.size(), 4);
-                        for (const auto& atom : molecule.atoms) {
-                            word(static_cast<std::uint8_t>(atom.type), 1);
-                            word(atom.position.q, 1);
-                            word(atom.position.r, 1);
-                        }
-                        word(molecule.bonds.size(), 4);
-                        for (const auto& bond : molecule.bonds) {
-                            word(bond.bits, 1);
-                            word(bond.from.q, 1);
-                            word(bond.from.r, 1);
-                            word(bond.to.q, 1);
-                            word(bond.to.r, 1);
-                        }
+        {
+            std::ofstream out(path, std::ios::binary);
+            auto word = [&](std::uint64_t v, int n) {
+                for (int i = 0; i < n; ++i)
+                    out.put(static_cast<char>(v >> (8 * i)));
+            };
+            word(3, 4);
+            word(puzzle.name.size(), 1);
+            out.write(puzzle.name.data(), puzzle.name.size());
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
+            for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
+                word(list->size(), 4);
+                for (const auto& molecule : *list) {
+                    word(molecule.atoms.size(), 4);
+                    for (const auto& atom : molecule.atoms) {
+                        word(static_cast<std::uint8_t>(atom.type), 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
+                    }
+                    word(molecule.bonds.size(), 4);
+                    for (const auto& bond : molecule.bonds) {
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
-                word(1, 4);
-                word(0, 1);
             }
+            word(1, 4);
+            word(0, 1);
+        }
         auto solution = batch.solution;
         io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
         const auto report = io::VerifySolutionFiles(path, solutionPath, 150000, 10000);
-        ASSERT_TRUE(report.Passed()) << report.detail << " cycle=" << report.errorCycle << " variant=" << variant;
+        ASSERT_TRUE(report.Passed())
+            << report.detail << " cycle=" << report.errorCycle << " variant=" << variant;
         solution.metrics = report.metrics;
         io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
         EXPECT_TRUE(io::VerifySolutionFiles(path, solutionPath, 150000, 10000).Passed());
@@ -1177,133 +1389,152 @@ TEST(SharedOrdinaryOutputTest, MolecularSupplyActualSource) {
 
 TEST(SharedOrdinaryOutputTest, FiniteSharedFactoryVerifiesTwice) {
     for (int family : {0, 1, 2})
-    for (int rotation = 0; rotation < 6; ++rotation)
-    for (bool calcify : {false, true})
-        for (bool reverse : {false, true}) {
-            io::PuzzleData puzzle;
-            puzzle.version = 3;
-            puzzle.name = "unequal-heights";
-            puzzle.outputMultiplier = 1;
-            puzzle.permissionBits =
-                AssemblyPlanner::RequiredPermissions | (1ULL << 2) | (1ULL << 3) | (1ULL << 17);
-            io::Molecule feed;
-            feed.atoms.push_back({core::AtomType::Salt, {0, 0}});
-            puzzle.inputs.push_back(feed);
-            const std::vector<int> demands = family == 0 ? std::vector<int>{2, 3}
-                : family == 1 ? std::vector<int>{2, 4} : std::vector<int>{3, 4};
-            for (int count : demands) {
-                io::Molecule output;
-                for (int atom = 0; atom < count; ++atom) {
-                    const core::HexCoord pos = family == 0 ? core::HexCoord{atom, 0}
-                        : core::HexCoord{atom == count-1 ? 1 : 0, atom == count-1 ? 0 : atom};
-                    output.atoms.push_back({core::AtomType::Salt, pos});
-                    if (atom) output.bonds.push_back({1,
-                        atom == count-1 && family != 0 ? core::HexCoord{0,0} : output.atoms[atom-1].position, pos});
-                }
-                auto transform = [&](core::HexCoord pos) {
-                    for (int i = 0; i < rotation; ++i) pos = {-pos.r, pos.q + pos.r};
-                    return core::Add(pos, {2, -3});
-                };
-                for (auto& atom : output.atoms) atom.position = transform(atom.position);
-                for (auto& bond : output.bonds) { bond.from = transform(bond.from); bond.to = transform(bond.to); }
-                puzzle.outputs.push_back(output);
-            }
-            if (calcify) {
-                puzzle.inputs[0].atoms[0].type = core::AtomType::Air;
-                puzzle.permissionBits |= 1ULL << 12;
-            }
-            if (reverse) std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
-            const ScopedTestDirectory scratch;
-            const auto path = scratch.Path() / "unequal-heights.puzzle";
-            const auto solutionPath = scratch.Path() / "unequal-heights.solution";
-            struct Cleanup {
-                std::filesystem::path puzzle, solution;
-                ~Cleanup() {
-                    std::filesystem::remove(puzzle);
-                    std::filesystem::remove(solution);
-                }
-            } cleanup{path, solutionPath};
-            {
-                std::ofstream out(path, std::ios::binary);
-                auto word = [&](std::uint64_t v, int n) {
-                    for (int i = 0; i < n; ++i)
-                        out.put(static_cast<char>(v >> (8 * i)));
-                };
-                word(3, 4);
-                word(puzzle.name.size(), 1);
-                out.write(puzzle.name.data(), puzzle.name.size());
-                word(0, 8);
-                word(puzzle.permissionBits, 8);
-                for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
-                    word(list->size(), 4);
-                    for (const auto& molecule : *list) {
-                        word(molecule.atoms.size(), 4);
-                        for (const auto& atom : molecule.atoms) {
-                            word(static_cast<std::uint8_t>(atom.type), 1);
-                            word(atom.position.q, 1);
-                            word(atom.position.r, 1);
+        for (int rotation = 0; rotation < 6; ++rotation)
+            for (bool calcify : {false, true})
+                for (bool reverse : {false, true}) {
+                    io::PuzzleData puzzle;
+                    puzzle.version = 3;
+                    puzzle.name = "unequal-heights";
+                    puzzle.outputMultiplier = 1;
+                    puzzle.permissionBits = AssemblyPlanner::RequiredPermissions | (1ULL << 2) |
+                                            (1ULL << 3) | (1ULL << 17);
+                    io::Molecule feed;
+                    feed.atoms.push_back({core::AtomType::Salt, {0, 0}});
+                    puzzle.inputs.push_back(feed);
+                    const std::vector<int> demands = family == 0   ? std::vector<int>{2, 3}
+                                                     : family == 1 ? std::vector<int>{2, 4}
+                                                                   : std::vector<int>{3, 4};
+                    for (int count : demands) {
+                        io::Molecule output;
+                        for (int atom = 0; atom < count; ++atom) {
+                            const core::HexCoord pos =
+                                family == 0 ? core::HexCoord{atom, 0}
+                                            : core::HexCoord{atom == count - 1 ? 1 : 0,
+                                                             atom == count - 1 ? 0 : atom};
+                            output.atoms.push_back({core::AtomType::Salt, pos});
+                            if (atom)
+                                output.bonds.push_back({1,
+                                                        atom == count - 1 && family != 0
+                                                            ? core::HexCoord{0, 0}
+                                                            : output.atoms[atom - 1].position,
+                                                        pos});
                         }
-                        word(molecule.bonds.size(), 4);
-                        for (const auto& bond : molecule.bonds) {
-                            word(bond.bits, 1);
-                            word(bond.from.q, 1);
-                            word(bond.from.r, 1);
-                            word(bond.to.q, 1);
-                            word(bond.to.r, 1);
+                        auto transform = [&](core::HexCoord pos) {
+                            for (int i = 0; i < rotation; ++i)
+                                pos = {-pos.r, pos.q + pos.r};
+                            return core::Add(pos, {2, -3});
+                        };
+                        for (auto& atom : output.atoms)
+                            atom.position = transform(atom.position);
+                        for (auto& bond : output.bonds) {
+                            bond.from = transform(bond.from);
+                            bond.to = transform(bond.to);
                         }
+                        puzzle.outputs.push_back(output);
                     }
+                    if (calcify) {
+                        puzzle.inputs[0].atoms[0].type = core::AtomType::Air;
+                        puzzle.permissionBits |= 1ULL << 12;
+                    }
+                    if (reverse) std::reverse(puzzle.outputs.begin(), puzzle.outputs.end());
+                    const ScopedTestDirectory scratch;
+                    const auto path = scratch.Path() / "unequal-heights.puzzle";
+                    const auto solutionPath = scratch.Path() / "unequal-heights.solution";
+                    struct Cleanup {
+                        std::filesystem::path puzzle, solution;
+                        ~Cleanup() {
+                            std::filesystem::remove(puzzle);
+                            std::filesystem::remove(solution);
+                        }
+                    } cleanup{path, solutionPath};
+                    {
+                        std::ofstream out(path, std::ios::binary);
+                        auto word = [&](std::uint64_t v, int n) {
+                            for (int i = 0; i < n; ++i)
+                                out.put(static_cast<char>(v >> (8 * i)));
+                        };
+                        word(3, 4);
+                        word(puzzle.name.size(), 1);
+                        out.write(puzzle.name.data(), puzzle.name.size());
+                        word(0, 8);
+                        word(puzzle.permissionBits, 8);
+                        for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
+                            word(list->size(), 4);
+                            for (const auto& molecule : *list) {
+                                word(molecule.atoms.size(), 4);
+                                for (const auto& atom : molecule.atoms) {
+                                    word(static_cast<std::uint8_t>(atom.type), 1);
+                                    word(atom.position.q, 1);
+                                    word(atom.position.r, 1);
+                                }
+                                word(molecule.bonds.size(), 4);
+                                for (const auto& bond : molecule.bonds) {
+                                    word(bond.bits, 1);
+                                    word(bond.from.q, 1);
+                                    word(bond.from.r, 1);
+                                    word(bond.to.q, 1);
+                                    word(bond.to.r, 1);
+                                }
+                            }
+                        }
+                        word(1, 4);
+                        word(0, 1);
+                    }
+                    if (calcify) {
+                        auto denied = puzzle;
+                        denied.permissionBits &= ~(1ULL << 12);
+                        EXPECT_THROW(CompileSharedFactoryBatch(denied), std::exception);
+                    }
+                    for (int bit : {2, 3}) {
+                        auto denied = puzzle;
+                        denied.permissionBits &= ~(1ULL << bit);
+                        EXPECT_THROW(CompileSharedFactoryBatch(denied), std::exception);
+                    }
+                    if (rotation == 0 && !reverse) {
+                        auto outside = puzzle;
+                        outside.inputs.push_back(outside.inputs.front());
+                        EXPECT_THROW(CompileSharedFactoryBatch(outside), std::invalid_argument);
+                        outside = puzzle;
+                        outside.outputs[0].atoms[0].type = core::AtomType::Fire;
+                        EXPECT_THROW(CompileSharedFactoryBatch(outside), std::invalid_argument);
+                    }
+                    auto batch = CompileSharedFactoryBatch(puzzle);
+                    std::set<ExecutionIR::AtomId> identities;
+                    for (const auto& emission : batch.emissions) {
+                        EXPECT_TRUE(identities.insert(emission.atom).second);
+                        EXPECT_LE(emission.beginCycle, emission.holderReleaseCycle);
+                        EXPECT_LT(emission.holderReleaseCycle, emission.readyCycle);
+                        EXPECT_LT(emission.readyCycle, emission.releaseCycle);
+                        EXPECT_LT(emission.releaseCycle, emission.reservationEnd);
+                    }
+                    EXPECT_EQ(batch.emissions.size(), 6u * (demands[0] + demands[1]));
+                    EXPECT_EQ(std::count_if(batch.solution.objects.begin(),
+                                            batch.solution.objects.end(),
+                                            [](const auto& object) {
+                                                return object.typeName == "glyph-calcification";
+                                            }),
+                              calcify ? 1 : 0);
+                    ExecutionIR::RequireComplete(batch.ledger.Replay(puzzle), {6, 6});
+                    for (std::size_t i = 1; i < batch.emissions.size(); ++i)
+                        EXPECT_LE(batch.emissions[i - 1].reservationEnd,
+                                  batch.emissions[i].beginCycle);
+                    auto solution = batch.solution;
+                    io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
+                    const auto report = io::VerifySolutionFiles(path, solutionPath, 150000, 10000);
+                    solution.metrics = report.metrics;
+                    ASSERT_TRUE(report.Passed()) << report.detail << " cycle=" << report.errorCycle
+                                                 << " reverse=" << reverse;
+                    if (rotation == 0 && !reverse && calcify) {
+                        std::cout << "POTENTIAL family=" << family
+                                  << " shared=" << report.metrics.cost << ","
+                                  << report.metrics.cycles << '\n';
+                        EXPECT_THROW(CompileLifeDeath(puzzle), std::invalid_argument);
+                    }
+                    solution.metrics = report.metrics;
+                    io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
+                    EXPECT_TRUE(
+                        io::VerifySolutionFiles(path, solutionPath, 150000, 10000).Passed());
                 }
-                word(1, 4);
-                word(0, 1);
-            }
-            if (calcify) {
-                auto denied = puzzle;
-                denied.permissionBits &= ~(1ULL << 12);
-                EXPECT_THROW(CompileSharedFactoryBatch(denied), std::exception);
-            }
-            for (int bit : {2, 3}) {
-                auto denied = puzzle;
-                denied.permissionBits &= ~(1ULL << bit);
-                EXPECT_THROW(CompileSharedFactoryBatch(denied), std::exception);
-            }
-            if (rotation == 0 && !reverse) {
-                auto outside = puzzle;
-                outside.inputs.push_back(outside.inputs.front());
-                EXPECT_THROW(CompileSharedFactoryBatch(outside), std::invalid_argument);
-                outside = puzzle;
-                outside.outputs[0].atoms[0].type = core::AtomType::Fire;
-                EXPECT_THROW(CompileSharedFactoryBatch(outside), std::invalid_argument);
-            }
-            auto batch = CompileSharedFactoryBatch(puzzle);
-            std::set<ExecutionIR::AtomId> identities;
-            for (const auto& emission : batch.emissions) {
-                EXPECT_TRUE(identities.insert(emission.atom).second);
-                EXPECT_LE(emission.beginCycle, emission.holderReleaseCycle);
-                EXPECT_LT(emission.holderReleaseCycle, emission.readyCycle);
-                EXPECT_LT(emission.readyCycle, emission.releaseCycle);
-                EXPECT_LT(emission.releaseCycle, emission.reservationEnd);
-            }
-            EXPECT_EQ(batch.emissions.size(), 6u * (demands[0] + demands[1]));
-            EXPECT_EQ(std::count_if(batch.solution.objects.begin(), batch.solution.objects.end(),
-                [](const auto& object) { return object.typeName == "glyph-calcification"; }), calcify ? 1 : 0);
-            ExecutionIR::RequireComplete(batch.ledger.Replay(puzzle), {6, 6});
-            for (std::size_t i = 1; i < batch.emissions.size(); ++i)
-                EXPECT_LE(batch.emissions[i-1].reservationEnd, batch.emissions[i].beginCycle);
-            auto solution = batch.solution;
-            io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
-            const auto report = io::VerifySolutionFiles(path, solutionPath, 150000, 10000);
-            solution.metrics = report.metrics;
-            ASSERT_TRUE(report.Passed())
-                << report.detail << " cycle=" << report.errorCycle << " reverse=" << reverse;
-            if (rotation == 0 && !reverse && calcify) {
-                std::cout << "POTENTIAL family=" << family
-                          << " shared=" << report.metrics.cost << "," << report.metrics.cycles << '\n';
-                EXPECT_THROW(CompileLifeDeath(puzzle), std::invalid_argument);
-            }
-            solution.metrics = report.metrics;
-            io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
-            EXPECT_TRUE(io::VerifySolutionFiles(path, solutionPath, 150000, 10000).Passed());
-        }
 }
 
 TEST(SharedOrdinaryOutputTest, LubricatingSolventsVerifiesTwice) {
@@ -1324,178 +1555,202 @@ TEST(SharedOrdinaryOutputTest, LubricatingSolventsVerifiesTwice) {
     EXPECT_TRUE(io::VerifySolutionFiles(input, output, 150000, 10000).Passed());
 }
 #endif
-}
+} // namespace
 void RunCompleteSharedAnimismusAssembly(bool nativeGate) {
     using T = core::AtomType;
     const ScopedTestDirectory scratch;
     const auto& dir = scratch.Path();
-    const auto original = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/tourney-2021/OM2021_W7.puzzle");
+    const auto original =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/tourney-2021/OM2021_W7.puzzle");
     for (int variant = 0; variant < 3; ++variant) {
-    SCOPED_TRACE(variant);
-    auto puzzle = original;
-    puzzle.name = "generated-complete-shared-assembly-" + std::to_string(variant);
-    puzzle.inputs.resize(1);
-    puzzle.outputs.resize(2);
-    for (auto& output : puzzle.outputs) {
-        output.atoms = {{T::Vitae, {0, 0}}, {T::Mors, {1, 0}}};
-        output.bonds = {{1, {0, 0}, {1, 0}}};
-    }
-    if (variant == 1) {
-        for (std::size_t i = 0; i < 2; ++i) {
-            auto& output = puzzle.outputs[i];
-            output.atoms = {{i ? T::Mors : T::Vitae, {0, 0}},
-                            {i ? T::Vitae : T::Mors, {1, 0}},
-                            {i ? T::Mors : T::Vitae, {2, 0}}};
-            output.bonds = {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}};
-        }
-    }
-    if (variant == 2) {
-        for (auto& atom : puzzle.inputs[0].atoms)
-            atom.position = core::Add(core::RotateClockwise(core::RotateClockwise(atom.position)), {2, -1});
-        for (auto& bond : puzzle.inputs[0].bonds) {
-            bond.from = core::Add(core::RotateClockwise(core::RotateClockwise(bond.from)), {2, -1});
-            bond.to = core::Add(core::RotateClockwise(core::RotateClockwise(bond.to)), {2, -1});
-        }
-        std::reverse(puzzle.inputs[0].atoms.begin(), puzzle.inputs[0].atoms.end());
+        SCOPED_TRACE(variant);
+        auto puzzle = original;
+        puzzle.name = "generated-complete-shared-assembly-" + std::to_string(variant);
+        puzzle.inputs.resize(1);
+        puzzle.outputs.resize(2);
         for (auto& output : puzzle.outputs) {
-            std::reverse(output.atoms.begin(), output.atoms.end());
-            for (auto& atom : output.atoms) atom.position = core::Add(atom.position, {3, -2});
-            for (auto& bond : output.bonds) {
-                bond.from = core::Add(bond.from, {3, -2});
-                bond.to = core::Add(bond.to, {3, -2});
+            output.atoms = {{T::Vitae, {0, 0}}, {T::Mors, {1, 0}}};
+            output.bonds = {{1, {0, 0}, {1, 0}}};
+        }
+        if (variant == 1) {
+            for (std::size_t i = 0; i < 2; ++i) {
+                auto& output = puzzle.outputs[i];
+                output.atoms = {{i ? T::Mors : T::Vitae, {0, 0}},
+                                {i ? T::Vitae : T::Mors, {1, 0}},
+                                {i ? T::Mors : T::Vitae, {2, 0}}};
+                output.bonds = {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}};
             }
         }
-        std::swap(puzzle.outputs[0], puzzle.outputs[1]);
-    }
-    const auto batch = CompileSharedAnimismusAssembly(puzzle);
-    std::ofstream tape(dir / (puzzle.name + "-tape.txt"));
-    for (const auto& object : batch.solution.objects) {
-        tape << object.typeName << " " << object.position.q << "," << object.position.r << "\n";
-        for (const auto& instruction : object.instructions)
-            tape << instruction.parameter << ":" << instruction.action << " ";
-        tape << "\n";
-    }
-    ASSERT_EQ(batch.emissions.size(), variant == 1 ? 36 : 24);
-    const auto state = batch.ledger.Replay(puzzle);
-    ExecutionIR::RequireComplete(state, {6, 6});
-    EXPECT_EQ(state.batches[0], variant == 1 ? 18 : 12);
-    EXPECT_EQ(state.discarded, 0);
-    std::ofstream emissions(dir / (puzzle.name + "-emissions.tsv"));
-    emissions << "product\toutput\tatom\ttype\tquantity\tidentity\tsourceBatch\tprecursor0\tprecursor1\tportQ\tportR\tconsumerQ\tconsumerR\tbegin\tholderRelease\tready\trelease\tend\n";
-    for (const auto& e : batch.emissions) {
-        emissions << e.product << '\t' << e.consumer.output << '\t' << e.consumer.atom << '\t'
-                  << static_cast<int>(e.type) << '\t' << e.quantity << '\t' << e.atom << '\t'
-                  << e.sourceBatch << '\t' << e.reactionInputs[0] << '\t' << e.reactionInputs[1] << '\t'
-                  << e.position.q << '\t' << e.position.r << '\t'
-                  << e.consumerPosition.q << '\t' << e.consumerPosition.r << '\t'
-                  << e.beginCycle << '\t' << e.holderReleaseCycle << '\t' << e.readyCycle << '\t'
-                  << e.releaseCycle << '\t' << e.reservationEnd << '\n';
-        EXPECT_EQ(e.quantity, 1);
-        EXPECT_EQ(e.type, puzzle.outputs[e.consumer.output].atoms[e.consumer.atom].type);
-        EXPECT_NE(e.reactionInputs[0], e.reactionInputs[1]);
-        EXPECT_GT(e.reactionInputs[0], 0);
-        EXPECT_GT(e.reactionInputs[1], 0);
-        EXPECT_EQ(e.sourceIdentity, 0);
-        EXPECT_LT(e.beginCycle, e.holderReleaseCycle);
-        EXPECT_LT(e.holderReleaseCycle, e.readyCycle);
-        EXPECT_LT(e.readyCycle, e.releaseCycle);
-        EXPECT_LT(e.releaseCycle, e.reservationEnd);
-    }
-    EXPECT_TRUE(state.atoms.empty());
-    const auto puzzlePath = dir / (puzzle.name + ".puzzle");
-    const auto solutionPath = dir / (puzzle.name + ".solution");
-    {
-        std::ofstream out(puzzlePath, std::ios::binary);
-                auto word = [&](std::uint64_t v, int n) {
-                    for (int i = 0; i < n; ++i)
-                        out.put(static_cast<char>(v >> (8 * i)));
-                };
-                word(3, 4);
-                word(puzzle.name.size(), 1);
-                out.write(puzzle.name.data(), puzzle.name.size());
-                word(0, 8);
-                word(puzzle.permissionBits, 8);
-                for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
-                    word(list->size(), 4);
-                    for (const auto& molecule : *list) {
-                        word(molecule.atoms.size(), 4);
-                        for (const auto& atom : molecule.atoms) {
-                            word(static_cast<std::uint8_t>(atom.type), 1);
-                            word(atom.position.q, 1);
-                            word(atom.position.r, 1);
-                        }
-                        word(molecule.bonds.size(), 4);
-                        for (const auto& bond : molecule.bonds) {
-                            word(bond.bits, 1);
-                            word(bond.from.q, 1);
-                            word(bond.from.r, 1);
-                            word(bond.to.q, 1);
-                            word(bond.to.r, 1);
-                        }
+        if (variant == 2) {
+            for (auto& atom : puzzle.inputs[0].atoms)
+                atom.position =
+                    core::Add(core::RotateClockwise(core::RotateClockwise(atom.position)), {2, -1});
+            for (auto& bond : puzzle.inputs[0].bonds) {
+                bond.from =
+                    core::Add(core::RotateClockwise(core::RotateClockwise(bond.from)), {2, -1});
+                bond.to = core::Add(core::RotateClockwise(core::RotateClockwise(bond.to)), {2, -1});
+            }
+            std::reverse(puzzle.inputs[0].atoms.begin(), puzzle.inputs[0].atoms.end());
+            for (auto& output : puzzle.outputs) {
+                std::reverse(output.atoms.begin(), output.atoms.end());
+                for (auto& atom : output.atoms)
+                    atom.position = core::Add(atom.position, {3, -2});
+                for (auto& bond : output.bonds) {
+                    bond.from = core::Add(bond.from, {3, -2});
+                    bond.to = core::Add(bond.to, {3, -2});
+                }
+            }
+            std::swap(puzzle.outputs[0], puzzle.outputs[1]);
+        }
+        const auto batch = CompileSharedAnimismusAssembly(puzzle);
+        std::ofstream tape(dir / (puzzle.name + "-tape.txt"));
+        for (const auto& object : batch.solution.objects) {
+            tape << object.typeName << " " << object.position.q << "," << object.position.r << "\n";
+            for (const auto& instruction : object.instructions)
+                tape << instruction.parameter << ":" << instruction.action << " ";
+            tape << "\n";
+        }
+        ASSERT_EQ(batch.emissions.size(), variant == 1 ? 36 : 24);
+        const auto state = batch.ledger.Replay(puzzle);
+        ExecutionIR::RequireComplete(state, {6, 6});
+        EXPECT_EQ(state.batches[0], variant == 1 ? 18 : 12);
+        EXPECT_EQ(state.discarded, 0);
+        std::ofstream emissions(dir / (puzzle.name + "-emissions.tsv"));
+        emissions
+            << "product\toutput\tatom\ttype\tquantity\tidentity\tsourceBatch\tprecursor0\tprecursor"
+               "1\tportQ\tportR\tconsumerQ\tconsumerR\tbegin\tholderRelease\tready\trelease\tend\n";
+        for (const auto& e : batch.emissions) {
+            emissions << e.product << '\t' << e.consumer.output << '\t' << e.consumer.atom << '\t'
+                      << static_cast<int>(e.type) << '\t' << e.quantity << '\t' << e.atom << '\t'
+                      << e.sourceBatch << '\t' << e.reactionInputs[0] << '\t' << e.reactionInputs[1]
+                      << '\t' << e.position.q << '\t' << e.position.r << '\t'
+                      << e.consumerPosition.q << '\t' << e.consumerPosition.r << '\t'
+                      << e.beginCycle << '\t' << e.holderReleaseCycle << '\t' << e.readyCycle
+                      << '\t' << e.releaseCycle << '\t' << e.reservationEnd << '\n';
+            EXPECT_EQ(e.quantity, 1);
+            EXPECT_EQ(e.type, puzzle.outputs[e.consumer.output].atoms[e.consumer.atom].type);
+            EXPECT_NE(e.reactionInputs[0], e.reactionInputs[1]);
+            EXPECT_GT(e.reactionInputs[0], 0);
+            EXPECT_GT(e.reactionInputs[1], 0);
+            EXPECT_EQ(e.sourceIdentity, 0);
+            EXPECT_LT(e.beginCycle, e.holderReleaseCycle);
+            EXPECT_LT(e.holderReleaseCycle, e.readyCycle);
+            EXPECT_LT(e.readyCycle, e.releaseCycle);
+            EXPECT_LT(e.releaseCycle, e.reservationEnd);
+        }
+        EXPECT_TRUE(state.atoms.empty());
+        const auto puzzlePath = dir / (puzzle.name + ".puzzle");
+        const auto solutionPath = dir / (puzzle.name + ".solution");
+        {
+            std::ofstream out(puzzlePath, std::ios::binary);
+            auto word = [&](std::uint64_t v, int n) {
+                for (int i = 0; i < n; ++i)
+                    out.put(static_cast<char>(v >> (8 * i)));
+            };
+            word(3, 4);
+            word(puzzle.name.size(), 1);
+            out.write(puzzle.name.data(), puzzle.name.size());
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
+            for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
+                word(list->size(), 4);
+                for (const auto& molecule : *list) {
+                    word(molecule.atoms.size(), 4);
+                    for (const auto& atom : molecule.atoms) {
+                        word(static_cast<std::uint8_t>(atom.type), 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
+                    }
+                    word(molecule.bonds.size(), 4);
+                    for (const auto& bond : molecule.bonds) {
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
-                word(1, 4);
-                word(0, 1);
             }
-    auto solution = batch.solution;
-    io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
-    if (nativeGate) {
-        const auto verified = io::VerifySolutionFiles(puzzlePath, solutionPath, 150000, 10000);
-        std::ofstream report(dir / (puzzle.name + "-gate.txt"));
-        report << "cost=" << verified.metrics.cost << " cycles=" << verified.metrics.cycles << " area=" << verified.metrics.area << "\n";
-        report << verified.detail << " cycle=" << verified.errorCycle << " at " << verified.errorU << "," << verified.errorV << "\n";
-        ASSERT_TRUE(verified.Passed()) << verified.detail;
-    }
-    const auto replay = verification::VerifyStaticProduction(puzzle, solution, 150000);
-    std::ofstream audit(dir / (puzzle.name + "-physical-audit.txt"));
-    audit << "status=" << static_cast<int>(replay.status) << " detail=" << replay.detail
-          << " acquired=" << replay.acquired << " disposed=" << replay.disposed
-          << " remaining=" << replay.remaining << " traceTruncated=" << replay.traceTruncated
-          << " continuousCertified=" << replay.continuousCertified << '\n';
-    for (const auto& event : replay.events) {
-        audit << event.cycle << ' ' << static_cast<int>(event.kind) << ' ' << event.port;
-        for (const auto atom : event.atoms) audit << ' ' << atom;
-        audit << '\n';
-    }
-    if (nativeGate) {
-        const auto twice = io::VerifySolutionFiles(puzzlePath, solutionPath, 150000, 10000);
-        ASSERT_TRUE(twice.Passed()) << twice.detail;
-    }
-    for (const int bit : {2, 3, 9, 12, 16}) {
-        auto denied = puzzle;
-        denied.permissionBits &= ~(1ULL << bit);
-        EXPECT_THROW(CompileSharedAnimismusAssembly(denied), std::invalid_argument);
-    }
-    if (variant == 0) {
-        auto missing = solution;
-        std::erase_if(missing.objects, [](const auto& o) { return o.typeName == "glyph-life-and-death"; });
-        io::BinaryWriter::WriteSolutionFile(dir / "missing-reaction.solution", missing);
+            word(1, 4);
+            word(0, 1);
+        }
+        auto solution = batch.solution;
+        io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
         if (nativeGate) {
-            EXPECT_FALSE(io::VerifySolutionFiles(puzzlePath, dir / "missing-reaction.solution", 150000, 10000).Passed());
+            const auto verified = io::VerifySolutionFiles(puzzlePath, solutionPath, 150000, 10000);
+            std::ofstream report(dir / (puzzle.name + "-gate.txt"));
+            report << "cost=" << verified.metrics.cost << " cycles=" << verified.metrics.cycles
+                   << " area=" << verified.metrics.area << "\n";
+            report << verified.detail << " cycle=" << verified.errorCycle << " at "
+                   << verified.errorU << "," << verified.errorV << "\n";
+            ASSERT_TRUE(verified.Passed()) << verified.detail;
         }
-        auto held = solution;
-        for (auto& o : held.objects) if (o.typeName == "arm1") {
-            auto release = std::find_if(o.instructions.begin(), o.instructions.end(), [](const auto& i) { return i.action == 'g'; });
-            if (release != o.instructions.end()) { o.instructions.erase(release); break; }
+        const auto replay = verification::VerifyStaticProduction(puzzle, solution, 150000);
+        std::ofstream audit(dir / (puzzle.name + "-physical-audit.txt"));
+        audit << "status=" << static_cast<int>(replay.status) << " detail=" << replay.detail
+              << " acquired=" << replay.acquired << " disposed=" << replay.disposed
+              << " remaining=" << replay.remaining << " traceTruncated=" << replay.traceTruncated
+              << " continuousCertified=" << replay.continuousCertified << '\n';
+        for (const auto& event : replay.events) {
+            audit << event.cycle << ' ' << static_cast<int>(event.kind) << ' ' << event.port;
+            for (const auto atom : event.atoms)
+                audit << ' ' << atom;
+            audit << '\n';
         }
-        io::BinaryWriter::WriteSolutionFile(dir / "held-coproduct.solution", held);
         if (nativeGate) {
-            EXPECT_FALSE(io::VerifySolutionFiles(puzzlePath, dir / "held-coproduct.solution", 150000, 10000).Passed());
+            const auto twice = io::VerifySolutionFiles(puzzlePath, solutionPath, 150000, 10000);
+            ASSERT_TRUE(twice.Passed()) << twice.detail;
         }
-        EXPECT_THROW(CompileSharedAnimismusAssembly(original), std::invalid_argument);
-    }
+        for (const int bit : {2, 3, 9, 12, 16}) {
+            auto denied = puzzle;
+            denied.permissionBits &= ~(1ULL << bit);
+            EXPECT_THROW(CompileSharedAnimismusAssembly(denied), std::invalid_argument);
+        }
+        if (variant == 0) {
+            auto missing = solution;
+            std::erase_if(missing.objects,
+                          [](const auto& o) { return o.typeName == "glyph-life-and-death"; });
+            io::BinaryWriter::WriteSolutionFile(dir / "missing-reaction.solution", missing);
+            if (nativeGate) {
+                EXPECT_FALSE(io::VerifySolutionFiles(puzzlePath, dir / "missing-reaction.solution",
+                                                     150000, 10000)
+                                 .Passed());
+            }
+            auto held = solution;
+            for (auto& o : held.objects)
+                if (o.typeName == "arm1") {
+                    auto release = std::find_if(o.instructions.begin(), o.instructions.end(),
+                                                [](const auto& i) { return i.action == 'g'; });
+                    if (release != o.instructions.end()) {
+                        o.instructions.erase(release);
+                        break;
+                    }
+                }
+            io::BinaryWriter::WriteSolutionFile(dir / "held-coproduct.solution", held);
+            if (nativeGate) {
+                EXPECT_FALSE(io::VerifySolutionFiles(puzzlePath, dir / "held-coproduct.solution",
+                                                     150000, 10000)
+                                 .Passed());
+            }
+            EXPECT_THROW(CompileSharedAnimismusAssembly(original), std::invalid_argument);
+        }
     }
 }
-TEST(SharedOrdinaryOutputTest, CompleteSharedAnimismusAssemblySemantics) { RunCompleteSharedAnimismusAssembly(false); }
+TEST(SharedOrdinaryOutputTest, CompleteSharedAnimismusAssemblySemantics) {
+    RunCompleteSharedAnimismusAssembly(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, CompleteSharedAnimismusAssembly) { RunCompleteSharedAnimismusAssembly(true); }
+TEST(SharedOrdinaryOutputTest, CompleteSharedAnimismusAssembly) {
+    RunCompleteSharedAnimismusAssembly(true);
+}
 #endif
 
 void RunClosedSharedAnimismusRealSubgraph(bool nativeGate) {
     using T = core::AtomType;
     const ScopedTestDirectory scratch;
     const auto& dir = scratch.Path();
-    const auto original = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/tourney-2021/OM2021_W7.puzzle");
+    const auto original =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/tourney-2021/OM2021_W7.puzzle");
     for (int variant = 0; variant < 4; ++variant) {
         auto puzzle = original;
         puzzle.name = "shared-chemistry-round14-" + std::to_string(variant);
@@ -1508,9 +1763,12 @@ void RunClosedSharedAnimismusRealSubgraph(bool nativeGate) {
             puzzle.outputs[i].bonds.clear();
         }
         if (variant == 1) {
-            for (auto& atom : puzzle.inputs[0].atoms) atom.position = core::Add(core::RotateClockwise(core::RotateClockwise(atom.position)), {2, -1});
+            for (auto& atom : puzzle.inputs[0].atoms)
+                atom.position =
+                    core::Add(core::RotateClockwise(core::RotateClockwise(atom.position)), {2, -1});
             for (auto& bond : puzzle.inputs[0].bonds) {
-                bond.from = core::Add(core::RotateClockwise(core::RotateClockwise(bond.from)), {2, -1});
+                bond.from =
+                    core::Add(core::RotateClockwise(core::RotateClockwise(bond.from)), {2, -1});
                 bond.to = core::Add(core::RotateClockwise(core::RotateClockwise(bond.to)), {2, -1});
             }
             std::reverse(puzzle.inputs[0].atoms.begin(), puzzle.inputs[0].atoms.end());
@@ -1539,51 +1797,53 @@ void RunClosedSharedAnimismusRealSubgraph(bool nativeGate) {
         using K = ExecutionIR::Kind;
         auto incomplete = batch.ledger;
         incomplete.steps.pop_back();
-        EXPECT_THROW(ExecutionIR::RequireComplete(incomplete.Replay(puzzle), {6, 6}), ExecutionIR::Error);
+        EXPECT_THROW(ExecutionIR::RequireComplete(incomplete.Replay(puzzle), {6, 6}),
+                     ExecutionIR::Error);
         auto material = ExecutionIR::Initial(puzzle);
         ExecutionIR invalid;
-        EXPECT_THROW(invalid.AppendFromTail(puzzle, material, {K::Animismus, 0, {1, 2}}), ExecutionIR::Error);
+        EXPECT_THROW(invalid.AppendFromTail(puzzle, material, {K::Animismus, 0, {1, 2}}),
+                     ExecutionIR::Error);
         std::ofstream trace(dir / (puzzle.name + ".trace"));
         for (const auto& e : batch.emissions)
-            trace << e.sourceBatch << ' ' << e.sourceAtom << ' ' << e.sourceIdentity << ' ' << e.atom
-                  << ' ' << e.consumerPosition.q << ' ' << e.consumerPosition.r << ' '
+            trace << e.sourceBatch << ' ' << e.sourceAtom << ' ' << e.sourceIdentity << ' '
+                  << e.atom << ' ' << e.consumerPosition.q << ' ' << e.consumerPosition.r << ' '
                   << e.beginCycle << ' ' << e.holderReleaseCycle << ' ' << e.readyCycle << ' '
                   << e.releaseCycle << ' ' << e.reservationEnd << '\n';
         const auto path = dir / (puzzle.name + ".puzzle");
         const auto solutionPath = dir / (puzzle.name + ".solution");
-            {
-                std::ofstream out(path, std::ios::binary);
-                auto word = [&](std::uint64_t v, int n) {
-                    for (int i = 0; i < n; ++i)
-                        out.put(static_cast<char>(v >> (8 * i)));
-                };
-                word(3, 4);
-                word(puzzle.name.size(), 1);
-                out.write(puzzle.name.data(), puzzle.name.size());
-                word(0, 8);
-                word(puzzle.permissionBits, 8);
-                for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
-                    word(list->size(), 4);
-                    for (const auto& molecule : *list) {
-                        word(molecule.atoms.size(), 4);
-                        for (const auto& atom : molecule.atoms) {
-                            word(static_cast<std::uint8_t>(atom.type), 1);
-                            word(atom.position.q, 1);
-                            word(atom.position.r, 1);
-                        }
-                        word(molecule.bonds.size(), 4);
-                        for (const auto& bond : molecule.bonds) {
-                            word(bond.bits, 1);
-                            word(bond.from.q, 1);
-                            word(bond.from.r, 1);
-                            word(bond.to.q, 1);
-                            word(bond.to.r, 1);
-                        }
+        {
+            std::ofstream out(path, std::ios::binary);
+            auto word = [&](std::uint64_t v, int n) {
+                for (int i = 0; i < n; ++i)
+                    out.put(static_cast<char>(v >> (8 * i)));
+            };
+            word(3, 4);
+            word(puzzle.name.size(), 1);
+            out.write(puzzle.name.data(), puzzle.name.size());
+            word(0, 8);
+            word(puzzle.permissionBits, 8);
+            for (const auto* list : {&puzzle.inputs, &puzzle.outputs}) {
+                word(list->size(), 4);
+                for (const auto& molecule : *list) {
+                    word(molecule.atoms.size(), 4);
+                    for (const auto& atom : molecule.atoms) {
+                        word(static_cast<std::uint8_t>(atom.type), 1);
+                        word(atom.position.q, 1);
+                        word(atom.position.r, 1);
+                    }
+                    word(molecule.bonds.size(), 4);
+                    for (const auto& bond : molecule.bonds) {
+                        word(bond.bits, 1);
+                        word(bond.from.q, 1);
+                        word(bond.from.r, 1);
+                        word(bond.to.q, 1);
+                        word(bond.to.r, 1);
                     }
                 }
-                word(1, 4);
-                word(0, 1);
             }
+            word(1, 4);
+            word(0, 1);
+        }
         io::VerificationOptions independent;
         independent.mode = io::VerificationMode::Independent;
         auto solution = batch.solution;
@@ -1591,28 +1851,38 @@ void RunClosedSharedAnimismusRealSubgraph(bool nativeGate) {
         if (nativeGate) {
             const auto report = io::VerifySolutionFiles(path, solutionPath, 150000, 10000);
             solution.metrics = report.metrics;
-            ASSERT_TRUE(report.Passed()) << report.detail << " cycle=" << report.errorCycle << " at " << report.errorU << "," << report.errorV << " variant=" << variant;
+            ASSERT_TRUE(report.Passed())
+                << report.detail << " cycle=" << report.errorCycle << " at " << report.errorU << ","
+                << report.errorV << " variant=" << variant;
         }
         const auto secondGate = io::VerifySolutionFiles(path, solutionPath, independent);
         EXPECT_EQ(secondGate.status, io::VerificationStatus::Unavailable) << secondGate.detail;
-        std::cout << "INDEPENDENT variant=" << variant << " unavailable=" << secondGate.detail << '\n';
+        std::cout << "INDEPENDENT variant=" << variant << " unavailable=" << secondGate.detail
+                  << '\n';
         if (nativeGate) {
             if (variant == 0) {
                 auto blocked = solution;
-                auto glyph = std::find_if(blocked.objects.begin(), blocked.objects.end(), [](const auto& o) { return o.typeName == "glyph-life-and-death"; });
+                auto glyph =
+                    std::find_if(blocked.objects.begin(), blocked.objects.end(), [](const auto& o) {
+                        return o.typeName == "glyph-life-and-death";
+                    });
                 ASSERT_NE(glyph, blocked.objects.end());
                 blocked.objects.erase(glyph);
                 const auto badPath = dir / "missing-reaction.solution";
                 io::BinaryWriter::WriteSolutionFile(badPath, blocked);
                 const auto missingGate = io::VerifySolutionFiles(path, badPath, 5000, 10000);
                 EXPECT_FALSE(missingGate.Passed());
-                std::cout << "NEGATIVE missing-reaction status=" << static_cast<int>(missingGate.status)
+                std::cout << "NEGATIVE missing-reaction status="
+                          << static_cast<int>(missingGate.status)
                           << " detail=" << missingGate.detail << '\n';
                 blocked = solution;
-                const auto collector = std::find_if(blocked.objects.begin(), blocked.objects.end(), [](const auto& o) { return o.typeName == "arm1"; });
+                const auto collector =
+                    std::find_if(blocked.objects.begin(), blocked.objects.end(),
+                                 [](const auto& o) { return o.typeName == "arm1"; });
                 ASSERT_NE(collector, blocked.objects.end());
                 EXPECT_EQ(collector->position, (core::HexCoord{14, 2}));
-                for (auto& instruction : collector->instructions) if (instruction.action == 'g') instruction.action = ' ';
+                for (auto& instruction : collector->instructions)
+                    if (instruction.action == 'g') instruction.action = ' ';
                 const auto heldPath = dir / "held-coproduct.solution";
                 io::BinaryWriter::WriteSolutionFile(heldPath, blocked);
                 const auto heldGate = io::VerifySolutionFiles(path, heldPath, 5000, 10000);
@@ -1621,7 +1891,9 @@ void RunClosedSharedAnimismusRealSubgraph(bool nativeGate) {
                           << " detail=" << heldGate.detail << '\n';
             }
             io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
-            std::cout << "CLOSED variant=" << variant << " cost=" << solution.metrics.cost << " cycles=" << solution.metrics.cycles << " area=" << solution.metrics.area << '\n';
+            std::cout << "CLOSED variant=" << variant << " cost=" << solution.metrics.cost
+                      << " cycles=" << solution.metrics.cycles << " area=" << solution.metrics.area
+                      << '\n';
         }
         for (int bit : {2, 3, 9, 12, 16}) {
             auto denied = puzzle;
@@ -1644,21 +1916,28 @@ void RunClosedSharedAnimismusRealSubgraph(bool nativeGate) {
             auto baseline = CompileLifeDeath(puzzle);
             const auto baselinePath = dir / (puzzle.name + "-duplicated.solution");
             io::BinaryWriter::WriteSolutionFile(baselinePath, baseline);
-            EXPECT_EQ(io::VerifySolutionFiles(path, baselinePath, independent).status, io::VerificationStatus::Unavailable);
+            EXPECT_EQ(io::VerifySolutionFiles(path, baselinePath, independent).status,
+                      io::VerificationStatus::Unavailable);
             if (nativeGate) {
                 const auto gate = io::VerifySolutionFiles(path, baselinePath, 150000, 10000);
                 EXPECT_TRUE(gate.Passed()) << gate.detail;
                 baseline.metrics = gate.metrics;
                 io::BinaryWriter::WriteSolutionFile(baselinePath, baseline);
-                std::cout << "BASELINE variant=" << variant << " passed=" << gate.Passed() << " cost=" << gate.metrics.cost << " cycles=" << gate.metrics.cycles << " area=" << gate.metrics.area << " detail=" << gate.detail << '\n';
+                std::cout << "BASELINE variant=" << variant << " passed=" << gate.Passed()
+                          << " cost=" << gate.metrics.cost << " cycles=" << gate.metrics.cycles
+                          << " area=" << gate.metrics.area << " detail=" << gate.detail << '\n';
             }
         } catch (const std::exception& e) {
             FAIL() << "registered baseline unexpectedly rejected: " << e.what();
         }
     }
 }
-TEST(SharedOrdinaryOutputTest, ClosedSharedAnimismusRealSubgraphSemantics) { RunClosedSharedAnimismusRealSubgraph(false); }
+TEST(SharedOrdinaryOutputTest, ClosedSharedAnimismusRealSubgraphSemantics) {
+    RunClosedSharedAnimismusRealSubgraph(false);
+}
 #ifdef HAS_LIBVERIFY
-TEST(SharedOrdinaryOutputTest, ClosedSharedAnimismusRealSubgraph) { RunClosedSharedAnimismusRealSubgraph(true); }
+TEST(SharedOrdinaryOutputTest, ClosedSharedAnimismusRealSubgraph) {
+    RunClosedSharedAnimismusRealSubgraph(true);
+}
 #endif
 } // namespace opusoptima::solvers

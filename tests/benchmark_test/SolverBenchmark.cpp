@@ -27,7 +27,8 @@ constexpr std::size_t kInitialSaltInputs = 10U;
 constexpr int kExtraInputGroups = 5;
 
 std::filesystem::path GetRepoRoot() {
-    return opusoptima::test::RepoRoot(__FILE__);}
+    return opusoptima::test::RepoRoot(__FILE__);
+}
 
 } // namespace
 

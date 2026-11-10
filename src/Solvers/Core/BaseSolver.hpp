@@ -32,8 +32,12 @@ class BaseSolver {
     /// The main entry point: solve a puzzle and return a solution.
     [[nodiscard]] virtual io::SolutionData Solve(const io::PuzzleData& puzzle) = 0;
 
-    void SetDeadline(std::chrono::steady_clock::time_point deadline) { deadline_ = deadline; }
-    [[nodiscard]] std::chrono::steady_clock::time_point Deadline() const { return deadline_; }
+    void SetDeadline(std::chrono::steady_clock::time_point deadline) {
+        deadline_ = deadline;
+    }
+    [[nodiscard]] std::chrono::steady_clock::time_point Deadline() const {
+        return deadline_;
+    }
 
     using CandidateAcceptance = std::function<bool(const io::SolutionData&)>;
     /// Try candidates until the caller accepts one; validation remains outside compilers.
@@ -75,8 +79,7 @@ class BaseSolver {
 
     /// Instantiate a solver by name, or the recommended assembly portfolio if omitted.
     /// Returns nullptr for an unknown explicit name; never substitutes another backend.
-    [[nodiscard]] static std::unique_ptr<BaseSolver> Create(
-        const std::string& name = kDefaultName);
+    [[nodiscard]] static std::unique_ptr<BaseSolver> Create(const std::string& name = kDefaultName);
 
     /// All registered solver names (sorted for stable output).
     [[nodiscard]] static std::vector<std::string> RegisteredNames();

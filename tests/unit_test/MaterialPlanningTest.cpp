@@ -1,23 +1,23 @@
 #include "MaterialPlanning.hpp"
+#include "BinaryWriter.hpp"
+#include "CandidateArchive.hpp"
 #include "InventoryIR.hpp"
 #include "SerialArmExecution.hpp"
 #include "SerialPortAccess.hpp"
-#include "CandidateArchive.hpp"
 #include "VerificationJson.hpp"
-#include "BinaryWriter.hpp"
 #include <cstdlib>
 
+#include "RepoRoot.hpp"
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <iostream>
-#include "RepoRoot.hpp"
 
 namespace opusoptima::solvers { namespace {
 using T = core::AtomType;
 struct ClosedLifeEnvironment {
-    const std::vector<std::string> names{"OPUSOPTIMA_PRODUCT_PORT_ACCESS",
-        "OPUSOPTIMA_CALCIFY_ANIMISMUS", "OPUSOPTIMA_SERIAL_ANIMISMUS",
-        "OPUSOPTIMA_CLOSED_CARDINAL_LIFE"};
+    const std::vector<std::string> names{
+        "OPUSOPTIMA_PRODUCT_PORT_ACCESS", "OPUSOPTIMA_CALCIFY_ANIMISMUS",
+        "OPUSOPTIMA_SERIAL_ANIMISMUS", "OPUSOPTIMA_CLOSED_CARDINAL_LIFE"};
     std::vector<std::optional<std::string>> saved;
     ClosedLifeEnvironment() {
         for (const auto& name : names) {
@@ -28,14 +28,16 @@ struct ClosedLifeEnvironment {
     }
     ~ClosedLifeEnvironment() {
         for (std::size_t i = 0; i < names.size(); ++i)
-            if (saved[i]) setenv(names[i].c_str(), saved[i]->c_str(), 1);
-            else unsetenv(names[i].c_str());
+            if (saved[i])
+                setenv(names[i].c_str(), saved[i]->c_str(), 1);
+            else
+                unsetenv(names[i].c_str());
     }
 };
 
 io::PuzzleData ClosedLifeOriginal() {
-    return io::BinaryParser::ParsePuzzleFile(
-        opusoptima::test::RepoRoot(__FILE__) / "asset/puzzle/24hour-1-puzzles/GEN873.puzzle");
+    return io::BinaryParser::ParsePuzzleFile(opusoptima::test::RepoRoot(__FILE__) /
+                                             "asset/puzzle/24hour-1-puzzles/GEN873.puzzle");
 }
 
 TEST(MaterialPlanning, ClosedCardinalLifeGuardAndTypedPolicy) {
@@ -43,89 +45,119 @@ TEST(MaterialPlanning, ClosedCardinalLifeGuardAndTypedPolicy) {
     const auto original = ClosedLifeOriginal();
     ASSERT_TRUE(SupportsClosedCardinalLife(original));
     auto small = original;
-    small.inputs = {{{{T::Earth,{0,0}}, {T::Earth,{1,0}}}, {{1,{0,0},{1,0}}}}};
-    small.outputs = {{{{T::Vitae,{2,-1}}, {T::Mors,{3,-1}}}, {{1,{2,-1},{3,-1}}}}};
+    small.inputs = {{{{T::Earth, {0, 0}}, {T::Earth, {1, 0}}}, {{1, {0, 0}, {1, 0}}}}};
+    small.outputs = {{{{T::Vitae, {2, -1}}, {T::Mors, {3, -1}}}, {{1, {2, -1}, {3, -1}}}}};
     ASSERT_TRUE(SupportsClosedCardinalLife(small));
     for (const auto& p : {original, small}) {
         EXPECT_FALSE(SearchMaterialExecution(p).plan);
-        EXPECT_FALSE(SearchMaterialExecutionWithPolicy(
-            p, SupplyMaterialLoweringPolicy::CutOrdinarySources).plan);
-        const auto planned = SearchMaterialExecutionWithPolicy(
-            p, SupplyMaterialLoweringPolicy::ClosedCardinalLife);
+        EXPECT_FALSE(
+            SearchMaterialExecutionWithPolicy(p, SupplyMaterialLoweringPolicy::CutOrdinarySources)
+                .plan);
+        const auto planned =
+            SearchMaterialExecutionWithPolicy(p, SupplyMaterialLoweringPolicy::ClosedCardinalLife);
         ASSERT_TRUE(planned.plan) << planned.detail;
-        EXPECT_LE(planned.states, 4096U); EXPECT_LE(planned.candidates, 32U);
+        EXPECT_LE(planned.states, 4096U);
+        EXPECT_LE(planned.candidates, 32U);
         EXPECT_LE(planned.plan->material.steps.size(), 512U);
         EXPECT_TRUE(SerialMaterialSourceCuts(planned.plan->material));
         const auto label = "atoms" + std::to_string(p.outputs[0].atoms.size());
         RecordProperty(label + "States", std::to_string(planned.states));
         RecordProperty(label + "Operations", std::to_string(planned.plan->material.steps.size()));
-        RecordProperty(label + "Batches", std::to_string(std::count_if(
-            planned.plan->material.steps.begin(), planned.plan->material.steps.end(),
-            [](const auto& step) { return step.operation.kind == ExecutionIR::Kind::Acquire; })));
+        RecordProperty(label + "Batches",
+                       std::to_string(std::count_if(
+                           planned.plan->material.steps.begin(), planned.plan->material.steps.end(),
+                           [](const auto& step) {
+                               return step.operation.kind == ExecutionIR::Kind::Acquire;
+                           })));
         ExecutionIR::RequireComplete(planned.plan->material.Replay(p), {1});
-        MaterialPlanningLimits limits; limits.maxSteps = 1;
+        MaterialPlanningLimits limits;
+        limits.maxSteps = 1;
         EXPECT_FALSE(SearchMaterialExecutionWithPolicy(
-            p, SupplyMaterialLoweringPolicy::ClosedCardinalLife, limits).plan);
+                         p, SupplyMaterialLoweringPolicy::ClosedCardinalLife, limits)
+                         .plan);
     }
     const auto denied = [&](const auto& mutate) {
-        auto p = small; mutate(p);
+        auto p = small;
+        mutate(p);
         EXPECT_FALSE(SupportsClosedCardinalLife(p));
-        EXPECT_EQ(SearchMaterialExecutionWithPolicy(p,
-            SupplyMaterialLoweringPolicy::ClosedCardinalLife).status,
+        EXPECT_EQ(
+            SearchMaterialExecutionWithPolicy(p, SupplyMaterialLoweringPolicy::ClosedCardinalLife)
+                .status,
             MaterialPlanningStatus::Unsupported);
-        EXPECT_EQ(SearchJointSupplyInventoryWithPolicy(p, 1,
-            SupplyMaterialLoweringPolicy::ClosedCardinalLife).states, 0U);
+        EXPECT_EQ(SearchJointSupplyInventoryWithPolicy(
+                      p, 1, SupplyMaterialLoweringPolicy::ClosedCardinalLife)
+                      .states,
+                  0U);
     };
     for (auto type : {T::Salt, T::Vitae, T::Gold, T::Quintessence})
         denied([&](auto& p) { p.inputs[0].atoms[0].type = type; });
-    denied([](auto& p) { p.outputs[0].atoms.push_back({T::Fire,{4,-1}});
-        p.outputs[0].bonds.push_back({1,{3,-1},{4,-1}}); });
+    denied([](auto& p) {
+        p.outputs[0].atoms.push_back({T::Fire, {4, -1}});
+        p.outputs[0].bonds.push_back({1, {3, -1}, {4, -1}});
+    });
     denied([](auto& p) { p.outputs[0].atoms[1].type = T::Vitae; });
     denied([](auto& p) { p.outputs[0].bonds[0].bits = 2; });
     denied([](auto& p) { p.inputs[0].bonds[0].bits = 2; });
-    denied([](auto& p) { p.inputs[0].atoms.push_back({T::Earth,{2,0}}); });
+    denied([](auto& p) { p.inputs[0].atoms.push_back({T::Earth, {2, 0}}); });
     denied([](auto& p) { p.productionInfo.emplace(); });
     denied([](auto& p) { p.outputMultiplier = 2; });
     denied([](auto& p) { p.inputs.resize(5, p.inputs[0]); });
-    denied([](auto& p) { p.outputs[0].atoms[1].position = {2,-1}; });
+    denied([](auto& p) { p.outputs[0].atoms[1].position = {2, -1}; });
     denied([](auto& p) { p.outputs[0].bonds.clear(); });
-    denied([](auto& p) { p.outputs[0].bonds[0].to = {9,9}; });
+    denied([](auto& p) { p.outputs[0].bonds[0].to = {9, 9}; });
     denied([](auto& p) { p.outputs[0].atoms.resize(17, p.outputs[0].atoms[0]); });
-    for (auto bit : {0,8,9,12,16,22,23,25})
+    for (auto bit : {0, 8, 9, 12, 16, 22, 23, 25})
         denied([&](auto& p) { p.permissionBits &= ~(1ULL << bit); });
 }
 
 TEST(MaterialPlanning, ClosedCardinalLifeDefaultCollectionRequiresNativeAuthority) {
     ClosedLifeEnvironment environment;
     const auto puzzle = ClosedLifeOriginal();
-    for (auto authority : {io::VerificationAuthority::None, io::VerificationAuthority::Independent}) {
+    for (auto authority :
+         {io::VerificationAuthority::None, io::VerificationAuthority::Independent}) {
         AssemblySolver solver;
         solver.SetDeadline(std::chrono::steady_clock::now() + std::chrono::seconds(8));
-        EXPECT_THROW((void)solver.CollectVerified(puzzle, [&](const auto&, const auto& stage) {
-            io::VerificationReport report;
-            if (stage.starts_with("shared-plan-ordinary-port-access"))
-                report.status = io::VerificationStatus::Passed;
-            report.authority = authority; return report;
-        }, 1), std::invalid_argument);
+        EXPECT_THROW((void)solver.CollectVerified(
+                         puzzle,
+                         [&](const auto&, const auto& stage) {
+                             io::VerificationReport report;
+                             if (stage.starts_with("shared-plan-ordinary-port-access"))
+                                 report.status = io::VerificationStatus::Passed;
+                             report.authority = authority;
+                             return report;
+                         },
+                         1),
+                     std::invalid_argument);
     }
     for (const auto* value : {"off", "unknown", "", "1"}) {
         setenv("OPUSOPTIMA_CLOSED_CARDINAL_LIFE", value, 1);
         AssemblySolver disabled;
-        EXPECT_THROW((void)disabled.CollectVerified(puzzle, [](const auto&, const auto& stage) {
-            EXPECT_FALSE(stage.starts_with("shared-plan-ordinary-port-access"));
-            return io::VerificationReport{};
-        }, 1), std::invalid_argument);
+        EXPECT_THROW((void)disabled.CollectVerified(
+                         puzzle,
+                         [](const auto&, const auto& stage) {
+                             EXPECT_FALSE(stage.starts_with("shared-plan-ordinary-port-access"));
+                             return io::VerificationReport{};
+                         },
+                         1),
+                     std::invalid_argument);
     }
     unsetenv("OPUSOPTIMA_CLOSED_CARDINAL_LIFE");
 #ifdef HAS_LIBVERIFY
-    const auto input = opusoptima::test::RepoRoot(__FILE__) /
-        "asset/puzzle/24hour-1-puzzles/GEN873.puzzle";
+    const auto input =
+        opusoptima::test::RepoRoot(__FILE__) / "asset/puzzle/24hour-1-puzzles/GEN873.puzzle";
     const auto originalBytes = io::BinaryParser::ReadAllBytes(input);
     struct Files {
-        std::filesystem::path path = std::filesystem::path("build/test-output") /
-            ("closed-life-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        Files() { std::filesystem::create_directories(path); }
-        ~Files() { std::error_code error; std::filesystem::remove_all(path, error); }
+        std::filesystem::path path =
+            std::filesystem::path("build/test-output") /
+            ("closed-life-" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        Files() {
+            std::filesystem::create_directories(path);
+        }
+        ~Files() {
+            std::error_code error;
+            std::filesystem::remove_all(path, error);
+        }
     } files;
     std::vector<std::byte> firstBytes;
     for (auto cap : {1U, 3U}) {
@@ -138,7 +170,7 @@ TEST(MaterialPlanning, ClosedCardinalLifeDefaultCollectionRequiresNativeAuthorit
             ++submissions;
             auto report = archive.Submit(candidate, stage);
             RecordProperty("cap" + std::to_string(cap) + "stage" + std::to_string(submissions),
-                io::VerificationReportJson(report));
+                           io::VerificationReportJson(report));
             if (report.Passed()) {
                 ++passed;
                 EXPECT_TRUE(stage.starts_with("shared-plan-ordinary-port-access")) << stage;
@@ -148,11 +180,15 @@ TEST(MaterialPlanning, ClosedCardinalLifeDefaultCollectionRequiresNativeAuthorit
         };
         const auto first = cap == 1 ? solver.CollectVerified(puzzle, submit, 1)
                                     : solver.CollectVerified(puzzle, submit);
-        EXPECT_GE(passed, 1U); EXPECT_LE(passed, cap); EXPECT_LE(submissions, 12U);
+        EXPECT_GE(passed, 1U);
+        EXPECT_LE(passed, cap);
+        EXPECT_LE(submissions, 12U);
         ASSERT_TRUE(archive.First());
         EXPECT_EQ(first.metrics.cycles, archive.First()->solution.metrics.cycles);
-        if (cap == 1) firstBytes = archive.First()->bytes;
-        else EXPECT_EQ(firstBytes, archive.First()->bytes);
+        if (cap == 1)
+            firstBytes = archive.First()->bytes;
+        else
+            EXPECT_EQ(firstBytes, archive.First()->bytes);
         ASSERT_TRUE(archive.Publish({}).Passed());
     }
     EXPECT_EQ(originalBytes, io::BinaryParser::ReadAllBytes(input));
@@ -162,20 +198,25 @@ TEST(MaterialPlanning, ClosedCardinalLifeDefaultCollectionRequiresNativeAuthorit
 TEST(MaterialPlanning, ExplicitCutPolicyPreservesDefaultAndSharesOperationLimit) {
     using IR = ExecutionIR;
     io::PuzzleData p;
-    p.version = 3; p.outputMultiplier = 1; p.permissionBits = ~0ULL;
+    p.version = 3;
+    p.outputMultiplier = 1;
+    p.permissionBits = ~0ULL;
     p.inputs = {{{{T::Earth, {0, 0}}, {T::Earth, {1, 0}}}, {{1, {0, 0}, {1, 0}}}}};
     p.outputs = p.inputs;
     const auto preserved = SearchMaterialExecution(p);
-    const auto explicitPreserved = SearchMaterialExecutionWithPolicy(
-        p, SupplyMaterialLoweringPolicy::PreserveCompatible);
-    ASSERT_TRUE(preserved.plan); ASSERT_TRUE(explicitPreserved.plan);
+    const auto explicitPreserved =
+        SearchMaterialExecutionWithPolicy(p, SupplyMaterialLoweringPolicy::PreserveCompatible);
+    ASSERT_TRUE(preserved.plan);
+    ASSERT_TRUE(explicitPreserved.plan);
     EXPECT_EQ(preserved.plan->material.steps, explicitPreserved.plan->material.steps);
     EXPECT_FALSE(SupportsClosedCardinalLife(p));
-    const auto oldMachine = CompileAcceptedSerialArmExecution(p, *preserved.plan,
+    const auto oldMachine =
+        CompileAcceptedSerialArmExecution(p, *preserved.plan, [](const auto&) { return true; });
+    const auto adaptedMachine = CompileAcceptedSerialArmExecutionWithPolicy(
+        p, *explicitPreserved.plan, SupplyMaterialLoweringPolicy::PreserveCompatible,
         [](const auto&) { return true; });
-    const auto adaptedMachine = CompileAcceptedSerialArmExecutionWithPolicy(p, *explicitPreserved.plan,
-        SupplyMaterialLoweringPolicy::PreserveCompatible, [](const auto&) { return true; });
-    ASSERT_TRUE(oldMachine); ASSERT_TRUE(adaptedMachine);
+    ASSERT_TRUE(oldMachine);
+    ASSERT_TRUE(adaptedMachine);
     EXPECT_EQ(io::BinaryWriter::WriteSolution(*oldMachine),
               io::BinaryWriter::WriteSolution(*adaptedMachine));
     MaterialPlanningLimits limits;
@@ -193,11 +234,13 @@ TEST(MaterialPlanning, ExplicitCutPolicyPreservesDefaultAndSharesOperationLimit)
     EXPECT_LE(capped.states, limits.maxStates);
     EXPECT_LE(capped.candidates, limits.maxCandidates);
     EXPECT_NE(capped.detail.find("lowered material operation limit exceeded"), std::string::npos);
-    p.inputs[0].atoms.pop_back(); p.inputs[0].bonds.clear();
+    p.inputs[0].atoms.pop_back();
+    p.inputs[0].bonds.clear();
     p.permissionBits &= ~(1ULL << 9);
     EXPECT_TRUE(SupportsOrdinarySourceCutLowering(p));
-    EXPECT_TRUE(SearchMaterialExecutionWithPolicy(
-        p, SupplyMaterialLoweringPolicy::CutOrdinarySources).plan);
+    EXPECT_TRUE(
+        SearchMaterialExecutionWithPolicy(p, SupplyMaterialLoweringPolicy::CutOrdinarySources)
+            .plan);
 }
 
 TEST(MaterialPlanning, CalcifiedAnimismusIsExplicitlyOutsideCurrentExecutionChain) {
@@ -224,12 +267,15 @@ TEST(MaterialPlanning, CalcifiedAnimismusIsExplicitlyOutsideCurrentExecutionChai
     ExecutionIR::RequireComplete(material.plan->material.Replay(p), {1, 1});
     int machines = 0;
     std::string failure;
-    EXPECT_FALSE(CompileAcceptedSerialArmExecution(p, *material.plan,
-        [&](const auto&) { ++machines; return true; },
+    EXPECT_FALSE(CompileAcceptedSerialArmExecution(
+        p, *material.plan,
+        [&](const auto&) {
+            ++machines;
+            return true;
+        },
         [&](const auto& message) { failure = message; }));
     EXPECT_EQ(machines, 0);
-    EXPECT_NE(failure.find("material reaction not yet implemented"), std::string::npos)
-        << failure;
+    EXPECT_NE(failure.find("material reaction not yet implemented"), std::string::npos) << failure;
 
     p.permissionBits &= ~(1ULL << 16);
     EXPECT_NE(SearchMaterialExecution(p).status, MaterialPlanningStatus::Found);
@@ -253,8 +299,10 @@ TEST(MaterialPlanning, ExperimentalAnimismusRejectsDeniedAndWrongFeedPlans) {
     setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", "1", 1);
     int machines = 0;
     auto refuse = [&](const io::PuzzleData& invalid) {
-        EXPECT_FALSE(CompileAcceptedSerialArmExecution(invalid, *material.plan,
-            [&](const auto&) { ++machines; return true; }));
+        EXPECT_FALSE(CompileAcceptedSerialArmExecution(invalid, *material.plan, [&](const auto&) {
+            ++machines;
+            return true;
+        }));
     };
     auto denied = p;
     denied.permissionBits &= ~(1ULL << 16);
@@ -263,8 +311,10 @@ TEST(MaterialPlanning, ExperimentalAnimismusRejectsDeniedAndWrongFeedPlans) {
     wrong.inputs[0].atoms[0].type = T::Earth;
     refuse(wrong);
     EXPECT_EQ(machines, 0);
-    if (present) setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", old.c_str(), 1);
-    else unsetenv("OPUSOPTIMA_SERIAL_ANIMISMUS");
+    if (present)
+        setenv("OPUSOPTIMA_SERIAL_ANIMISMUS", old.c_str(), 1);
+    else
+        unsetenv("OPUSOPTIMA_SERIAL_ANIMISMUS");
 }
 TEST(MaterialPlanning, PlansChemistryWithoutTrackPistonOrRailGeometry) {
     io::PuzzleData p;

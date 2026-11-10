@@ -27,7 +27,8 @@ struct SharedFactoryEmission {
     // is the physical arm's CCW hex heading, not ExecutionIR's clockwise frame.
     core::HexCoord position{};
     core::HexCoord consumerPosition{0, 0};
-    int orientation{}, beginCycle{}, holderReleaseCycle{}, readyCycle{}, releaseCycle{}, reservationEnd{};
+    int orientation{}, beginCycle{}, holderReleaseCycle{}, readyCycle{}, releaseCycle{},
+        reservationEnd{};
     // Molecular provenance: acquired identity before optional conversion.
     ExecutionIR::AtomId sourceIdentity{};
     std::size_t sourceInput{}, sourceAtom{}, sourceBatch{}, sourceRemainder{};
@@ -69,7 +70,8 @@ SharedFactoryBatch CompileMolecularFragmentSupplyBatch(const io::PuzzleData&);
 // Direct-call, default-unregistered finite tree atomization and row reassembly.
 // One real <=16-atom tree, <=32 demand atoms, one/two outputs; each acquired
 // batch is exhausted before renewal. One physical singleton slot; no disposal.
-SharedFactoryBatch CompileRenewableFragmentTransport(const io::PuzzleData&,
+SharedFactoryBatch CompileRenewableFragmentTransport(
+    const io::PuzzleData&,
     std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max(),
     std::function<std::chrono::steady_clock::time_point()> clock = {});
 SharedFactoryBatch CompileMolecularSupplyBatch(const io::PuzzleData&);
@@ -85,9 +87,11 @@ SharedFactoryBatch CompileSharedAnimismusAssembly(const io::PuzzleData&);
 // source allocations fail closed. No consumer count or buffer geometry changes.
 // Optional nearCache derives exclusive physical slot reuse from the complete
 // store/reaction/consumer dependency order and places that bank before sources.
-SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData&, bool scheduleEmptyReturns = false,
-                                                  bool compactBuffers = false, bool batchConsumer = false,
-                                                  bool nearCache = false);
+SharedFactoryBatch CompileMixedInventoryAssembly(const io::PuzzleData&,
+                                                 bool scheduleEmptyReturns = false,
+                                                 bool compactBuffers = false,
+                                                 bool batchConsumer = false,
+                                                 bool nearCache = false);
 struct MolecularRecipeSupply {
     SharedFactoryBatch batch;
     // Local output index -> atom demand in the untouched original recipe.
@@ -96,8 +100,8 @@ struct MolecularRecipeSupply {
     ExecutionIR recipeReservations;
     std::size_t input{};
 };
-MolecularRecipeSupply CompileMolecularRecipeSupply(
-    const io::PuzzleData&, std::size_t input, const std::vector<ProductAtomRef>& consumers);
+MolecularRecipeSupply CompileMolecularRecipeSupply(const io::PuzzleData&, std::size_t input,
+                                                   const std::vector<ProductAtomRef>& consumers);
 // Single-stage purification consumes two source atoms in the shared feed inventory.
 io::SolutionData CompileSharedPurificationAssembly(const io::PuzzleData&);
 io::SolutionData CompileRowAssembly(const io::PuzzleData&, const AssemblyPlan&, int feedSpacing);
@@ -111,7 +115,7 @@ io::SolutionData CompileStructuredRowAssembly(const io::PuzzleData&, const Assem
 io::SolutionData CompileRetimedRowAssembly(const io::PuzzleData&, const AssemblyPlan&);
 // Retain ordinary lowering when empty resets cannot overlap; never extend the deadline.
 io::SolutionData CompileScheduledRowAssembly(const io::PuzzleData&, const AssemblyPlan&,
-                                            std::chrono::steady_clock::time_point deadline);
+                                             std::chrono::steady_clock::time_point deadline);
 // Same scheduled row with the local source intake forced on. Submitted as its own
 // candidate so a rejection never replaces the shared-feeder machine.
 io::SolutionData CompileScheduledRowIntakeAssembly(const io::PuzzleData&, const AssemblyPlan&,
@@ -119,13 +123,13 @@ io::SolutionData CompileScheduledRowIntakeAssembly(const io::PuzzleData&, const 
 // Same scheduled row with the shared serpentine feeder forced. Used as the lazy
 // fallback when the intake machine is rejected by the native gate.
 io::SolutionData CompileScheduledRowFeederAssembly(const io::PuzzleData&, const AssemblyPlan&,
-                                                  std::chrono::steady_clock::time_point deadline,
-                                                  int gapOverride = -1);
+                                                   std::chrono::steady_clock::time_point deadline,
+                                                   int gapOverride = -1);
 // Clocked companion with the shared feeder forced; the fallback for a rejected
 // intake clocked machine.
-io::SolutionData CompileScheduledRowFeederClockAssembly(const io::PuzzleData&, const AssemblyPlan&,
-                                                       std::chrono::steady_clock::time_point deadline,
-                                                       int gapOverride = -1);
+io::SolutionData CompileScheduledRowFeederClockAssembly(
+    const io::PuzzleData&, const AssemblyPlan&, std::chrono::steady_clock::time_point deadline,
+    int gapOverride = -1);
 // True when the most recent scheduled-row compile actually used the intake.
 bool ScheduledRowIntakeApplied();
 
@@ -136,9 +140,9 @@ struct ScheduleAudit {
     std::size_t arms{};
     std::size_t instructions{};
     std::int64_t period{};
-    bool monotone{true};   // ticks non-decreasing inside every arm
-    bool uniqueTicks{true};  // no arm emits two actions on the same tick
-    bool displaced{};      // the fragment merge had to move an instruction
+    bool monotone{true};    // ticks non-decreasing inside every arm
+    bool uniqueTicks{true}; // no arm emits two actions on the same tick
+    bool displaced{};       // the fragment merge had to move an instruction
 };
 
 ScheduleAudit AuditMachineSchedule(const io::SolutionData& machine);
@@ -151,9 +155,9 @@ io::SolutionData CompileScheduledRowClockAssembly(const io::PuzzleData&, const A
 // clocked cycles machine. The portfolio submits both, so the parallel clock
 // does not consume a second construction or replace any existing family.
 struct ScheduledRowCandidates {
-    io::SolutionData compact;                 // gap2 fallback
+    io::SolutionData compact; // gap2 fallback
     std::optional<io::SolutionData> compactGap0;
-    io::SolutionData clocked;                 // gap2 clocked fallback
+    io::SolutionData clocked; // gap2 clocked fallback
     std::optional<io::SolutionData> clockedGap0;
     // Shared-feeder companions of the intake machines. They replace the gap0
     // variant whenever the intake is in play, so the portfolio can compare the
@@ -167,18 +171,19 @@ struct ScheduledRowCandidates {
     bool compactUsesIntake{false};
     bool clockedUsesIntake{false};
 };
-ScheduledRowCandidates CompileScheduledRowCandidates(const io::PuzzleData&, const AssemblyPlan&,
-                                                     std::chrono::steady_clock::time_point deadline);
+ScheduledRowCandidates CompileScheduledRowCandidates(
+    const io::PuzzleData&, const AssemblyPlan&, std::chrono::steady_clock::time_point deadline);
 // Emit one product only; callers must halt the resulting finite machine.
 io::SolutionData CompileRowAssemblySingleProduct(const io::PuzzleData&, const AssemblyPlan&);
 io::SolutionData CompileRowAssemblySingleProduct(const io::PuzzleData&, const AssemblyPlan&,
-    std::chrono::steady_clock::time_point deadline);
+                                                 std::chrono::steady_clock::time_point deadline);
 // Product boundaries are exclusive instruction times in emission order. The
 // last slice must run through the full tape duration to include feed cleanup.
 io::SolutionData CompileRowAssemblyBatch(const io::PuzzleData&, const AssemblyPlan&,
                                          std::vector<int>&);
 io::SolutionData CompileRowAssemblyBatch(const io::PuzzleData&, const AssemblyPlan&,
-    std::vector<int>&, std::chrono::steady_clock::time_point deadline);
+                                         std::vector<int>&,
+                                         std::chrono::steady_clock::time_point deadline);
 // Emit a finite number of intermediates, parking surplus when disposal is unavailable.
 io::SolutionData CompileRowAssemblyFiniteBatch(const io::PuzzleData&, const AssemblyPlan&,
                                                std::vector<int>&, std::size_t products);

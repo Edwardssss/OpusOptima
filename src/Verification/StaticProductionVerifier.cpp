@@ -132,7 +132,8 @@ class Replay {
            std::optional<std::chrono::steady_clock::time_point> started = std::nullopt,
            bool repeating = false)
         : puzzle_(puzzle), solution_(solution), allowOrdinary_(allowOrdinary), certify_(certify),
-          collectTimings_(collectTimings), repeating_(repeating), limit_(limit), sharedBudget_(started.has_value()),
+          collectTimings_(collectTimings), repeating_(repeating), limit_(limit),
+          sharedBudget_(started.has_value()),
           started_(started.value_or(std::chrono::steady_clock::now())) {}
     StaticProductionReport Run() {
         Measure(io::VerificationPhase::Setup, [&] {
@@ -311,8 +312,10 @@ class Replay {
             for (const auto id : report_.events.back().atoms) {
                 StaticProductionEvent::AtomState state{id, atoms_.at(id).type, Held(id), {}};
                 for (const auto& [edge, bits] : bonds_) {
-                    if (edge.first == id) state.bonds.emplace_back(edge.second, bits);
-                    else if (edge.second == id) state.bonds.emplace_back(edge.first, bits);
+                    if (edge.first == id)
+                        state.bonds.emplace_back(edge.second, bits);
+                    else if (edge.second == id)
+                        state.bonds.emplace_back(edge.first, bits);
                 }
                 report_.events.back().outputState.push_back(std::move(state));
             }
@@ -500,8 +503,9 @@ class Replay {
             throw Unsupported("repeating opt-in excludes production/certification");
         for (std::size_t i = 0; i < puzzle_.outputs.size(); ++i) {
             const auto& molecule = puzzle_.outputs[i];
-            const auto marker = std::find_if(molecule.atoms.begin(), molecule.atoms.end(),
-                [](const auto& atom) { return atom.type == core::AtomType::Repeat; });
+            const auto marker =
+                std::find_if(molecule.atoms.begin(), molecule.atoms.end(),
+                             [](const auto& atom) { return atom.type == core::AtomType::Repeat; });
             if (!repeating_ || marker == molecule.atoms.end()) {
                 Molecule(molecule);
                 continue;
@@ -513,10 +517,11 @@ class Replay {
             repeatingPorts_[i] = true;
         }
         if (repeating_) {
-            if (std::none_of(repeatingPorts_.begin(), repeatingPorts_.end(), [](bool p) { return p; }))
+            if (std::none_of(repeatingPorts_.begin(), repeatingPorts_.end(),
+                             [](bool p) { return p; }))
                 throw Unsupported("repeating opt-in requires a repeating output");
-            std::vector<FiniteRepeatingPortConfig> configs(puzzle_.outputs.size(),
-                {6, static_cast<std::size_t>(puzzle_.outputMultiplier), 6});
+            std::vector<FiniteRepeatingPortConfig> configs(
+                puzzle_.outputs.size(), {6, static_cast<std::size_t>(puzzle_.outputMultiplier), 6});
             repeatingProgress_.emplace(configs, deadline_);
         }
         if (solution_.objects.size() > finiteOrdinaryProfile.maxParts)
@@ -749,9 +754,11 @@ class Replay {
         period_ = std::max(period_, 1);
         if (repeating_) {
             std::array<unsigned, 16> bindings{};
-            for (const auto& port : outputs_) ++bindings[port.index];
+            for (const auto& port : outputs_)
+                ++bindings[port.index];
             for (std::size_t i = 0; i < puzzle_.outputs.size(); ++i)
-                if (bindings[i] != 1) throw Unsupported("repeating requires unique output bindings");
+                if (bindings[i] != 1)
+                    throw Unsupported("repeating requires unique output bindings");
         }
         report_.outputs.resize(puzzle_.outputs.size());
     }
@@ -892,7 +899,8 @@ class Replay {
                 if (!initialPositions.insert(cell).second)
                     throw Rejected("independent instantaneous body overlap");
             };
-            for (const auto& [id, atom] : before) insert(atom.position);
+            for (const auto& [id, atom] : before)
+                insert(atom.position);
             for (const auto& old : oldArms) {
                 insert(old.base);
                 if (old.wheel)
@@ -903,8 +911,8 @@ class Replay {
             // This exact lattice case does not depend on the unproved atom rotation model.
             for (std::size_t i = 0; i < oldArms.size(); ++i)
                 for (std::size_t j = 0; j < i; ++j)
-                    if (oldArms[i].base != oldArms[j].base &&
-                        arms_[i].base == oldArms[j].base && arms_[j].base == oldArms[i].base)
+                    if (oldArms[i].base != oldArms[j].base && arms_[i].base == oldArms[j].base &&
+                        arms_[j].base == oldArms[i].base)
                         throw Rejected("independent simultaneous base swap");
             for (const auto& [id, motion] : motions)
                 if (motion.turn != 0 || motion.translation != Cell{})
@@ -923,8 +931,8 @@ class Replay {
         for (std::size_t i = 0; i < oldArms.size(); ++i) {
             const auto& old = oldArms[i];
             metrics_.ObserveArmMotion({old.base.first, old.base.second}, old.length, old.direction,
-                                      {old.base.first, old.base.second}, old.length,
-                                      old.direction, old.wheel ? 6 : old.grabbers, old.wheel);
+                                      {old.base.first, old.base.second}, old.length, old.direction,
+                                      old.wheel ? 6 : old.grabbers, old.wheel);
             if (old.wheel)
                 for (auto offset : directions) {
                     const auto cell = Add(old.base, Rotate(offset, old.direction));
@@ -1022,9 +1030,9 @@ class Replay {
                     for (std::size_t arm = 0; arm < oldArms.size(); ++arm)
                         if (oldArms[arm].wheel)
                             for (int i = 0; i < 6; ++i) {
-                                result.emplace_back(arm,
-                                                    Add(oldArms[arm].base,
-                                                        Rotate(directions[i], oldArms[arm].direction)));
+                                result.emplace_back(
+                                    arm, Add(oldArms[arm].base,
+                                             Rotate(directions[i], oldArms[arm].direction)));
                             }
                     return result;
                 }();
@@ -1069,8 +1077,8 @@ class Replay {
                     for (std::size_t arm = 0; arm < oldArms.size(); ++arm)
                         bases[arm] = AtMotion(oldArms[arm].base, baseMotions[arm], t);
                     for (std::size_t wheel = 0; wheel < oldWheels.size(); ++wheel)
-                        wheelPoints[wheel] =
-                            AtMotion(oldWheels[wheel].second, wheelMotions[oldWheels[wheel].first], t);
+                        wheelPoints[wheel] = AtMotion(oldWheels[wheel].second,
+                                                      wheelMotions[oldWheels[wheel].first], t);
                     for (std::size_t arm = 0; arm < oldArms.size(); ++arm) {
                         const auto base = bases[arm];
                         for (std::size_t other = 0; other < arm; ++other) {
@@ -1082,8 +1090,8 @@ class Replay {
                         }
                     }
                     for (const auto& [id, atom] : before)
-                        points.at(id) = AtMotion(atom.position,
-                                                 motions.contains(id) ? motions.at(id) : Motion{}, t);
+                        points.at(id) = AtMotion(
+                            atom.position, motions.contains(id) ? motions.at(id) : Motion{}, t);
                     for (const auto& [id, point] : points) {
                         const bool dynamic = movingAtoms.contains(id);
                         const int room = originalRooms.at(id);
@@ -1093,8 +1101,9 @@ class Replay {
                             if (other > id && (!sample || dynamic || movingAtoms.contains(other))) {
                                 const double dx = point.x - position.x, dy = point.y - position.y;
                                 if (dx * dx + dy * dy < 0.36)
-                                    throw Rejected("independent simultaneous atom collision at cycle " +
-                                                   std::to_string(cycle));
+                                    throw Rejected(
+                                        "independent simultaneous atom collision at cycle " +
+                                        std::to_string(cycle));
                             }
                         for (std::size_t arm = 0; arm < oldArms.size(); ++arm) {
                             if (sample && !dynamic && !movingBases[arm]) continue;
@@ -1327,8 +1336,8 @@ class Replay {
                     for (const auto id : fragment) {
                         const auto& atom = atoms_.at(id);
                         const auto local = port.frame.Local(atom.position);
-                        component.atoms.push_back({static_cast<core::AtomType>(atom.type),
-                                                   {local.first, local.second}});
+                        component.atoms.push_back(
+                            {static_cast<core::AtomType>(atom.type), {local.first, local.second}});
                     }
                     for (const auto& [edge, bits] : bonds_) {
                         if (!ids.contains(edge.first) || !ids.contains(edge.second)) continue;
@@ -1338,8 +1347,8 @@ class Replay {
                     }
                 }
                 Budget();
-                const auto observed = repeatingProgress_->Observe(port.index, output, component,
-                    repeatingDisplacements_[port.index]);
+                const auto observed = repeatingProgress_->Observe(
+                    port.index, output, component, repeatingDisplacements_[port.index]);
                 if (const auto* failure = std::get_if<FiniteRepeatingGraphFailure>(&observed))
                     throw Unsupported(failure->detail);
                 Budget();
@@ -1421,10 +1430,10 @@ class Replay {
     const std::chrono::steady_clock::time_point started_ = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point deadline_ = started_ + std::chrono::seconds(2);
 };
-StaticProductionReport ExecuteReplay(const io::PuzzleData& puzzle, const io::SolutionData& solution,
-                                     int limit, bool ordinary = false, bool certify = false,
-                                     bool timings = false,
-                                     std::optional<std::chrono::steady_clock::time_point> started = std::nullopt) {
+StaticProductionReport ExecuteReplay(
+    const io::PuzzleData& puzzle, const io::SolutionData& solution, int limit,
+    bool ordinary = false, bool certify = false, bool timings = false,
+    std::optional<std::chrono::steady_clock::time_point> started = std::nullopt) {
     Replay replay(puzzle, solution, limit, ordinary, certify, timings, started);
     try {
         return replay.Run();
@@ -1445,7 +1454,7 @@ StaticProductionReport ExecuteReplay(const io::PuzzleData& puzzle, const io::Sol
 }
 } // namespace
 StaticProductionReport AuditOrdinaryMachine(const io::PuzzleData& puzzle,
-                                             const io::SolutionData& solution, int cycleLimit) {
+                                            const io::SolutionData& solution, int cycleLimit) {
     return ExecuteReplay(puzzle, solution, cycleLimit, true);
 }
 StaticProductionReport VerifyStaticProduction(const io::PuzzleData& puzzle,
@@ -1474,12 +1483,12 @@ StaticProductionReport VerifyStaticProductionFiles(const std::filesystem::path& 
                 .detail = std::string("independent file decoding failed: ") + error.what()};
     }
 }
-static FiniteReplayReport ReplayFiniteMachineWithStart(const io::PuzzleData& puzzle,
-                                       const io::SolutionData& solution, int cycleLimit,
-                                       bool collectTimings,
-                                       std::optional<std::chrono::steady_clock::time_point> started) {
+static FiniteReplayReport ReplayFiniteMachineWithStart(
+    const io::PuzzleData& puzzle, const io::SolutionData& solution, int cycleLimit,
+    bool collectTimings, std::optional<std::chrono::steady_clock::time_point> started) {
     try {
-        auto report = ExecuteReplay(puzzle, solution, cycleLimit, true, false, collectTimings, started);
+        auto report =
+            ExecuteReplay(puzzle, solution, cycleLimit, true, false, collectTimings, started);
         ReplayOutcome outcome = ReplayOutcome::Error;
         switch (report.status) {
         case io::VerificationStatus::Passed:
@@ -1531,10 +1540,12 @@ RepeatingFiniteReplayReport ReplayRepeatingFiniteMachine(const io::PuzzleData& p
         if (std::chrono::steady_clock::now() >= started + std::chrono::seconds(2))
             return {{.outcome = ReplayOutcome::Timeout}};
         const auto outcome = report.status == io::VerificationStatus::Passed
-            ? ReplayOutcome::Completed : ReplayOutcome::CycleLimit;
-        RepeatingFiniteReplayReport result{{outcome, std::move(report.detail), report.cycles,
-                 std::move(report.outputs), report.acquired, report.disposed, report.remaining,
-                 std::move(report.events), report.traceTruncated, std::move(report.diagnostics)}};
+                                 ? ReplayOutcome::Completed
+                                 : ReplayOutcome::CycleLimit;
+        RepeatingFiniteReplayReport result{
+            {outcome, std::move(report.detail), report.cycles, std::move(report.outputs),
+             report.acquired, report.disposed, report.remaining, std::move(report.events),
+             report.traceTruncated, std::move(report.diagnostics)}};
         if (outcome == ReplayOutcome::Completed)
             result.execution.detail = "finite repeating opt-in targets reached (non-certifying)";
         if (std::chrono::steady_clock::now() >= started + std::chrono::seconds(2))
@@ -1551,11 +1562,17 @@ RepeatingFiniteReplayReport ReplayRepeatingFiniteMachine(const io::PuzzleData& p
         } catch (const TimedOut&) {
             return {{.outcome = ReplayOutcome::Timeout}};
         } catch (const Unsupported& error) {
-            try { return {{.outcome = ReplayOutcome::Unavailable, .detail = error.what()}}; }
-            catch (...) { return {{.outcome = ReplayOutcome::Unavailable}, false, true}; }
+            try {
+                return {{.outcome = ReplayOutcome::Unavailable, .detail = error.what()}};
+            } catch (...) {
+                return {{.outcome = ReplayOutcome::Unavailable}, false, true};
+            }
         } catch (const Rejected& error) {
-            try { return {{.outcome = ReplayOutcome::Rejected, .detail = error.what()}}; }
-            catch (...) { return {{.outcome = ReplayOutcome::Unavailable}, false, true}; }
+            try {
+                return {{.outcome = ReplayOutcome::Rejected, .detail = error.what()}};
+            } catch (...) {
+                return {{.outcome = ReplayOutcome::Unavailable}, false, true};
+            }
         } catch (...) {
             return {{.outcome = ReplayOutcome::Unavailable}};
         }
@@ -1579,21 +1596,34 @@ ExpandedFiniteReplayReport ReplayExpandedFiniteMachine(const io::PuzzleData& puz
             result.expansionFailure = *failure;
             const char* category = "UnknownState";
             switch (failure->code) {
-            case TapeExpansionError::Malformed: category = "Malformed"; break;
-            case TapeExpansionError::OutsideDomain: category = "OutsideDomain"; break;
-            case TapeExpansionError::BoundExceeded: category = "BoundExceeded"; break;
-            case TapeExpansionError::Conflict: category = "Conflict"; break;
-            case TapeExpansionError::UnknownState: break;
-            case TapeExpansionError::ResourceUnavailable: category = "ResourceUnavailable"; break;
+            case TapeExpansionError::Malformed:
+                category = "Malformed";
+                break;
+            case TapeExpansionError::OutsideDomain:
+                category = "OutsideDomain";
+                break;
+            case TapeExpansionError::BoundExceeded:
+                category = "BoundExceeded";
+                break;
+            case TapeExpansionError::Conflict:
+                category = "Conflict";
+                break;
+            case TapeExpansionError::UnknownState:
+                break;
+            case TapeExpansionError::ResourceUnavailable:
+                category = "ResourceUnavailable";
+                break;
             }
             result.execution.detail = std::string("finite expansion failed: ") + category;
             result.execution.outcome = ReplayOutcome::Unavailable;
         } else {
             result.expandedTape = std::move(std::get<ExpandedFiniteTape>(expanded));
             auto machine = raw;
-            machine.objects[result.expandedTape->armObject].instructions = result.expandedTape->slots;
+            machine.objects[result.expandedTape->armObject].instructions =
+                result.expandedTape->slots;
             if (std::chrono::steady_clock::now() <= deadline)
-                result.execution = ReplayFiniteMachineWithStart(puzzle, machine, cycleLimit, false, started);
+                result.execution =
+                    ReplayFiniteMachineWithStart(puzzle, machine, cycleLimit, false, started);
         }
     } catch (const std::exception& error) {
         result.execution.outcome = ReplayOutcome::Error;
@@ -1603,8 +1633,10 @@ ExpandedFiniteReplayReport ReplayExpandedFiniteMachine(const io::PuzzleData& puz
         result.execution.outcome = ReplayOutcome::Timeout;
         result.execution.detail = "finite expansion/setup/execution exceeded shared 2s budget";
     }
-    result.totalMicros = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now() - started).count());
+    result.totalMicros =
+        static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+                                       std::chrono::steady_clock::now() - started)
+                                       .count());
     return result;
 }
 io::VerificationReport VerifyIndependent(const io::PuzzleData& puzzle,

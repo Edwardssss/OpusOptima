@@ -1,17 +1,17 @@
 #include "WheelAssembly.hpp"
+#include "AssemblySolver.hpp"
+#include "Core/LogManager.hpp"
 #include "IO/BinaryWriter.hpp"
 #include "IO/SolutionVerifier.hpp"
-#include "AssemblySolver.hpp"
+#include "RepoRoot.hpp"
 #include <algorithm>
 #include <cstdlib>
-#include <optional>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <optional>
 #include <spdlog/sinks/ostream_sink.h>
 #include <sstream>
-#include "Core/LogManager.hpp"
-#include "RepoRoot.hpp"
 
 namespace opusoptima::solvers { namespace {
 const auto root = opusoptima::test::RepoRoot(__FILE__);
@@ -34,7 +34,8 @@ TEST(WheelAssemblyTest, CalcifiedAtomicSupplyRequiresAllConversionPermissions) {
     auto puzzle = io::BinaryParser::ParsePuzzleFile(puzzlePath);
     puzzle.inputs = {{{{core::AtomType::Water, {0, 0}}}, {}}};
     for (auto& output : puzzle.outputs)
-        for (auto& atom : output.atoms) atom.type = core::AtomType::Air;
+        for (auto& atom : output.atoms)
+            atom.type = core::AtomType::Air;
     puzzle.outputs.resize(1);
     puzzle.permissionBits = (1ULL << 29) - 1;
     EXPECT_NO_THROW((void)CompileWheelAssembly(puzzle));
@@ -88,11 +89,14 @@ TEST(WheelAssemblyTest, RadialReuseChecksPermissionsTopologyAndTransforms) {
     for (int turn = 0; turn < 6; ++turn) {
         auto p = original;
         auto transform = [&](core::HexCoord c) {
-            for (int i = 0; i < turn; ++i) c = core::RotateClockwise(c);
+            for (int i = 0; i < turn; ++i)
+                c = core::RotateClockwise(c);
             return core::Add(c, {7, -4});
         };
-        for (auto& input : p.inputs) input.atoms[0].position = transform(input.atoms[0].position);
-        for (auto& atom : p.outputs[0].atoms) atom.position = transform(atom.position);
+        for (auto& input : p.inputs)
+            input.atoms[0].position = transform(input.atoms[0].position);
+        for (auto& atom : p.outputs[0].atoms)
+            atom.position = transform(atom.position);
         for (auto& bond : p.outputs[0].bonds) {
             bond.from = transform(bond.from);
             bond.to = transform(bond.to);
@@ -117,8 +121,10 @@ TEST(WheelAssemblyTest, RadialReusePreservesFirstAndCollectionCaps) {
     struct Restore {
         const std::optional<std::string>& prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_RADIAL_WHEEL", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_RADIAL_WHEEL");
+            if (prior)
+                setenv("OPUSOPTIMA_RADIAL_WHEEL", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_RADIAL_WHEEL");
         }
     } restore{prior};
     const auto p = io::BinaryParser::ParsePuzzleFile(puzzlePath);
@@ -131,47 +137,65 @@ TEST(WheelAssemblyTest, RadialReusePreservesFirstAndCollectionCaps) {
         std::shared_ptr<spdlog::logger> logger;
         std::vector<spdlog::sink_ptr> sinks;
         spdlog::level::level_enum level;
-        ~RestoreLogger() { logger->sinks() = sinks; logger->set_level(level); }
+        ~RestoreLogger() {
+            logger->sinks() = sinks;
+            logger->set_level(level);
+        }
     } restoreLogger{logger, logger->sinks(), logger->level()};
     logger->sinks() = {std::make_shared<spdlog::sinks::ostream_sink_mt>(output)};
     logger->set_level(spdlog::level::info);
-    for (const auto* mode : {"off", "<unset>", "on", "invalid"}) for (std::size_t cap : {1u, 2u, 3u})
-        for (auto authority : {io::VerificationAuthority::LegacyGate,
-                               io::VerificationAuthority::Independent, io::VerificationAuthority::None}) {
-        if (authority != io::VerificationAuthority::LegacyGate &&
-            (cap != 3 || std::string_view(mode) != "on")) continue;
-        SCOPED_TRACE(static_cast<int>(authority));
-        if (std::string_view(mode) == "<unset>") unsetenv("OPUSOPTIMA_RADIAL_WHEEL");
-        else setenv("OPUSOPTIMA_RADIAL_WHEEL", mode, 1);
-        output.str(""); output.clear();
-        std::vector<std::string> stages;
-        const auto first = AssemblySolver{}.CollectVerified(p, [&](const auto&, const auto& stage) {
-            stages.push_back(stage);
-            io::VerificationReport report;
-            report.status = io::VerificationStatus::Passed;
-            report.authority = stage == "portfolio-radial-wheel" ? authority :
-                               io::VerificationAuthority::LegacyGate;
-            return report;
-        }, cap);
-        EXPECT_EQ(io::BinaryWriter::WriteSolution(first), expected);
-        EXPECT_LE(stages.size(), cap);
-        EXPECT_LE(stages.size(), AssemblySolver::MaxCandidateSubmissions);
-        const bool radial = cap == 3 && (std::string_view(mode) == "on" ||
-                                          std::string_view(mode) == "<unset>");
-        EXPECT_EQ(std::count(stages.begin(), stages.end(), "portfolio-radial-wheel"), radial ? 1 : 0);
-        if (radial) {
-            ASSERT_EQ(stages.size(), 3U);
-            EXPECT_EQ(stages[1], "portfolio-static-embedding");
-            EXPECT_EQ(stages[2], "portfolio-radial-wheel");
-            const auto accepted = authority == io::VerificationAuthority::LegacyGate ? "true" : "false";
-            EXPECT_NE(output.str().find(std::string("portfolio-radial-wheel event=gate accepted=") + accepted),
-                      std::string::npos) << output.str();
-        }
-    }
+    for (const auto* mode : {"off", "<unset>", "on", "invalid"})
+        for (std::size_t cap : {1u, 2u, 3u})
+            for (auto authority :
+                 {io::VerificationAuthority::LegacyGate, io::VerificationAuthority::Independent,
+                  io::VerificationAuthority::None}) {
+                if (authority != io::VerificationAuthority::LegacyGate &&
+                    (cap != 3 || std::string_view(mode) != "on"))
+                    continue;
+                SCOPED_TRACE(static_cast<int>(authority));
+                if (std::string_view(mode) == "<unset>")
+                    unsetenv("OPUSOPTIMA_RADIAL_WHEEL");
+                else
+                    setenv("OPUSOPTIMA_RADIAL_WHEEL", mode, 1);
+                output.str("");
+                output.clear();
+                std::vector<std::string> stages;
+                const auto first = AssemblySolver{}.CollectVerified(
+                    p,
+                    [&](const auto&, const auto& stage) {
+                        stages.push_back(stage);
+                        io::VerificationReport report;
+                        report.status = io::VerificationStatus::Passed;
+                        report.authority = stage == "portfolio-radial-wheel"
+                                               ? authority
+                                               : io::VerificationAuthority::LegacyGate;
+                        return report;
+                    },
+                    cap);
+                EXPECT_EQ(io::BinaryWriter::WriteSolution(first), expected);
+                EXPECT_LE(stages.size(), cap);
+                EXPECT_LE(stages.size(), AssemblySolver::MaxCandidateSubmissions);
+                const bool radial = cap == 3 && (std::string_view(mode) == "on" ||
+                                                 std::string_view(mode) == "<unset>");
+                EXPECT_EQ(std::count(stages.begin(), stages.end(), "portfolio-radial-wheel"),
+                          radial ? 1 : 0);
+                if (radial) {
+                    ASSERT_EQ(stages.size(), 3U);
+                    EXPECT_EQ(stages[1], "portfolio-static-embedding");
+                    EXPECT_EQ(stages[2], "portfolio-radial-wheel");
+                    const auto accepted =
+                        authority == io::VerificationAuthority::LegacyGate ? "true" : "false";
+                    EXPECT_NE(
+                        output.str().find(
+                            std::string("portfolio-radial-wheel event=gate accepted=") + accepted),
+                        std::string::npos)
+                        << output.str();
+                }
+            }
 }
 TEST(WheelAssemblyTest, RadialProjectionRefusesUnsupportedStructureAndPermissions) {
-    const auto original = io::BinaryParser::ParsePuzzleFile(
-        root / "asset/puzzle/tourney-2021/OM2021_W6.puzzle");
+    const auto original =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/tourney-2021/OM2021_W6.puzzle");
     ASSERT_TRUE(SupportsRadialProjectionAssembly(original));
     ASSERT_FALSE(SupportsRadialWheelAssembly(original));
     auto refuse = [&](const auto& p) {
@@ -186,18 +210,25 @@ TEST(WheelAssemblyTest, RadialProjectionRefusesUnsupportedStructureAndPermission
     for (int mutation = 0; mutation < 8; ++mutation) {
         auto p = original;
         auto radial = std::find_if(p.outputs.begin(), p.outputs.end(),
-            [](const auto& output) { return output.atoms.size() > 1; });
+                                   [](const auto& output) { return output.atoms.size() > 1; });
         if (mutation == 0) {
             std::erase_if(p.inputs, [](const auto& input) {
                 return input.atoms[0].type == core::AtomType::Quicksilver;
             });
-        } else if (mutation == 1) radial->bonds[0].bits = 2;
-        else if (mutation == 2) radial->bonds[0].to = {40, -30};
-        else if (mutation == 3) radial->atoms[0].position = radial->atoms[1].position;
-        else if (mutation == 4) p.outputMultiplier = 2;
-        else if (mutation == 5) p.inputs[0].atoms[0].type = core::AtomType::Vitae;
-        else if (mutation == 6) p.inputs[0].atoms[0].type = core::AtomType::Gold;
-        else p.outputs.push_back(p.outputs.back());
+        } else if (mutation == 1)
+            radial->bonds[0].bits = 2;
+        else if (mutation == 2)
+            radial->bonds[0].to = {40, -30};
+        else if (mutation == 3)
+            radial->atoms[0].position = radial->atoms[1].position;
+        else if (mutation == 4)
+            p.outputMultiplier = 2;
+        else if (mutation == 5)
+            p.inputs[0].atoms[0].type = core::AtomType::Vitae;
+        else if (mutation == 6)
+            p.inputs[0].atoms[0].type = core::AtomType::Gold;
+        else
+            p.outputs.push_back(p.outputs.back());
         refuse(p);
     }
 }
@@ -208,79 +239,99 @@ TEST(WheelAssemblyTest, RadialProjectionKeepsFirstCapsAndOwnNativeAuthority) {
     struct Restore {
         const std::optional<std::string>& prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_RADIAL_PROJECTION", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_RADIAL_PROJECTION");
+            if (prior)
+                setenv("OPUSOPTIMA_RADIAL_PROJECTION", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_RADIAL_PROJECTION");
         }
     } restore{prior};
-    const auto p = io::BinaryParser::ParsePuzzleFile(
-        root / "asset/puzzle/tourney-2021/OM2021_W6.puzzle");
+    const auto p =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/tourney-2021/OM2021_W6.puzzle");
     auto logger = GetLoggerOrFallback("solver");
     std::ostringstream output;
     struct RestoreLogger {
         std::shared_ptr<spdlog::logger> logger;
         std::vector<spdlog::sink_ptr> sinks;
         spdlog::level::level_enum level;
-        ~RestoreLogger() { logger->sinks() = sinks; logger->set_level(level); }
+        ~RestoreLogger() {
+            logger->sinks() = sinks;
+            logger->set_level(level);
+        }
     } restoreLogger{logger, logger->sinks(), logger->level()};
     logger->sinks() = {std::make_shared<spdlog::sinks::ostream_sink_mt>(output)};
     logger->set_level(spdlog::level::info);
     std::vector<std::byte> expected;
     for (const auto* mode : {"off", "<unset>", "invalid", "on"})
         for (std::size_t cap : {1u, 2u, 3u})
-            for (auto authority : {io::VerificationAuthority::LegacyGate,
-                                   io::VerificationAuthority::Independent,
-                                   io::VerificationAuthority::None}) {
-        const bool enabled = std::string_view(mode) == "<unset>" || std::string_view(mode) == "on";
-        if (authority != io::VerificationAuthority::LegacyGate && (cap != 3 || !enabled)) continue;
-        SCOPED_TRACE(mode);
-        SCOPED_TRACE(cap);
-        if (std::string_view(mode) == "<unset>") unsetenv("OPUSOPTIMA_RADIAL_PROJECTION");
-        else setenv("OPUSOPTIMA_RADIAL_PROJECTION", mode, 1);
-        output.str(""); output.clear();
-        std::vector<std::string> stages;
-        const auto gate = [&](const auto&, const auto& stage) {
-            stages.push_back(stage);
-            io::VerificationReport report;
-            report.status = io::VerificationStatus::Passed;
-            report.authority = stage == "portfolio-radial-projection" ? authority :
-                               io::VerificationAuthority::LegacyGate;
-            return report;
-        };
-        const auto first = cap == 3 ? AssemblySolver{}.CollectVerified(p, gate) :
-                                     AssemblySolver{}.CollectVerified(p, gate, cap);
-        const auto bytes = io::BinaryWriter::WriteSolution(first);
-        if (expected.empty()) expected = bytes;
-        EXPECT_EQ(bytes, expected);
-        EXPECT_LE(stages.size(), cap);
-        EXPECT_LE(stages.size(), AssemblySolver::MaxCandidateSubmissions);
-        const bool attempted = cap == 3 && enabled;
-        EXPECT_EQ(std::count(stages.begin(), stages.end(), "portfolio-radial-projection"),
-                  attempted ? 1 : 0);
-        EXPECT_EQ(std::count(stages.begin(), stages.end(), "portfolio-radial-wheel"), 0);
-        if (attempted) {
-            ASSERT_EQ(stages.size(), 3U);
-            EXPECT_EQ(stages.back(), "portfolio-radial-projection");
-            const auto accepted = authority == io::VerificationAuthority::LegacyGate ? "true" : "false";
-            EXPECT_NE(output.str().find(std::string("portfolio-radial-projection event=gate accepted=") + accepted),
-                      std::string::npos) << output.str();
-        }
-    }
+            for (auto authority :
+                 {io::VerificationAuthority::LegacyGate, io::VerificationAuthority::Independent,
+                  io::VerificationAuthority::None}) {
+                const bool enabled =
+                    std::string_view(mode) == "<unset>" || std::string_view(mode) == "on";
+                if (authority != io::VerificationAuthority::LegacyGate && (cap != 3 || !enabled))
+                    continue;
+                SCOPED_TRACE(mode);
+                SCOPED_TRACE(cap);
+                if (std::string_view(mode) == "<unset>")
+                    unsetenv("OPUSOPTIMA_RADIAL_PROJECTION");
+                else
+                    setenv("OPUSOPTIMA_RADIAL_PROJECTION", mode, 1);
+                output.str("");
+                output.clear();
+                std::vector<std::string> stages;
+                const auto gate = [&](const auto&, const auto& stage) {
+                    stages.push_back(stage);
+                    io::VerificationReport report;
+                    report.status = io::VerificationStatus::Passed;
+                    report.authority = stage == "portfolio-radial-projection"
+                                           ? authority
+                                           : io::VerificationAuthority::LegacyGate;
+                    return report;
+                };
+                const auto first = cap == 3 ? AssemblySolver{}.CollectVerified(p, gate)
+                                            : AssemblySolver{}.CollectVerified(p, gate, cap);
+                const auto bytes = io::BinaryWriter::WriteSolution(first);
+                if (expected.empty()) expected = bytes;
+                EXPECT_EQ(bytes, expected);
+                EXPECT_LE(stages.size(), cap);
+                EXPECT_LE(stages.size(), AssemblySolver::MaxCandidateSubmissions);
+                const bool attempted = cap == 3 && enabled;
+                EXPECT_EQ(std::count(stages.begin(), stages.end(), "portfolio-radial-projection"),
+                          attempted ? 1 : 0);
+                EXPECT_EQ(std::count(stages.begin(), stages.end(), "portfolio-radial-wheel"), 0);
+                if (attempted) {
+                    ASSERT_EQ(stages.size(), 3U);
+                    EXPECT_EQ(stages.back(), "portfolio-radial-projection");
+                    const auto accepted =
+                        authority == io::VerificationAuthority::LegacyGate ? "true" : "false";
+                    EXPECT_NE(output.str().find(
+                                  std::string("portfolio-radial-projection event=gate accepted=") +
+                                  accepted),
+                              std::string::npos)
+                        << output.str();
+                }
+            }
     auto restricted = p;
     restricted.permissionBits &= ~(1ULL << 25);
     std::vector<std::vector<std::byte>> baseline;
     for (const auto* mode : {"off", "on"}) {
         setenv("OPUSOPTIMA_RADIAL_PROJECTION", mode, 1);
         std::vector<std::vector<std::byte>> candidates;
-        (void)AssemblySolver{}.CollectVerified(restricted, [&](const auto& candidate, const auto& stage) {
-            EXPECT_NE(stage, "portfolio-radial-projection");
-            candidates.push_back(io::BinaryWriter::WriteSolution(candidate));
-            io::VerificationReport report;
-            report.status = io::VerificationStatus::Passed;
-            report.authority = io::VerificationAuthority::LegacyGate;
-            return report;
-        }, 3);
-        if (std::string_view(mode) == "off") baseline = candidates;
-        else EXPECT_EQ(candidates, baseline);
+        (void)AssemblySolver{}.CollectVerified(
+            restricted,
+            [&](const auto& candidate, const auto& stage) {
+                EXPECT_NE(stage, "portfolio-radial-projection");
+                candidates.push_back(io::BinaryWriter::WriteSolution(candidate));
+                io::VerificationReport report;
+                report.status = io::VerificationStatus::Passed;
+                report.authority = io::VerificationAuthority::LegacyGate;
+                return report;
+            },
+            3);
+        if (std::string_view(mode) == "off")
+            baseline = candidates;
+        else
+            EXPECT_EQ(candidates, baseline);
     }
 }
 
@@ -290,8 +341,10 @@ TEST(WheelAssemblyTest, RadialReuseIneligiblePreservesPortfolio) {
     struct Restore {
         const std::optional<std::string>& prior;
         ~Restore() {
-            if (prior) setenv("OPUSOPTIMA_RADIAL_WHEEL", prior->c_str(), 1);
-            else unsetenv("OPUSOPTIMA_RADIAL_WHEEL");
+            if (prior)
+                setenv("OPUSOPTIMA_RADIAL_WHEEL", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_RADIAL_WHEEL");
         }
     } restore{prior};
     auto p = io::BinaryParser::ParsePuzzleFile(puzzlePath);
@@ -299,19 +352,26 @@ TEST(WheelAssemblyTest, RadialReuseIneligiblePreservesPortfolio) {
     ASSERT_FALSE(SupportsRadialWheelAssembly(p));
     std::vector<std::vector<std::byte>> baseline;
     for (const auto* mode : {"off", "<unset>", "on", "invalid"}) {
-        if (std::string_view(mode) == "<unset>") unsetenv("OPUSOPTIMA_RADIAL_WHEEL");
-        else setenv("OPUSOPTIMA_RADIAL_WHEEL", mode, 1);
+        if (std::string_view(mode) == "<unset>")
+            unsetenv("OPUSOPTIMA_RADIAL_WHEEL");
+        else
+            setenv("OPUSOPTIMA_RADIAL_WHEEL", mode, 1);
         std::vector<std::vector<std::byte>> candidates;
-        (void)AssemblySolver{}.CollectVerified(p, [&](const auto& candidate, const auto& stage) {
-            EXPECT_NE(stage, "portfolio-radial-wheel");
-            candidates.push_back(io::BinaryWriter::WriteSolution(candidate));
-            io::VerificationReport report;
-            report.status = io::VerificationStatus::Passed;
-            report.authority = io::VerificationAuthority::LegacyGate;
-            return report;
-        }, 8);
-        if (std::string_view(mode) == "off") baseline = candidates;
-        else EXPECT_EQ(candidates, baseline);
+        (void)AssemblySolver{}.CollectVerified(
+            p,
+            [&](const auto& candidate, const auto& stage) {
+                EXPECT_NE(stage, "portfolio-radial-wheel");
+                candidates.push_back(io::BinaryWriter::WriteSolution(candidate));
+                io::VerificationReport report;
+                report.status = io::VerificationStatus::Passed;
+                report.authority = io::VerificationAuthority::LegacyGate;
+                return report;
+            },
+            8);
+        if (std::string_view(mode) == "off")
+            baseline = candidates;
+        else
+            EXPECT_EQ(candidates, baseline);
     }
 }
 #ifdef HAS_LIBVERIFY
@@ -320,7 +380,10 @@ TEST(WheelAssemblyTest, RadialReuseWholeMachineVerifiesTwiceOnOriginal) {
     const auto path = std::filesystem::current_path() / "radial-wheel-test.solution";
     struct Cleanup {
         std::filesystem::path path;
-        ~Cleanup() { std::error_code ec; std::filesystem::remove(path, ec); }
+        ~Cleanup() {
+            std::error_code ec;
+            std::filesystem::remove(path, ec);
+        }
     } cleanup{path};
     int oldCost = 0;
     for (bool radial : {false, true}) {
@@ -328,7 +391,7 @@ TEST(WheelAssemblyTest, RadialReuseWholeMachineVerifiesTwiceOnOriginal) {
         io::BinaryWriter::WriteSolutionFile(path, solution);
         auto report = io::VerifySolutionFiles(puzzlePath, path, 1000000, 10000);
         ASSERT_TRUE(report.Passed()) << report.detail << " cycle=" << report.errorCycle
-                                    << " cell=" << report.errorU << ',' << report.errorV;
+                                     << " cell=" << report.errorU << ',' << report.errorV;
         solution.metrics = report.metrics;
         io::BinaryWriter::WriteSolutionFile(path, solution);
         const auto measured = report.metrics;
@@ -337,8 +400,10 @@ TEST(WheelAssemblyTest, RadialReuseWholeMachineVerifiesTwiceOnOriginal) {
         EXPECT_EQ(report.metrics.cost, measured.cost);
         EXPECT_EQ(report.metrics.cycles, measured.cycles);
         EXPECT_EQ(report.metrics.area, measured.area);
-        if (!radial) oldCost = measured.cost;
-        else EXPECT_LT(measured.cost, oldCost);
+        if (!radial)
+            oldCost = measured.cost;
+        else
+            EXPECT_LT(measured.cost, oldCost);
         std::cout << "radial=" << radial << " cost=" << measured.cost
                   << " cycles=" << measured.cycles << " area=" << measured.area << '\n';
     }

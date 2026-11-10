@@ -12,8 +12,8 @@
 
 #ifdef HAS_LIBVERIFY
 #    include "IO/BinaryWriter.hpp"
-#    include "Verification/libverify.h"
 #    include "UnitTestConstants.hpp"
+#    include "Verification/libverify.h"
 #endif
 
 namespace opusoptima::verification {
@@ -22,7 +22,9 @@ struct IndependentMetricsRasterTestAccess {
                        double uncertainty) {
         metrics.RasterPoint(x, y, radius, uncertainty);
     }
-    static const auto& Area(const IndependentMetrics& metrics) { return metrics.area_; }
+    static const auto& Area(const IndependentMetrics& metrics) {
+        return metrics.area_;
+    }
     static const auto& Uncertain(const IndependentMetrics& metrics) {
         return metrics.uncertainCells_;
     }
@@ -208,23 +210,27 @@ TEST(IndependentMetrics, LargeCoordinateUncertaintyExpandsRasterCandidateCoverag
 TEST(IndependentMetrics, RasterRectangleCoversFloatingFilterBoundaryAdversaries) {
     using Access = IndependentMetricsRasterTestAccess;
     constexpr int limit = 1 << 20;
-    struct Case { double x, y, radius, uncertainty; };
+    struct Case {
+        double x, y, radius, uncertainty;
+    };
     const std::array cases{
-        Case{0., 0., 0., 0.}, Case{-0., -0., 58., 0.},
-        Case{58., 0., 58., 0.}, Case{-58., 0., 58., 0.},
-        Case{0., 71., 0., 71.}, Case{41., -71., 49., 22.},
+        Case{0., 0., 0., 0.},
+        Case{-0., -0., 58., 0.},
+        Case{58., 0., 58., 0.},
+        Case{-58., 0., 58., 0.},
+        Case{0., 71., 0., 71.},
+        Case{41., -71., 49., 22.},
         Case{82. * (limit - 20), 71. * (limit - 20), 58., 500.},
         Case{-82. * (limit - 20), -71. * (limit - 20), 58., 500.},
-        Case{82. * ((limit - 20) + (-limit + 20) * .5),
-             71. * (-limit + 20), 49., 500.}};
+        Case{82. * ((limit - 20) + (-limit + 20) * .5), 71. * (-limit + 20), 49., 500.}};
     for (const auto& fixture : cases)
-        for (double direction : {-std::numeric_limits<double>::infinity(),
-                                  std::numeric_limits<double>::infinity()}) {
+        for (double direction :
+             {-std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity()}) {
             const double x = std::nextafter(fixture.x, direction),
-                         y = std::nextafter(fixture.y, direction),
-                         radius = fixture.radius, uncertainty = fixture.uncertainty;
-            SCOPED_TRACE((testing::Message() << std::hexfloat << x << ',' << y
-                          << " radius=" << radius << " uncertainty=" << uncertainty));
+                         y = std::nextafter(fixture.y, direction), radius = fixture.radius,
+                         uncertainty = fixture.uncertainty;
+            SCOPED_TRACE((testing::Message() << std::hexfloat << x << ',' << y << " radius="
+                                             << radius << " uncertainty=" << uncertainty));
             IndependentMetrics metrics;
             metrics.Initialize(Puzzle(), {});
             ASSERT_NO_THROW(Access::Raster(metrics, x, y, radius, uncertainty));
@@ -263,18 +269,15 @@ TEST(IndependentMetrics, RasterRectangleRejectsNumericCoordinateAndResourceOverf
     for (const auto& args : std::array{
              std::array{inf, 0., 58., 0.}, std::array{0., inf, 58., 0.},
              std::array{0., 0., std::numeric_limits<double>::quiet_NaN(), 0.},
-             std::array{0., 0., -1., 0.}, std::array{0., 0., 1., -1.},
-             std::array{0., 0., inf, inf},
+             std::array{0., 0., -1., 0.}, std::array{0., 0., 1., -1.}, std::array{0., 0., inf, inf},
              std::array{0., 0., std::numeric_limits<double>::max(),
                         std::numeric_limits<double>::max()},
-             std::array{0., 0., 0., double(limit)},
-             std::array{0., 0., double(limit) + 1., 0.},
+             std::array{0., 0., 0., double(limit)}, std::array{0., 0., double(limit) + 1., 0.},
              std::array{std::numeric_limits<double>::max(), 0., 58., 0.},
              std::array{82. * (limit - 2), 0., 58., 0.},
              std::array{82. * (-limit + 2) - .01, 0., 58., 0.},
              std::array{0., 71. * (limit - 2), 58., 0.},
-             std::array{0., 71. * (-limit + 2) - .01, 58., 0.},
-             std::array{0., 0., 0., 31000.}}) {
+             std::array{0., 71. * (-limit + 2) - .01, 58., 0.}, std::array{0., 0., 0., 31000.}}) {
         EXPECT_THROW(Access::Raster(metrics, args[0], args[1], args[2], args[3]),
                      std::invalid_argument);
         EXPECT_EQ(metrics.WorkStats().rasterCandidates, 0U);
@@ -334,8 +337,8 @@ TEST(IndependentMetrics, SampleEnvelopesDoNotProveContinuousArcCoverage) {
     ASSERT_GT(angle, 0.);
     ASSERT_LT(angle, std::acos(-1.) / 3.);
     EXPECT_LT(std::abs(std::hypot(x, y) - std::hypot(px, py)), 58.);
-    const double uncertainty = .05 + .03 * 9. +
-                               16. * std::numeric_limits<float>::epsilon() * (px + py);
+    const double uncertainty =
+        .05 + .03 * 9. + 16. * std::numeric_limits<float>::epsilon() * (px + py);
     for (int sample = 1; sample < 32; ++sample) {
         const double a = std::acos(-1.) / 3. * sample / 32.;
         EXPECT_GT(std::hypot(x - px * std::cos(a) + py * std::sin(a),
@@ -459,8 +462,7 @@ TEST(IndependentMetrics, PendingSweepsAreBoundedAcrossAtomAndArmObservations) {
     metrics.BeginMotions();
     for (std::size_t i = 0; i < limit; ++i)
         metrics.ObserveAtomMotion({}, {}, {1, 0}, 0);
-    EXPECT_THROW(metrics.ObserveArmMotion({}, 1, 0, {1, 0}, 1, 0, 1),
-                 std::invalid_argument);
+    EXPECT_THROW(metrics.ObserveArmMotion({}, 1, 0, {1, 0}, 1, 0, 1), std::invalid_argument);
     EXPECT_FALSE(metrics.Conclusive());
     EXPECT_THROW((void)metrics.Finish(1), std::invalid_argument);
     EXPECT_THROW(metrics.EndMotions(), std::invalid_argument);

@@ -1,13 +1,13 @@
 #include "Verification/FiniteTapeExpansion.hpp"
-#include "Verification/IndependentMetrics.hpp"
 #include "BinaryWriter.hpp"
 #include "UnitTestConstants.hpp"
+#include "Verification/IndependentMetrics.hpp"
 
+#include "RepoRoot.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <limits>
-#include "RepoRoot.hpp"
 
 namespace opusoptima::verification { namespace {
 using Error = TapeExpansionError;
@@ -36,8 +36,8 @@ TEST(FiniteTapeExpansion, ExpiredEnclosingDeadlineCancelsCopyWithoutPublishingTa
         const auto result = ExpandFiniteArm1Tape(Puzzle(), machine, expired);
         ASSERT_TRUE(std::holds_alternative<TapeExpansionFailure>(result));
         EXPECT_EQ(std::get<TapeExpansionFailure>(result).code, Error::ResourceUnavailable);
-        EXPECT_TRUE(std::holds_alternative<ExpandedFiniteTape>(
-            ExpandFiniteArm1Tape(Puzzle(), machine)));
+        EXPECT_TRUE(
+            std::holds_alternative<ExpandedFiniteTape>(ExpandFiniteArm1Tape(Puzzle(), machine)));
         EXPECT_TRUE(std::holds_alternative<ExpandedFiniteTape>(ExpandFiniteArm1Tape(
             Puzzle(), machine, std::chrono::steady_clock::now() + std::chrono::hours(1))));
     }
@@ -47,26 +47,40 @@ TEST(FiniteTapeExpansion, ExpiredEnclosingDeadlineCancelsCopyWithoutPublishingTa
 }
 TEST(FiniteTapeExpansion, LiteralSlotsCountsOriginsAndStrictRoundTrip) {
     const auto path = opusoptima::test::RepoRoot(__FILE__) /
-        ("build/finite-expansion-" + std::to_string(test::ProcessId()) + ".solution");
+                      ("build/finite-expansion-" + std::to_string(test::ProcessId()) + ".solution");
     struct Cleanup {
         std::filesystem::path path;
-        ~Cleanup() { std::filesystem::remove(path); }
+        ~Cleanup() {
+            std::filesystem::remove(path);
+        }
     } cleanup{path};
-    for (const auto& [raw, expected] : std::vector<std::pair<std::string, std::string>>{
-        {"G_C__C", "G G  G"}, {"C", " "}, {"X", " "}, {"", ""},
-        {"GrX", "GrgR"}, {"rrrX", "rrrRRR"}, {"RRRX", "RRRrrr"},
-        {"rXX", "rR "}, {"rXC_GX", "rRrRGg"}, {"O_C", "O O"},
-        {" _C", "   "}, {"BrX", "BrR"}, {"GCCg", "GGGg"},
-        {"GrCC", "GrGGr"}, {"G_XC", "G gG g"},
-        {"G_C__O_C", "G G  O O"}}) {
+    for (const auto& [raw, expected] :
+         std::vector<std::pair<std::string, std::string>>{{"G_C__C", "G G  G"},
+                                                          {"C", " "},
+                                                          {"X", " "},
+                                                          {"", ""},
+                                                          {"GrX", "GrgR"},
+                                                          {"rrrX", "rrrRRR"},
+                                                          {"RRRX", "RRRrrr"},
+                                                          {"rXX", "rR "},
+                                                          {"rXC_GX", "rRrRGg"},
+                                                          {"O_C", "O O"},
+                                                          {" _C", "   "},
+                                                          {"BrX", "BrR"},
+                                                          {"GCCg", "GGGg"},
+                                                          {"GrCC", "GrGGr"},
+                                                          {"G_XC", "G gG g"},
+                                                          {"G_C__O_C", "G G  O O"}}) {
         SCOPED_TRACE(raw);
         const auto machine = Machine(Tape(raw));
         const auto saved = machine;
         auto result = ExpandFiniteArm1Tape(Puzzle(), machine);
         ASSERT_EQ(machine.objects[0].instructions.size(), saved.objects[0].instructions.size());
         for (std::size_t i = 0; i < saved.objects[0].instructions.size(); ++i) {
-            EXPECT_EQ(machine.objects[0].instructions[i].action, saved.objects[0].instructions[i].action);
-            EXPECT_EQ(machine.objects[0].instructions[i].parameter, saved.objects[0].instructions[i].parameter);
+            EXPECT_EQ(machine.objects[0].instructions[i].action,
+                      saved.objects[0].instructions[i].action);
+            EXPECT_EQ(machine.objects[0].instructions[i].parameter,
+                      saved.objects[0].instructions[i].parameter);
         }
         EXPECT_EQ(machine.objects[0].bodyData, saved.objects[0].bodyData);
         ASSERT_TRUE(std::holds_alternative<ExpandedFiniteTape>(result));
@@ -83,10 +97,11 @@ TEST(FiniteTapeExpansion, LiteralSlotsCountsOriginsAndStrictRoundTrip) {
             if (std::string_view("GgRrPp").find(expected[i]) != std::string_view::npos) ++count;
         }
         EXPECT_EQ(out.staticInstructions, count);
-        EXPECT_EQ(out.rawStart, raw.empty() ? std::optional<std::int32_t>{}
-                                           : std::optional<std::int32_t>{0});
+        EXPECT_EQ(out.rawStart,
+                  raw.empty() ? std::optional<std::int32_t>{} : std::optional<std::int32_t>{0});
         EXPECT_EQ(out.haltSlot, raw.find('B') == std::string::npos
-            ? std::optional<std::int64_t>{} : std::optional<std::int64_t>{raw.find('B')});
+                                    ? std::optional<std::int64_t>{}
+                                    : std::optional<std::int64_t>{raw.find('B')});
         io::BinaryWriter::WriteSolutionFile(path, machine);
         const auto decoded = io::BinaryParser::ParseSolutionFile(path);
         const auto again = ExpandFiniteArm1Tape(Puzzle(), decoded);
@@ -148,18 +163,23 @@ TEST(FiniteTapeExpansion, FailuresAreAtomicAndOrdered) {
         const auto result = ExpandFiniteArm1Tape(puzzle, machine);
         ASSERT_TRUE(std::holds_alternative<TapeExpansionFailure>(result));
         EXPECT_EQ(std::get<TapeExpansionFailure>(result).code, code);
-        const auto path = opusoptima::test::RepoRoot(__FILE__) /
+        const auto path =
+            opusoptima::test::RepoRoot(__FILE__) /
             ("build/finite-failure-" + std::to_string(test::ProcessId()) + ".solution");
         struct Cleanup {
             std::filesystem::path path;
-            ~Cleanup() { std::filesystem::remove(path); }
+            ~Cleanup() {
+                std::filesystem::remove(path);
+            }
         } cleanup{path};
         // Malformed object bodies are rejected by the codec before conversion.
         if (std::all_of(machine.objects.begin(), machine.objects.end(), [](const auto& part) {
-                return part.bodyData.size() >= 5 && part.typeName != "pipe" && part.typeName != "track";
+                return part.bodyData.size() >= 5 && part.typeName != "pipe" &&
+                       part.typeName != "track";
             })) {
             io::BinaryWriter::WriteSolutionFile(path, machine);
-            const auto decoded = ExpandFiniteArm1Tape(puzzle, io::BinaryParser::ParseSolutionFile(path));
+            const auto decoded =
+                ExpandFiniteArm1Tape(puzzle, io::BinaryParser::ParseSolutionFile(path));
             ASSERT_TRUE(std::holds_alternative<TapeExpansionFailure>(decoded));
             EXPECT_EQ(std::get<TapeExpansionFailure>(decoded).code, code);
         }
@@ -171,7 +191,8 @@ TEST(FiniteTapeExpansion, FailuresAreAtomicAndOrdered) {
     fail(Machine({{'?', 20001}}), Error::BoundExceeded);
     fail(Machine({{'C', -1}}), Error::OutsideDomain);
     fail(Machine(Tape("BC")), Error::OutsideDomain);
-    for (char action : std::string("?AaEe")) fail(Machine({{action, 0}}), Error::OutsideDomain);
+    for (char action : std::string("?AaEe"))
+        fail(Machine({{action, 0}}), Error::OutsideDomain);
     for (const auto type : {"track", "piston", "arm2", "baron", "out-rep", "unknown"}) {
         auto machine = Machine({});
         machine.objects.push_back({type, {}, {}, {1, 0, 0, 0, 0}});
@@ -184,26 +205,31 @@ TEST(FiniteTapeExpansion, FailuresAreAtomicAndOrdered) {
     machine.objects[0].bodyData.clear();
     fail(machine, Error::Malformed);
     for (int bad : {-1, 6}) {
-        machine = Machine({}); machine.objects[0].bodyData[1] = bad;
+        machine = Machine({});
+        machine.objects[0].bodyData[1] = bad;
         fail(machine, Error::Malformed);
     }
     for (int bad : {0, 4}) {
-        machine = Machine({}); machine.objects[0].bodyData[0] = bad;
+        machine = Machine({});
+        machine.objects[0].bodyData[0] = bad;
         fail(machine, Error::Malformed);
     }
     for (const auto& [action, bit] : std::vector<std::pair<char, int>>{
-        {'G',23}, {'g',22}, {'P',26}, {'O',25}, {'C',25}, {'X',24}}) {
-        auto puzzle = Puzzle(); puzzle.permissionBits &= ~(1ULL << bit);
+             {'G', 23}, {'g', 22}, {'P', 26}, {'O', 25}, {'C', 25}, {'X', 24}}) {
+        auto puzzle = Puzzle();
+        puzzle.permissionBits &= ~(1ULL << bit);
         fail(Machine({{action, 0}}), Error::OutsideDomain, puzzle);
     }
-    auto puzzle = Puzzle(); puzzle.permissionBits &= ~(1ULL << 22);
+    auto puzzle = Puzzle();
+    puzzle.permissionBits &= ~(1ULL << 22);
     fail(Machine(Tape("GX")), Error::OutsideDomain, puzzle);
-    puzzle = Puzzle(); puzzle.inputs.push_back({{{core::AtomType::Repeat, {}}}, {}});
+    puzzle = Puzzle();
+    puzzle.inputs.push_back({{{core::AtomType::Repeat, {}}}, {}});
     fail(Machine({}), Error::OutsideDomain, puzzle);
     fail(Machine({{'G', std::numeric_limits<std::int32_t>::max()}}), Error::BoundExceeded);
     fail(Machine({{'X', std::numeric_limits<std::int32_t>::min()}}), Error::BoundExceeded);
-    fail(Machine({{'G',20000}, {'C',20001}}), Error::BoundExceeded);
-    fail(Machine({{'r',19998}, {'r',19999}, {'X',20000}}), Error::BoundExceeded);
+    fail(Machine({{'G', 20000}, {'C', 20001}}), Error::BoundExceeded);
+    fail(Machine({{'r', 19998}, {'r', 19999}, {'X', 20000}}), Error::BoundExceeded);
     machine = Machine(std::vector<io::ArmInstruction>(40002, {'G', 0}));
     fail(machine, Error::BoundExceeded);
     machine = Machine({});
@@ -216,7 +242,8 @@ TEST(FiniteTapeExpansion, FailuresAreAtomicAndOrdered) {
 TEST(FiniteTapeExpansion, ResourceEdgesAndNegativeResetStart) {
     for (int offset : {-3, 19997}) {
         auto machine = Machine(Tape("GrgX"));
-        for (auto& inst : machine.objects[0].instructions) inst.parameter += offset;
+        for (auto& inst : machine.objects[0].instructions)
+            inst.parameter += offset;
         const auto result = ExpandFiniteArm1Tape(Puzzle(), machine);
         ASSERT_TRUE(std::holds_alternative<ExpandedFiniteTape>(result));
         const auto& out = std::get<ExpandedFiniteTape>(result);
@@ -224,9 +251,9 @@ TEST(FiniteTapeExpansion, ResourceEdgesAndNegativeResetStart) {
         EXPECT_EQ(out.slots.back().parameter, offset + 3);
         EXPECT_EQ(out.slots.back().action, 'R');
     }
-    auto result = ExpandFiniteArm1Tape(Puzzle(), Machine({{'r',19999}, {'X',20000}}));
+    auto result = ExpandFiniteArm1Tape(Puzzle(), Machine({{'r', 19999}, {'X', 20000}}));
     ASSERT_TRUE(std::holds_alternative<ExpandedFiniteTape>(result));
-    result = ExpandFiniteArm1Tape(Puzzle(), Machine({{'X',-20000}, {'O',20000}}));
+    result = ExpandFiniteArm1Tape(Puzzle(), Machine({{'X', -20000}, {'O', 20000}}));
     ASSERT_TRUE(std::holds_alternative<ExpandedFiniteTape>(result));
     const auto& out = std::get<ExpandedFiniteTape>(result);
     EXPECT_EQ(out.rawSpan, 40001);
@@ -234,4 +261,4 @@ TEST(FiniteTapeExpansion, ResourceEdgesAndNegativeResetStart) {
     EXPECT_EQ(out.origins.front().kind, TapeOrigin::Kind::Reset);
     EXPECT_EQ(out.origins.back().kind, TapeOrigin::Kind::Raw);
 }
-} } // namespace opusoptima::verification
+}} // namespace opusoptima::verification

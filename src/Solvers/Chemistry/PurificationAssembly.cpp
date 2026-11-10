@@ -9,12 +9,13 @@
 namespace opusoptima::solvers {
 namespace {
 int SingletonSource(const io::PuzzleData& p) {
-    constexpr auto permissions = (1ULL << 0) | (1ULL << 2) | (1ULL << 3) |
-        (1ULL << 15) | (1ULL << 22) | (1ULL << 23) | (1ULL << 25);
+    constexpr auto permissions = (1ULL << 0) | (1ULL << 2) | (1ULL << 3) | (1ULL << 15) |
+                                 (1ULL << 22) | (1ULL << 23) | (1ULL << 25);
     if (p.version != 3 || p.productionInfo || p.outputMultiplier != 1 ||
         (p.permissionBits & permissions) != permissions || p.outputs.size() != 1 ||
-        p.outputs[0].atoms.size() != 1 || !p.outputs[0].bonds.empty() ||
-        p.inputs.empty() || p.inputs.size() > 8) return -1;
+        p.outputs[0].atoms.size() != 1 || !p.outputs[0].bonds.empty() || p.inputs.empty() ||
+        p.inputs.size() > 8)
+        return -1;
     const int target = static_cast<int>(p.outputs[0].atoms[0].type);
     if (target < 7 || target > 10) return -1;
     int source = -1;
@@ -24,7 +25,8 @@ int SingletonSource(const io::PuzzleData& p) {
         const int type = static_cast<int>(input.atoms[0].type);
         if (type < 7 || type > 12) return -1;
         if (type > target &&
-            (source < 0 || type < static_cast<int>(p.inputs[source].atoms[0].type))) source = i;
+            (source < 0 || type < static_cast<int>(p.inputs[source].atoms[0].type)))
+            source = i;
     }
     if (source < 0) return -1;
     const int depth = static_cast<int>(p.inputs[source].atoms[0].type) - target;
@@ -40,15 +42,16 @@ bool AdmitsSingletonPurificationChain(const io::PuzzleData& puzzle) {
     const int source = SingletonSource(puzzle);
     if (source < 0) return false;
     const auto target = puzzle.outputs[0].atoms[0].type;
-    const int depth = static_cast<int>(puzzle.inputs[source].atoms[0].type) -
-        static_cast<int>(target);
+    const int depth =
+        static_cast<int>(puzzle.inputs[source].atoms[0].type) - static_cast<int>(target);
     // Chain cost 35*d+50 beats static cost 10*d*(d+1) at depths four and five.
-    return depth >= 4 && std::none_of(puzzle.inputs.begin(), puzzle.inputs.end(),
-        [target](const auto& input) { return input.atoms[0].type == target; });
+    return depth >= 4 &&
+           std::none_of(puzzle.inputs.begin(), puzzle.inputs.end(),
+                        [target](const auto& input) { return input.atoms[0].type == target; });
 }
 
 io::SolutionData CompileSingletonPurificationChain(const io::PuzzleData& p,
-    std::chrono::steady_clock::time_point deadline) {
+                                                   std::chrono::steady_clock::time_point deadline) {
     auto check = [&] {
         if (std::chrono::steady_clock::now() >= deadline)
             throw std::invalid_argument("singleton purification chain deadline");
@@ -57,12 +60,12 @@ io::SolutionData CompileSingletonPurificationChain(const io::PuzzleData& p,
     const int source = SingletonSource(p);
     if (source < 0) throw std::invalid_argument("unsupported singleton purification chain");
     const int depth = static_cast<int>(p.inputs[source].atoms[0].type) -
-        static_cast<int>(p.outputs[0].atoms[0].type);
+                      static_cast<int>(p.outputs[0].atoms[0].type);
     io::SolutionData result;
     result.puzzleName = p.name;
     result.solutionName = "Reusable singleton purification chain";
-    auto object = [&](const char* type, core::HexCoord cell, int length = 1,
-                      int rotation = 0, int index = 0) {
+    auto object = [&](const char* type, core::HexCoord cell, int length = 1, int rotation = 0,
+                      int index = 0) {
         check();
         io::SolutionObject part;
         part.typeName = type;
@@ -80,30 +83,48 @@ io::SolutionData CompileSingletonPurificationChain(const io::PuzzleData& p,
     const auto rail = object("track", {0, -2});
     auto& data = result.objects[rail].bodyData;
     data = {1, 0, 0, 0, 3 * depth + 2};
-    for (int q = 0; q <= 3 * depth + 1; ++q) data.insert(data.end(), {q, 0});
+    for (int q = 0; q <= 3 * depth + 1; ++q)
+        data.insert(data.end(), {q, 0});
     data.push_back(0);
     const auto arm = object("piston", {0, -2}, 1, 1);
     int time = 0, position = 0;
-    auto emit = [&](char action) { check(); result.objects[arm].instructions.push_back({action, time++}); };
+    auto emit = [&](char action) {
+        check();
+        result.objects[arm].instructions.push_back({action, time++});
+    };
     auto move = [&](int to) {
-        while (position < to) { emit('A'); ++position; }
-        while (position > to) { emit('a'); --position; }
+        while (position < to) {
+            emit('A');
+            ++position;
+        }
+        while (position > to) {
+            emit('a');
+            --position;
+        }
     };
     auto transfer = [&](int from, int height, int to) {
         move(from);
-        for (int i = 0; i <= height; ++i) emit('E');
+        for (int i = 0; i <= height; ++i)
+            emit('E');
         emit('G');
-        for (int i = 0; i <= height; ++i) emit('e');
+        for (int i = 0; i <= height; ++i)
+            emit('e');
         move(to);
-        emit('E'); emit('g'); emit('e');
+        emit('E');
+        emit('g');
+        emit('e');
     };
     auto produce = [&](auto&& self, int level, int to) -> void {
         check();
-        if (level < 0) { transfer(0, 0, to); return; }
+        if (level < 0) {
+            transfer(0, 0, to);
+            return;
+        }
         const int q = 3 * (level + 1);
         self(self, level - 1, q);
         self(self, level - 1, q + 1);
-        emit('O'); emit('O');
+        emit('O');
+        emit('O');
         transfer(q, 1, to);
     };
     // The final glyph feeds the genuine output directly. All lower stock is
@@ -111,7 +132,8 @@ io::SolutionData CompileSingletonPurificationChain(const io::PuzzleData& p,
     const int final = 3 * depth;
     produce(produce, depth - 2, final);
     produce(produce, depth - 2, final + 1);
-    emit('O'); emit('O');
+    emit('O');
+    emit('O');
     move(0);
     emit('g');
     check();
@@ -122,11 +144,11 @@ io::SolutionData CompileSingletonPurificationChain(const io::PuzzleData& p,
 // explicit recursive purification machine, serialized ahead of the row pickup.
 io::SolutionData CompilePurificationAssembly(const io::PuzzleData& puzzle, bool allowFiniteFeed) {
     return CompilePurificationAssembly(puzzle, allowFiniteFeed,
-        std::chrono::steady_clock::time_point::max());
+                                       std::chrono::steady_clock::time_point::max());
 }
 
 io::SolutionData CompilePurificationAssembly(const io::PuzzleData& puzzle, bool allowFiniteFeed,
-    std::chrono::steady_clock::time_point deadline) {
+                                             std::chrono::steady_clock::time_point deadline) {
     auto checkDeadline = [&] {
         if (deadline != std::chrono::steady_clock::time_point::max() &&
             std::chrono::steady_clock::now() >= deadline)
@@ -217,8 +239,8 @@ io::SolutionData CompilePurificationAssembly(const io::PuzzleData& puzzle, bool 
     auto result = [&] {
         if (finiteFeed) {
             std::vector<int> ends;
-            return CompileRowAssemblyFiniteBatch(finite, plan, ends,
-                                                 6ULL * finite.outputMultiplier, deadline);
+            return CompileRowAssemblyFiniteBatch(finite, plan, ends, 6ULL * finite.outputMultiplier,
+                                                 deadline);
         }
         if (repeating) {
             try {

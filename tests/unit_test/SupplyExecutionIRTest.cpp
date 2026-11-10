@@ -1,5 +1,5 @@
-#include "CalcifyAnimismusAdmission.hpp"
 #include "SupplyExecutionIR.hpp"
+#include "CalcifyAnimismusAdmission.hpp"
 #include "InventoryIR.hpp"
 #include "InventorySearch.hpp"
 #include <algorithm>
@@ -32,8 +32,9 @@ TEST(SupplyExecutionIR, DirectFragmentsPreserveMasksAcrossRotationsAndDeliveryOr
                 const auto ir =
                     BuildJointSupplyExecutionIR(p, plan, {{{9, -3}, rotation}}, {{{-4, 7}, 2}});
                 EXPECT_EQ(ir.steps, BuildJointSupplyExecutionIRWithPolicy(
-                    p, plan, SupplyMaterialLoweringPolicy::PreserveCompatible,
-                    {{{9, -3}, rotation}}, {{{-4, 7}, 2}}).steps);
+                                        p, plan, SupplyMaterialLoweringPolicy::PreserveCompatible,
+                                        {{{9, -3}, rotation}}, {{{-4, 7}, 2}})
+                                        .steps);
                 EXPECT_EQ(std::count_if(ir.steps.begin(), ir.steps.end(),
                                         [](const auto& step) {
                                             return step.operation.kind ==
@@ -56,15 +57,18 @@ TEST(SupplyExecutionIR, ExplicitOrdinaryCutsRecreateBondsWithOriginalIndexFrames
             for (int rotation = 0; rotation < 6; ++rotation) {
                 auto p = SupplyPuzzle();
                 if (reverseSource) std::reverse(p.inputs[0].atoms.begin(), p.inputs[0].atoms.end());
-                if (reverseOutput) std::reverse(p.outputs[0].atoms.begin(), p.outputs[0].atoms.end());
+                if (reverseOutput)
+                    std::reverse(p.outputs[0].atoms.begin(), p.outputs[0].atoms.end());
                 JointSupplyPlan supply;
                 supply.productsPerPeriod = 1;
                 supply.usage = {{1, 2, 0}};
                 for (std::size_t i : {1U, 0U})
-                    supply.steps.push_back({{SupplyPlan::Kind::Take, 0, i,
-                        reverseSource == reverseOutput ? i : 1 - i}, 0});
+                    supply.steps.push_back(
+                        {{SupplyPlan::Kind::Take, 0, i, reverseSource == reverseOutput ? i : 1 - i},
+                         0});
                 const core::HexFrame output{{9, -3}, rotation}, input{{-4, 7}, 2};
-                const auto ir = BuildJointSupplyExecutionIRWithPolicy(p, supply, cut, {output}, {input});
+                const auto ir =
+                    BuildJointSupplyExecutionIRWithPolicy(p, supply, cut, {output}, {input});
                 ASSERT_EQ(ir.steps.size(), 6U);
                 EXPECT_EQ(ir.steps[0].operation.kind, IR::Kind::Acquire);
                 EXPECT_EQ(ir.steps[0].operation.index, 0U);
@@ -77,38 +81,57 @@ TEST(SupplyExecutionIR, ExplicitOrdinaryCutsRecreateBondsWithOriginalIndexFrames
                 EXPECT_EQ(ir.steps[4].operation.kind, IR::Kind::Bond);
                 for (std::size_t i = 0; i < 2; ++i)
                     EXPECT_EQ(ir.steps[4].effects.atoms.at(i + 1).position,
-                        output.ToWorld(p.outputs[0].atoms[reverseSource == reverseOutput ? i : 1-i].position));
+                              output.ToWorld(p.outputs[0]
+                                                 .atoms[reverseSource == reverseOutput ? i : 1 - i]
+                                                 .position));
                 EXPECT_EQ(ir.steps[4].effects.bonds, ir.steps[0].effects.bonds);
                 IR::RequireComplete(ir.Replay(p), {1});
                 SupplyPlan scalar;
                 scalar.productsPerPeriod = supply.productsPerPeriod;
                 scalar.usage = supply.usage;
-                for (const auto& step : supply.steps) scalar.steps.push_back(step.supply);
+                for (const auto& step : supply.steps)
+                    scalar.steps.push_back(step.supply);
                 const auto assembly = AssemblyPlanner::Plan(p);
-                EXPECT_EQ(ir.steps, BuildSupplyExecutionIRWithPolicy(
-                    p, assembly, scalar, cut, output, {input}).steps);
+                EXPECT_EQ(ir.steps, BuildSupplyExecutionIRWithPolicy(p, assembly, scalar, cut,
+                                                                     output, {input})
+                                        .steps);
                 EXPECT_EQ(BuildSupplyExecutionIR(p, assembly, scalar, output, {input}).steps,
-                    BuildSupplyExecutionIRWithPolicy(p, assembly, scalar,
-                        SupplyMaterialLoweringPolicy::PreserveCompatible, output, {input}).steps);
+                          BuildSupplyExecutionIRWithPolicy(
+                              p, assembly, scalar, SupplyMaterialLoweringPolicy::PreserveCompatible,
+                              output, {input})
+                              .steps);
             }
     auto p = SupplyPuzzle();
     JointSupplyPlan supply;
-    supply.productsPerPeriod = 1; supply.usage = {{1, 2, 0}};
-    supply.steps = {{{SupplyPlan::Kind::Take, 0, 0, 0}, 0},
-                    {{SupplyPlan::Kind::Take, 0, 1, 1}, 0}};
+    supply.productsPerPeriod = 1;
+    supply.usage = {{1, 2, 0}};
+    supply.steps = {{{SupplyPlan::Kind::Take, 0, 0, 0}, 0}, {{SupplyPlan::Kind::Take, 0, 1, 1}, 0}};
     const auto refused = [&](const auto& puzzle, const auto& plan) {
-        EXPECT_THROW((void)BuildJointSupplyExecutionIRWithPolicy(puzzle, plan, cut), IR::Unsupported);
+        EXPECT_THROW((void)BuildJointSupplyExecutionIRWithPolicy(puzzle, plan, cut),
+                     IR::Unsupported);
     };
     p.permissionBits &= ~(1ULL << 9);
     refused(p, supply);
-    p = SupplyPuzzle(); p.permissionBits &= ~(1ULL << 8); refused(p, supply);
+    p = SupplyPuzzle();
+    p.permissionBits &= ~(1ULL << 8);
+    refused(p, supply);
     EXPECT_FALSE(SupportsOrdinarySourceCutLowering(p));
     EXPECT_NO_THROW((void)BuildJointSupplyExecutionIR(p, supply));
-    p = SupplyPuzzle(); p.inputs[0].bonds[0].bits = 2; refused(p, supply);
-    p = SupplyPuzzle(); p.outputs[0].bonds[0].bits = 2; refused(p, supply);
-    p = SupplyPuzzle(); p.inputs[0].atoms.push_back({T::Fire, {2, 0}}); refused(p, supply);
-    p = SupplyPuzzle(); p.productionInfo.emplace(); refused(p, supply);
-    p = SupplyPuzzle(); supply.steps[0].supply.retainProduct = true; refused(p, supply);
+    p = SupplyPuzzle();
+    p.inputs[0].bonds[0].bits = 2;
+    refused(p, supply);
+    p = SupplyPuzzle();
+    p.outputs[0].bonds[0].bits = 2;
+    refused(p, supply);
+    p = SupplyPuzzle();
+    p.inputs[0].atoms.push_back({T::Fire, {2, 0}});
+    refused(p, supply);
+    p = SupplyPuzzle();
+    p.productionInfo.emplace();
+    refused(p, supply);
+    p = SupplyPuzzle();
+    supply.steps[0].supply.retainProduct = true;
+    refused(p, supply);
     supply.steps[0].supply.retainProduct = false;
     supply.steps[0].supply.wheelCatalyst = SupplyPlan::Step::WheelCatalyst{};
     refused(p, supply);
@@ -351,21 +374,21 @@ TEST(SupplyExecutionIR, JointQuintessenceInventoryClosesAcrossPorts) {
 }
 
 TEST(SupplyExecutionIR, CalcifiedAnimismusAuthorityBoundary) {
-    for (const auto stage : {"shared-plan-calcify-animismus",
-                              "shared-plan-ordinary-port-access",
-                              "whole-feed-singleton-receivers",
-                              "shared-plan-ordinary-port-access:parent=012345", "shared-plan-wheel",
-                              "shared-plan-wheel:parent=012345",
-                              "portfolio-static-reaction-purification",
-                              "portfolio-static-reaction-ordinary-pair",
-                              "portfolio-singleton-purification-chain"}) {
+    for (const auto stage :
+         {"shared-plan-calcify-animismus", "shared-plan-ordinary-port-access",
+          "whole-feed-singleton-receivers", "shared-plan-ordinary-port-access:parent=012345",
+          "shared-plan-wheel", "shared-plan-wheel:parent=012345",
+          "portfolio-static-reaction-purification", "portfolio-static-reaction-ordinary-pair",
+          "portfolio-singleton-purification-chain"}) {
         for (const auto mode : {io::VerificationMode::LegacyGate, io::VerificationMode::Shadow})
             EXPECT_TRUE(io::CalcifyAnimismusModeAllowed(stage, mode));
         EXPECT_FALSE(io::CalcifyAnimismusModeAllowed(stage, io::VerificationMode::Independent));
-        EXPECT_TRUE(io::CalcifyAnimismusModeAllowed("shared-plan", io::VerificationMode::Independent));
+        EXPECT_TRUE(
+            io::CalcifyAnimismusModeAllowed("shared-plan", io::VerificationMode::Independent));
         io::VerificationReport report;
         report.status = io::VerificationStatus::Passed;
-        for (const auto authority : {io::VerificationAuthority::None, io::VerificationAuthority::Independent}) {
+        for (const auto authority :
+             {io::VerificationAuthority::None, io::VerificationAuthority::Independent}) {
             report.authority = authority;
             EXPECT_EQ(io::RequireCalcifyAnimismusAuthority(stage, report).status,
                       io::VerificationStatus::Unavailable);
@@ -375,7 +398,7 @@ TEST(SupplyExecutionIR, CalcifiedAnimismusAuthorityBoundary) {
         EXPECT_TRUE(io::RequireCalcifyAnimismusAuthority(stage, report).Passed());
     }
     EXPECT_TRUE(io::CalcifyAnimismusModeAllowed("shared-plan-serial-arms",
-                                               io::VerificationMode::Independent));
+                                                io::VerificationMode::Independent));
     EXPECT_FALSE(io::RequiresCalcifyAnimismusNativeGate("shared-plan-ordinary-port-access-extra"));
     EXPECT_FALSE(io::RequiresCalcifyAnimismusNativeGate("shared-plan-ordinary-port-access:child="));
 }
@@ -392,15 +415,19 @@ TEST(SupplyExecutionIR, CalcifiedAnimismusHasDistinctFreshIdentitiesAndClosedRes
     if (found.status == InventorySearchStatus::Found) {
         const auto ir = BuildJointSupplyExecutionIR(p, found.plan);
         ExecutionIR::RequireComplete(ir.Replay(p), {1, 1});
-        EXPECT_EQ(std::count_if(ir.steps.begin(), ir.steps.end(), [](const auto& step) {
-            return step.operation.kind == ExecutionIR::Kind::Calcify;
-        }), 2);
+        EXPECT_EQ(std::count_if(ir.steps.begin(), ir.steps.end(),
+                                [](const auto& step) {
+                                    return step.operation.kind == ExecutionIR::Kind::Calcify;
+                                }),
+                  2);
         auto denied = p;
         denied.permissionBits &= ~(1ULL << 12);
-        EXPECT_THROW((void)BuildJointSupplyExecutionIR(denied, found.plan), ExecutionIR::PermissionFailure);
+        EXPECT_THROW((void)BuildJointSupplyExecutionIR(denied, found.plan),
+                     ExecutionIR::PermissionFailure);
         denied = p;
         denied.permissionBits &= ~(1ULL << 16);
-        EXPECT_THROW((void)BuildJointSupplyExecutionIR(denied, found.plan), ExecutionIR::PermissionFailure);
+        EXPECT_THROW((void)BuildJointSupplyExecutionIR(denied, found.plan),
+                     ExecutionIR::PermissionFailure);
         denied = p;
         denied.inputs[0].atoms[0].type = T::Quicksilver;
         EXPECT_THROW((void)BuildJointSupplyExecutionIR(denied, found.plan), ExecutionIR::Error);
@@ -425,8 +452,10 @@ TEST(SupplyExecutionIR, CalcifiedAnimismusHasDistinctFreshIdentitiesAndClosedRes
         EXPECT_THROW((void)BuildJointSupplyExecutionIR(p, found.plan), ExecutionIR::Error);
         EXPECT_NE(SearchJointSupplyInventory(p, 1).status, InventorySearchStatus::Found);
     }
-    if (present) setenv("OPUSOPTIMA_CALCIFY_ANIMISMUS", old.c_str(), 1);
-    else unsetenv("OPUSOPTIMA_CALCIFY_ANIMISMUS");
+    if (present)
+        setenv("OPUSOPTIMA_CALCIFY_ANIMISMUS", old.c_str(), 1);
+    else
+        unsetenv("OPUSOPTIMA_CALCIFY_ANIMISMUS");
 }
 TEST(SupplyExecutionIR, JointAnimismusPreservesExactCoproductAcrossPorts) {
     for (bool reversed : {false, true}) {

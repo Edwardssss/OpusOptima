@@ -15,7 +15,9 @@ struct FiniteRepeatingGraphRequest {
     core::HexCoord displacement;
     std::size_t maxMonomers;
 };
-struct RepeatingGraphCell { std::int64_t q, r; };
+struct RepeatingGraphCell {
+    std::int64_t q, r;
+};
 enum class RepeatingGraphDifferenceKind { MissingAtom, AtomType, BondMask, UnexpectedAtom };
 struct RepeatingGraphDifference {
     RepeatingGraphDifferenceKind kind;

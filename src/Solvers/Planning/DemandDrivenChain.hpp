@@ -23,23 +23,33 @@ struct StaticReactionResult {
 enum class StaticEmbeddingSuppressionReason { AcceptedSingletonPurification };
 // Suppression requires actual native acceptance and the same singleton purification triangle.
 // Genuine direct target feeds, other families and molecular/multiple products remain eligible.
-[[nodiscard]] std::optional<StaticEmbeddingSuppressionReason> StaticEmbeddingSuppressionAfterReaction(
-    const io::PuzzleData& puzzle, StaticReactionFamily family, const io::VerificationReport& report);
+[[nodiscard]] std::optional<StaticEmbeddingSuppressionReason>
+StaticEmbeddingSuppressionAfterReaction(const io::PuzzleData& puzzle, StaticReactionFamily family,
+                                        const io::VerificationReport& report);
 // The bounded static reaction slot also compiles one-to-five-step singleton metal purification.
 [[nodiscard]] io::SolutionData CompileStaticReaction(const io::PuzzleData& puzzle);
 [[nodiscard]] io::SolutionData CompileStaticReaction(
     const io::PuzzleData& puzzle, std::chrono::steady_clock::time_point deadline);
 // Stable first-observed rejection only; no inference about later construction stages.
 enum class RigidCarrierReason {
-    InputHeader, Permissions, SourceGraph, TargetGraph, ExactCoverImpossible,
-    SearchNodeCap, Deadline, NoMultiatomCover
+    InputHeader,
+    Permissions,
+    SourceGraph,
+    TargetGraph,
+    ExactCoverImpossible,
+    SearchNodeCap,
+    Deadline,
+    NoMultiatomCover
 };
 [[nodiscard]] const char* RigidCarrierReasonName(RigidCarrierReason reason) noexcept;
 class RigidCarrierUnsupported : public std::invalid_argument {
-public:
+    public:
     explicit RigidCarrierUnsupported(RigidCarrierReason reason);
-    [[nodiscard]] RigidCarrierReason reason() const noexcept { return reason_; }
-private:
+    [[nodiscard]] RigidCarrierReason reason() const noexcept {
+        return reason_;
+    }
+
+    private:
     RigidCarrierReason reason_;
 };
 struct RigidCarrierPreflight {
@@ -68,11 +78,12 @@ struct RigidCarrierResult {
     const io::PuzzleData& puzzle,
     std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max());
 [[nodiscard]] bool StaticEmbeddingMissingLifeFeed(const io::PuzzleData& puzzle);
-// Direct singleton feeds and bounded static chemistry share 576 placement checks and the caller deadline.
-// One-to-five-step metal purification or one-step projection composes with direct ordinary neighbors.
-// Purification reserves each entire triangle and retains existing direct/adjacent supply priority.
-// Projection reserves isolated Mercury beside the metal product; mixed derived chemistry is unsupported.
+// Direct singleton feeds and bounded static chemistry share 576 placement checks and the caller
+// deadline. One-to-five-step metal purification or one-step projection composes with direct
+// ordinary neighbors. Purification reserves each entire triangle and retains existing
+// direct/adjacent supply priority. Projection reserves isolated Mercury beside the metal product;
+// mixed derived chemistry is unsupported.
 [[nodiscard]] io::SolutionData CompileStaticEmbedding(
     const io::PuzzleData& puzzle,
     std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max());
-}
+} // namespace opusoptima::solvers

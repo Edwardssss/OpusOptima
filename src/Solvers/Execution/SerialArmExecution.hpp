@@ -1,8 +1,8 @@
 #pragma once
-#include <chrono>
 #include "AutomaticSupply.hpp"
 #include "ExecutionPlan.hpp"
 #include "MaterialPolicy.hpp"
+#include <chrono>
 
 namespace opusoptima::solvers {
 // Typed eligibility for the opt-in closed singleton receiver stage.
@@ -22,9 +22,8 @@ namespace opusoptima::solvers {
     const std::function<bool()>& beginConstruction = {});
 // Check the projected post-Output physical ledger before committing a finite
 // completion Output. Targets are actual bound cache cells, not logical IR poses.
-void RequireFinitePhysicalTerminal(const ExecutionIR::State&,
-    const ExecutionIR::FiniteRetention&,
-    const std::map<ExecutionIR::AtomId, core::HexCoord>& targets);
+void RequireFinitePhysicalTerminal(const ExecutionIR::State&, const ExecutionIR::FiniteRetention&,
+                                   const std::map<ExecutionIR::AtomId, core::HexCoord>& targets);
 enum class SerialArmFailure { Unsupported, BudgetExhausted, LayoutCollision, MechanicalFailure };
 // OPUSOPTIMA_FRAGMENT_PRODUCT_DOCKING=1 selects a finite-only, bounded whole-feed
 // rigid docking experiment. Requires identical connected ordinary feed/output
@@ -87,7 +86,8 @@ std::optional<io::SolutionData> CompileAcceptedSerialArmExecution(
     const std::function<void(const std::string&)>& feedback = {},
     std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max(),
     const std::function<void(SerialArmFailure, const std::string&)>& classifiedFeedback = {},
-    const std::function<void(const io::SolutionData&, const io::SolutionData&)>& acceptedPipeline = {});
+    const std::function<void(const io::SolutionData&, const io::SolutionData&)>& acceptedPipeline =
+        {});
 // ClosedCardinalLife validates its source domain before any physical trials.
 std::optional<io::SolutionData> CompileAcceptedSerialArmExecutionWithPolicy(
     const io::PuzzleData&, const ExecutionPlan&, SupplyMaterialLoweringPolicy,
@@ -95,5 +95,6 @@ std::optional<io::SolutionData> CompileAcceptedSerialArmExecutionWithPolicy(
     const std::function<void(const std::string&)>& feedback = {},
     std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max(),
     const std::function<void(SerialArmFailure, const std::string&)>& classifiedFeedback = {},
-    const std::function<void(const io::SolutionData&, const io::SolutionData&)>& acceptedPipeline = {});
+    const std::function<void(const io::SolutionData&, const io::SolutionData&)>& acceptedPipeline =
+        {});
 } // namespace opusoptima::solvers

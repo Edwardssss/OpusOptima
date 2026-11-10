@@ -57,11 +57,10 @@ static io::SolutionData Compile(const io::PuzzleData& p, int batches,
         for (const auto& b : input.bonds) {
             checkDeadline();
             const auto contains = [&](core::HexCoord cell) {
-                return std::any_of(input.atoms.begin(), input.atoms.end(),
-                                   [&](const auto& atom) {
-                                       checkDeadline();
-                                       return atom.position == cell;
-                                   });
+                return std::any_of(input.atoms.begin(), input.atoms.end(), [&](const auto& atom) {
+                    checkDeadline();
+                    return atom.position == cell;
+                });
             };
             if (b.bits != 1 || core::Distance(b.from, b.to) != 1 || !contains(b.from) ||
                 !contains(b.to))
@@ -268,10 +267,12 @@ static io::SolutionData Compile(const io::PuzzleData& p, int batches,
         }
     };
     auto routeIndex = [&](core::HexCoord c) {
-        return static_cast<int>(std::find_if(route.begin(), route.end(), [&](auto cell) {
-            checkDeadline();
-            return cell == c;
-        }) - route.begin());
+        return static_cast<int>(std::find_if(route.begin(), route.end(),
+                                             [&](auto cell) {
+                                                 checkDeadline();
+                                                 return cell == c;
+                                             }) -
+                                route.begin());
     };
     const std::array<core::HexCoord, 4> ports{
         {{center, 1}, {center - 1, 1}, {center, -1}, {center + 1, -1}}};
@@ -462,7 +463,7 @@ io::SolutionData CompileSaltQuintessenceBatch(const io::PuzzleData& puzzle, int 
                                         std::chrono::steady_clock::time_point::max());
 }
 io::SolutionData CompileSaltQuintessenceBatch(const io::PuzzleData& puzzle, int saltInput,
-                                             std::chrono::steady_clock::time_point deadline) {
+                                              std::chrono::steady_clock::time_point deadline) {
     CheckDeadline(deadline);
     if (saltInput < 0 || saltInput >= static_cast<int>(puzzle.inputs.size()) ||
         puzzle.inputs[saltInput].atoms.size() != 1 || !puzzle.inputs[saltInput].bonds.empty() ||

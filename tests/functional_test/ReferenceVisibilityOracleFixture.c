@@ -1,10 +1,15 @@
-int main(void)
-{
+int main(void) {
     struct board board = {0};
-    const uint32_t types[] = {ARM, TWO_ARM, THREE_ARM, SIX_ARM, PISTON, VAN_BERLO, RAVARI,
-        DUPLICATION, PROLIFERATION, CALCIFICATION};
-    const atom flags[] = {VALID, REMOVED, MOVED, WHEEL_ATOM, GRABBED_ONCE,
-        1ULL << NORMAL_BOND, 1ULL << RECENT_BOND, HAS_DISJOINT_BOND};
+    const uint32_t types[] = {ARM,       TWO_ARM, THREE_ARM,   SIX_ARM,       PISTON,
+                              VAN_BERLO, RAVARI,  DUPLICATION, PROLIFERATION, CALCIFICATION};
+    const atom flags[] = {VALID,
+                          REMOVED,
+                          MOVED,
+                          WHEEL_ATOM,
+                          GRABBED_ONCE,
+                          1ULL << NORMAL_BOND,
+                          1ULL << RECENT_BOND,
+                          HAS_DISJOINT_BOND};
     unsigned cases = 0;
     for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); ++t) {
         struct mechanism m = {0};
@@ -19,8 +24,8 @@ int main(void)
             bool wheel = mask & 8;
             bool arm = t < 7;
             bool wheel_reader = t >= 5 && t <= 8;
-            bool visible = valid && ((arm && removed && moved) ||
-                (!removed && (!wheel || wheel_reader)));
+            bool visible =
+                valid && ((arm && removed && moved) || (!removed && (!wheel || wheel_reader)));
             lookups = 0;
             struct atom_ref_at_position found = get_atom(&board, m, 3, -2);
             assert(lookups == 1);

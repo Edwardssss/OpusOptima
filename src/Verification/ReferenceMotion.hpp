@@ -44,8 +44,7 @@ std::optional<double> TrackAtomPositionErrorBound(const Motion& motion);
 std::optional<Hex> SnapToHex(Point point);
 // Seven board candidates visited by add_collider, filtered by its strict radius test.
 // This is the sampled reference raster, not a swept-area enclosure.
-std::optional<std::size_t> BoardAreaCells(Point center, float radius,
-                                         Hex (&cells)[7]);
+std::optional<std::size_t> BoardAreaCells(Point center, float radius, Hex (&cells)[7]);
 std::optional<float> CollisionIncrement(int maximumRotationDistance);
 std::optional<std::size_t> InteriorSampleCount(int maximumRotationDistance,
                                                std::size_t limit = 65536);

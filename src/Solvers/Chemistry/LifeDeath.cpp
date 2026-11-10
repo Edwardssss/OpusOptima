@@ -1,7 +1,7 @@
 #include "LifeDeath.hpp"
-#include "FiniteFeedResource.hpp"
 #include "AssemblySolver.hpp"
 #include "ChemistryPipeline.hpp"
+#include "FiniteFeedResource.hpp"
 #include "PurificationAssembly.hpp"
 #include "RowAssembly.hpp"
 #include "Unification.hpp"
@@ -78,11 +78,10 @@ io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle) {
     return CompileLifeDeath(puzzle, false);
 }
 namespace {
-io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool singleProduct,
-                                         bool compactRelay, bool relayBaseline = false,
-                                         bool compactSpare = false, bool shareFeeds = false,
-                                         std::chrono::steady_clock::time_point deadline =
-                                             std::chrono::steady_clock::time_point::max()) {
+io::SolutionData CompileLifeDeathGeometry(
+    const io::PuzzleData& puzzle, bool singleProduct, bool compactRelay, bool relayBaseline = false,
+    bool compactSpare = false, bool shareFeeds = false,
+    std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max()) {
     auto checkDeadline = [&] {
         if (std::chrono::steady_clock::now() >= deadline)
             throw std::invalid_argument("shared feed construction deadline");
@@ -138,8 +137,8 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
         auto extraction = realExtraction(input, type);
         const auto plan = realSourcePlan(input, type);
         SourceBatch batch;
-        batch.machine = CompileRowAssemblyFiniteBatch(
-            extraction, plan, batch.productEnds, products, deadline);
+        batch.machine =
+            CompileRowAssemblyFiniteBatch(extraction, plan, batch.productEnds, products, deadline);
         checkDeadline();
         // Only complete successful compilations enter the cache, before any
         // placement, input remapping, tape clearing, or resource construction.
@@ -149,14 +148,16 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
         return std::move(batch.machine);
     };
     bool sharedPair = false;
-    if (shareFeeds && (compactRelay || singleProduct || puzzle.outputs.empty() ||
-        puzzle.outputs.size() > 2 ||
-        std::none_of(puzzle.inputs.begin(),puzzle.inputs.end(),
-            [](const auto& input) { return input.atoms.size() > 1; })))
-        throw std::invalid_argument("shared feed requires one or two outputs and a molecular input");
+    if (shareFeeds &&
+        (compactRelay || singleProduct || puzzle.outputs.empty() || puzzle.outputs.size() > 2 ||
+         std::none_of(puzzle.inputs.begin(), puzzle.inputs.end(),
+                      [](const auto& input) { return input.atoms.size() > 1; })))
+        throw std::invalid_argument(
+            "shared feed requires one or two outputs and a molecular input");
     if (compactRelay && puzzle.outputs.size() != 1)
         Reject("compact relay requires one ordinary output");
-    if (!shareFeeds && !compactRelay && puzzle.outputs.size() == 1 && puzzle.outputs[0].atoms.size() == 1 &&
+    if (!shareFeeds && !compactRelay && puzzle.outputs.size() == 1 &&
+        puzzle.outputs[0].atoms.size() == 1 &&
         puzzle.outputs[0].atoms[0].type == core::AtomType::Quintessence)
         return CompileUnification(puzzle, deadline);
     const int productCount = singleProduct ? 1 : 6 * puzzle.outputMultiplier;
@@ -192,8 +193,10 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                 try {
                     auto planning = extraction;
                     planning.permissionBits |= 1ULL << 17;
-                    if (shareFeeds) (void)realSourcePlan(i, atom.type);
-                    else (void)AssemblyPlanner::Plan(planning,false,deadline);
+                    if (shareFeeds)
+                        (void)realSourcePlan(i, atom.type);
+                    else
+                        (void)AssemblyPlanner::Plan(planning, false, deadline);
                 } catch (const std::invalid_argument&) {
                     continue;
                 }
@@ -203,11 +206,12 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
         }
     }
     const bool needsSyntheticQuintessence =
-        std::any_of(puzzle.outputs.begin(), puzzle.outputs.end(), [](const auto& output) {
-            return std::any_of(output.atoms.begin(), output.atoms.end(), [](const auto& atom) {
-                return atom.type == AtomType::Quintessence;
-            });
-        }) &&
+        std::any_of(puzzle.outputs.begin(), puzzle.outputs.end(),
+                    [](const auto& output) {
+                        return std::any_of(
+                            output.atoms.begin(), output.atoms.end(),
+                            [](const auto& atom) { return atom.type == AtomType::Quintessence; });
+                    }) &&
         std::none_of(sourceMap.begin(), sourceMap.end(), [](const auto& source) {
             return source.input >= 0 && source.type == AtomType::Quintessence;
         });
@@ -240,7 +244,7 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
             extraction.outputMultiplier = 1;
             try {
                 try {
-                    (void)AssemblyPlanner::PlanSupply(extraction,false,20000,deadline);
+                    (void)AssemblyPlanner::PlanSupply(extraction, false, 20000, deadline);
                 } catch (const std::invalid_argument&) {
                     (void)CompilePurificationAssembly(extraction, false, deadline);
                 }
@@ -340,7 +344,7 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
         }();
         if (shareFeeds && unsupportedSynthetic)
             Reject("shared feed requires bounded real-source lowering");
-        const auto plan = AssemblyPlanner::Plan(single,false,deadline);
+        const auto plan = AssemblyPlanner::Plan(single, false, deadline);
         const bool dispersionStorage =
             !(puzzle.permissionBits & (1ULL << 17)) &&
             std::any_of(feeds.begin(), feeds.end(),
@@ -353,12 +357,10 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
         if (singleProduct && triplex)
             Reject("single-product chemistry does not support colored bonds");
         auto machine = singleProduct ? CompileRowAssemblySingleProduct(single, plan)
-                       : triplex
-                           ? CompileTriplexRowAssembly(single, plan, labels, false, feedSpacing,
-                                                       deadline)
-                           : shareFeeds
-                               ? CompileRowAssembly(single,plan,deadline)
-                               : CompileRowAssembly(single, plan, feedSpacing);
+                       : triplex     ? CompileTriplexRowAssembly(single, plan, labels, false,
+                                                                 feedSpacing, deadline)
+                       : shareFeeds  ? CompileRowAssembly(single, plan, deadline)
+                                     : CompileRowAssembly(single, plan, feedSpacing);
         int feedArm = -1, feedOffset = 0;
         for (std::size_t i = 0; i < machine.objects.size(); ++i) {
             const auto& o = machine.objects[i];
@@ -385,8 +387,8 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
             int duration = 0, carrier = -1, pickup = 0, height = 0, distance = 0, factoryQ = 0;
             std::vector<int> productEnds;
             std::optional<FiniteFeedResource> resource;
-        std::optional<std::size_t> sharedProducer;
-        std::size_t expectedRequests{}, consumedRequests{};
+            std::optional<std::size_t> sharedProducer;
+            std::size_t expectedRequests{}, consumedRequests{};
         };
         std::vector<MolecularFeed> molecularFeeds;
         int nextFactoryRight = -200;
@@ -416,7 +418,8 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                 for (int j = 0; j < part.bodyData[4]; ++j)
                     assemblyTop = std::max(assemblyTop, part.position.r + part.bodyData[6 + 2 * j]);
         }
-        auto addFeed = [&](core::HexCoord cell, std::size_t index, int factoryQ, bool shared = false) {
+        auto addFeed = [&](core::HexCoord cell, std::size_t index, int factoryQ,
+                           bool shared = false) {
             checkDeadline();
             const int input = actual[index];
             const auto sourceType = sources.inputs[feeds[index].input].atoms[0].type;
@@ -438,7 +441,8 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                     std::count_if(puzzle.outputs[output].atoms.begin(),
                                   puzzle.outputs[output].atoms.end(),
                                   [&](const auto& atom) { return atom.type == desired[index]; });
-                feed.batch = CompileCardinalSource(extraction, feed.productEnds, products, deadline);
+                feed.batch =
+                    CompileCardinalSource(extraction, feed.productEnds, products, deadline);
             } else
                 try {
                     auto planning = extraction;
@@ -450,14 +454,16 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                                                          return atom.type == desired[index];
                                                      });
                     if (shared) feed.expectedRequests = static_cast<std::size_t>(products);
-                    const auto finiteProducts = static_cast<std::size_t>(products) * (shared ? 2 : 1);
-                    feed.batch = shareFeeds && input >= 0
-                        ? realSourceBatch(input, sourceType, finiteProducts, feed.productEnds)
-                        : CompileRowAssemblyFiniteBatch(
-                            extraction, AssemblyPlanner::Plan(planning,false,deadline),
-                            feed.productEnds, finiteProducts, deadline);
+                    const auto finiteProducts =
+                        static_cast<std::size_t>(products) * (shared ? 2 : 1);
+                    feed.batch =
+                        shareFeeds && input >= 0
+                            ? realSourceBatch(input, sourceType, finiteProducts, feed.productEnds)
+                            : CompileRowAssemblyFiniteBatch(
+                                  extraction, AssemblyPlanner::Plan(planning, false, deadline),
+                                  feed.productEnds, finiteProducts, deadline);
                     if (shared && (feed.productEnds.empty() ||
-                        feed.productEnds.size() != 2 * feed.expectedRequests))
+                                   feed.productEnds.size() != 2 * feed.expectedRequests))
                         Reject("shared feed requires every finite product boundary");
                 } catch (const std::invalid_argument&) {
                     if (input >= 0) throw;
@@ -490,8 +496,8 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                 if (part.typeName == "track")
                     for (int j = 0; j < part.bodyData[4]; ++j)
                         extent = std::max(extent, part.position.r + part.bodyData[6 + 2 * j]);
-                feed.height = std::max(feed.height,
-                                       (compactRelay ? assemblyTop + 16 : 110) + extent - delivery.r);
+                feed.height = std::max(feed.height, (compactRelay ? assemblyTop + 16 : 110) +
+                                                        extent - delivery.r);
             }
             const auto translation = core::Add({feed.pickup, feed.height + 1}, delivery);
             for (auto part : feed.batch.objects) {
@@ -511,7 +517,8 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
             }
             feed.resource.emplace(ModulePort{{feed.pickup, feed.height + 1}, 0, false},
                                   feed.productEnds, feed.duration,
-                                  shared ? std::optional<std::size_t>(2 * feed.expectedRequests) : std::nullopt);
+                                  shared ? std::optional<std::size_t>(2 * feed.expectedRequests)
+                                         : std::nullopt);
             checkDeadline();
             molecularFeeds.push_back(std::move(feed));
         };
@@ -658,19 +665,20 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
             // ianh/omsim sim.c, ANIMISMUS (a88d12d8d100784aa525ee90259255b869bcba38):
             // ungrabbed, unbonded salts at (0,0),(1,0), vitae at (0,1), mors
             // at (1,-1). A blocked output stops conversion.
-            const bool shared = shareFeeds && actual[index] >= 0 &&
-                puzzle.inputs[actual[index]].atoms.size() > 1;
+            const bool shared =
+                shareFeeds && actual[index] >= 0 && puzzle.inputs[actual[index]].atoms.size() > 1;
             const auto producerIndex = molecularFeeds.size();
             for (int x = q; x <= q + 1; ++x) {
                 if (shared && x == q + 1) {
                     MolecularFeed request;
-                    request.cell = {x,3};
+                    request.cell = {x, 3};
                     request.factoryQ = q;
                     request.sharedProducer = producerIndex;
                     request.expectedRequests = molecularFeeds.at(producerIndex).expectedRequests;
                     molecularFeeds.push_back(std::move(request));
                     sharedPair = true;
-                } else addFeed({x, 3}, index, q, shared);
+                } else
+                    addFeed({x, 3}, index, q, shared);
                 if (saltType != AtomType::Salt) object("glyph-calcification", {x, 3}, 1, 0);
             }
         }
@@ -704,7 +712,7 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
             }
             int pickup = molecularFeeds.front().pickup;
             for (const auto& feed : molecularFeeds)
-                if (!feed.sharedProducer) pickup = std::min(pickup,feed.pickup);
+                if (!feed.sharedProducer) pickup = std::min(pickup, feed.pickup);
             const int step = pickup <= bend ? 1 : -1;
             for (int q = pickup;; q += step) {
                 transportPath.push_back({q, 88});
@@ -776,10 +784,12 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
             const int repetitions = productCount;
             for (const auto& feed : molecularFeeds) {
                 if (!feed.expectedRequests) continue;
-                const auto eventsPerProduct = std::count_if(events.begin(),events.end(),[&](const auto& event) {
-                    return factories[event.factory].q == feed.factoryQ;
-                });
-                if (static_cast<std::size_t>(eventsPerProduct) * repetitions != feed.expectedRequests)
+                const auto eventsPerProduct =
+                    std::count_if(events.begin(), events.end(), [&](const auto& event) {
+                        return factories[event.factory].q == feed.factoryQ;
+                    });
+                if (static_cast<std::size_t>(eventsPerProduct) * repetitions !=
+                    feed.expectedRequests)
                     Reject("shared feed request count differs from finite demand");
             }
             // Separate vertical lanes keep collectors clear of other factories.
@@ -793,12 +803,13 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                 spareArms.push_back(object("piston", {factory.q + 1, 1}, 1, 1));
                 const int rail = object("track", {factory.q + 1, 1}, 1, 0);
                 auto& data = machine.objects[rail].bodyData;
-                const auto pickups = std::count_if(events.begin(), events.end(), [&](const auto& event) {
-                    return event.factory == static_cast<int>(spareArms.size()) - 1;
-                });
+                const auto pickups =
+                    std::count_if(events.begin(), events.end(), [&](const auto& event) {
+                        return event.factory == static_cast<int>(spareArms.size()) - 1;
+                    });
                 const int length = compactSpare
-                    ? static_cast<int>(pickups) * repetitions * 2 + 3
-                    : static_cast<int>(events.size()) * repetitions * 3 + 3;
+                                       ? static_cast<int>(pickups) * repetitions * 2 + 3
+                                       : static_cast<int>(events.size()) * repetitions * 3 + 3;
                 data = {1, 0, 0, 0, length + 1};
                 for (int r = -length; r <= 0; ++r)
                     data.insert(data.end(), {0, r});
@@ -851,7 +862,9 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                         for (auto& feed : molecularFeeds) {
                             if (feed.factoryQ != factories[f].q) continue;
                             checkDeadline();
-                            auto& producer = feed.sharedProducer ? molecularFeeds.at(*feed.sharedProducer) : feed;
+                            auto& producer = feed.sharedProducer
+                                                 ? molecularFeeds.at(*feed.sharedProducer)
+                                                 : feed;
                             const auto slice = producer.resource->Reserve(shift);
                             const int end = slice.end;
                             for (int id : producer.objects)
@@ -870,8 +883,9 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                             const int pickupTime = shift;
                             emit('G');
                             emit('e');
-                            producer.resource->Release(ModulePort{{producer.pickup, producer.height + 1}, 0, false},
-                                                       pickupTime, shift);
+                            producer.resource->Release(
+                                ModulePort{{producer.pickup, producer.height + 1}, 0, false},
+                                pickupTime, shift);
                             if (feed.expectedRequests) ++feed.consumedRequests;
                             emit('e');
                             for (int i = 0; i < producer.distance; ++i)
@@ -894,8 +908,10 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                                     --transportPosition;
                                 }
                             };
-                            if (compactRelay) activeArm = transport;
-                            else moveTransport({producer.pickup, 88});
+                            if (compactRelay)
+                                activeArm = transport;
+                            else
+                                moveTransport({producer.pickup, 88});
                             emit('G');
                             activeArm = producer.carrier;
                             emit('r');
@@ -903,23 +919,28 @@ io::SolutionData CompileLifeDeathGeometry(const io::PuzzleData& puzzle, bool sin
                             emit('r');
                             for (int i = CarrierIdleClearance; i < producer.distance; ++i)
                                 emit('a');
-                            if (compactRelay) activeArm = transport;
-                            else moveTransport({feed.cell.q, transportRow});
+                            if (compactRelay)
+                                activeArm = transport;
+                            else
+                                moveTransport({feed.cell.q, transportRow});
                             emit('R');
                             emit('R');
                             emit('R');
-                            for (int i = 1; i < (compactRelay ? 1 : transportRow - feed.cell.r); ++i)
+                            for (int i = 1; i < (compactRelay ? 1 : transportRow - feed.cell.r);
+                                 ++i)
                                 emit('E');
                             emit('g');
-                            for (int i = 1; i < (compactRelay ? 1 : transportRow - feed.cell.r); ++i)
+                            for (int i = 1; i < (compactRelay ? 1 : transportRow - feed.cell.r);
+                                 ++i)
                                 emit('e');
                             emit('r');
                             emit('r');
                             emit('r');
                             // Clear the assembly lane before its feed arm resumes.
-                            if (!compactRelay) moveTransport(
-                                *std::find_if(transportPath.begin(), transportPath.end(),
-                                              [](core::HexCoord cell) { return cell.r == 87; }));
+                            if (!compactRelay)
+                                moveTransport(*std::find_if(
+                                    transportPath.begin(), transportPath.end(),
+                                    [](core::HexCoord cell) { return cell.r == 87; }));
                         }
                         if (std::any_of(spareOutlets.begin(), spareOutlets.end(),
                                         [&](const auto& outlet) { return outlet.factory == f; })) {
@@ -1016,22 +1037,23 @@ io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle, bool singleProdu
 }
 
 io::SolutionData CompileSharedLifeDeath(const io::PuzzleData& puzzle,
-                                       std::chrono::steady_clock::time_point deadline) {
-    return CompileLifeDeathGeometry(puzzle,false,false,false,false,true,deadline);
+                                        std::chrono::steady_clock::time_point deadline) {
+    return CompileLifeDeathGeometry(puzzle, false, false, false, false, true, deadline);
 }
 bool SupportsCompactSpareChemistry(const io::PuzzleData& puzzle) {
     if (puzzle.version != 3 || puzzle.productionInfo || puzzle.inputs.empty() ||
-        puzzle.outputs.empty() || puzzle.outputs.size() > 4 ||
-        puzzle.outputMultiplier < 1 || puzzle.outputMultiplier > 2 ||
+        puzzle.outputs.empty() || puzzle.outputs.size() > 4 || puzzle.outputMultiplier < 1 ||
+        puzzle.outputMultiplier > 2 ||
         !std::all_of(puzzle.inputs.begin(), puzzle.inputs.end(), [](const auto& input) {
             return input.atoms.size() == 1 && input.bonds.empty();
-        })) return false;
+        }))
+        return false;
     return std::any_of(puzzle.outputs.begin(), puzzle.outputs.end(), [&](const auto& output) {
         return std::any_of(output.atoms.begin(), output.atoms.end(), [&](const auto& atom) {
             return (atom.type == AtomType::Vitae || atom.type == AtomType::Mors) &&
-                std::none_of(puzzle.inputs.begin(), puzzle.inputs.end(), [&](const auto& input) {
-                    return input.atoms.front().type == atom.type;
-                });
+                   std::none_of(puzzle.inputs.begin(), puzzle.inputs.end(), [&](const auto& input) {
+                       return input.atoms.front().type == atom.type;
+                   });
         });
     });
 }

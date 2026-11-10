@@ -40,7 +40,8 @@ class ChemicalPlanner {
                                                                bool allowSurplus);
 
     private:
-    [[nodiscard]] static ChemicalRecipe PlanRecipe(const io::PuzzleData&, std::size_t, bool, bool,
+    [[nodiscard]] static ChemicalRecipe PlanRecipe(
+        const io::PuzzleData&, std::size_t, bool, bool,
         std::chrono::steady_clock::time_point = std::chrono::steady_clock::time_point::max());
 };
 } // namespace opusoptima::solvers

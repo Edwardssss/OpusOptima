@@ -23,17 +23,20 @@ struct ScopedDirectInput {
     const char* name = "OPUSOPTIMA_DIRECT_INPUT";
     std::optional<std::string> saved;
     explicit ScopedDirectInput(std::optional<std::string> value)
-        : saved(std::getenv(name) ? std::optional<std::string>(std::getenv(name))
-                                  : std::nullopt) {
-        if (value) setenv(name, value->c_str(), 1);
-        else unsetenv(name);
+        : saved(std::getenv(name) ? std::optional<std::string>(std::getenv(name)) : std::nullopt) {
+        if (value)
+            setenv(name, value->c_str(), 1);
+        else
+            unsetenv(name);
     }
     ~ScopedDirectInput() {
-        if (saved) setenv(name, saved->c_str(), 1);
-        else unsetenv(name);
+        if (saved)
+            setenv(name, saved->c_str(), 1);
+        else
+            unsetenv(name);
     }
 };
-}  // namespace
+} // namespace
 
 TEST(ScheduledRowCompanion, IntakeCandidatesExposeTheFeederCompanion) {
     const auto puzzle = io::BinaryParser::ParsePuzzleFile("asset/puzzle/easy/just-salt.puzzle");

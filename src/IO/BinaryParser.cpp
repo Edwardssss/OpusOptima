@@ -243,8 +243,7 @@ std::vector<std::byte> BinaryParser::ReadAllBytes(const std::filesystem::path& p
     }
 
     const auto byteCount = static_cast<std::streamoff>(fileSize);
-    if (!std::in_range<std::size_t>(byteCount) ||
-        !std::in_range<std::streamsize>(byteCount) ||
+    if (!std::in_range<std::size_t>(byteCount) || !std::in_range<std::streamsize>(byteCount) ||
         static_cast<std::size_t>(byteCount) > std::vector<std::byte>().max_size()) {
         throw ParseError("File size exceeds representable buffer range: " + path.string());
     }

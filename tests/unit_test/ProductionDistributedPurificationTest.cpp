@@ -3,12 +3,12 @@
 #include "SolutionVerifier.hpp"
 #include "Verification/StaticProductionVerifier.hpp"
 
+#include "RepoRoot.hpp"
 #include "UnitTestConstants.hpp"
 #include <algorithm>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <stdexcept>
-#include "RepoRoot.hpp"
 
 namespace {
 using namespace opusoptima;

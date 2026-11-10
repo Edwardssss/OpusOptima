@@ -31,5 +31,5 @@ io::SolutionData CompileUnificationFiniteBatch(const io::PuzzleData& puzzle,
                                                std::vector<int>& productEnds, int products,
                                                std::chrono::steady_clock::time_point deadline);
 io::SolutionData CompileSaltQuintessenceBatch(const io::PuzzleData& puzzle, int saltInput,
-                                             std::chrono::steady_clock::time_point deadline);
+                                              std::chrono::steady_clock::time_point deadline);
 } // namespace opusoptima::solvers

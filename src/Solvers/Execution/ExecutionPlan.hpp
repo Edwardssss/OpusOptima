@@ -61,7 +61,8 @@ struct ExecutionPlan {
 // Terminal inventory must hold before native stop; trailing reset is not required
 // to execute. This contract does not generalize to multiple output ports.
 [[nodiscard]] ExecutionPlan MakeFiniteExecutionPlan(const io::PuzzleData&, ExecutionIR,
-    ExecutionIR::FiniteRetention, io::VerificationMode);
+                                                    ExecutionIR::FiniteRetention,
+                                                    io::VerificationMode);
 
 // A physical implementation choice is deliberately separate from material
 // scheduling. This records proposed sites, custody and timing, not a certificate.

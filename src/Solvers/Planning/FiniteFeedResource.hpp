@@ -7,7 +7,7 @@ namespace opusoptima::solvers {
 
 // A single-exit scheduling contract, not a material closure or swept-path proof.
 class FiniteFeedResource {
-public:
+    public:
     struct Slice {
         int begin{}, end{};
         friend bool operator==(const Slice&, const Slice&) = default;
@@ -25,9 +25,12 @@ public:
             slices_.push_back({previous, end});
             previous = end;
         }
-        if (slices_.empty()) slices_.push_back({0, duration});
-        else slices_.back().end = duration;
-        if (expectedDeliveries_ && (*expectedDeliveries_ == 0 || *expectedDeliveries_ % slices_.size() != 0))
+        if (slices_.empty())
+            slices_.push_back({0, duration});
+        else
+            slices_.back().end = duration;
+        if (expectedDeliveries_ &&
+            (*expectedDeliveries_ == 0 || *expectedDeliveries_ % slices_.size() != 0))
             throw std::invalid_argument("finite feed demand does not close its batch");
     }
 
@@ -42,7 +45,8 @@ public:
     void Release(ModulePort consumed, int pickup, int cleared) {
         if (!pending_) throw std::invalid_argument("finite feed has no reserved slice");
         const auto slice = slices_[next_];
-        if (static_cast<long long>(pickup) < static_cast<long long>(*pending_) + slice.end - slice.begin)
+        if (static_cast<long long>(pickup) <
+            static_cast<long long>(*pending_) + slice.end - slice.begin)
             throw std::invalid_argument("finite feed slice has not finished");
         // Occupy the exit conservatively from the start of production until the
         // receiver actually moves away, including all cleanup in the last slice.
@@ -55,11 +59,14 @@ public:
     }
 
     bool Complete() const {
-        return !pending_ && next_ == 0 && (!expectedDeliveries_ || delivered_ == *expectedDeliveries_);
+        return !pending_ && next_ == 0 &&
+               (!expectedDeliveries_ || delivered_ == *expectedDeliveries_);
     }
-    const ModulePort& Outlet() const { return outlet_; }
+    const ModulePort& Outlet() const {
+        return outlet_;
+    }
 
-private:
+    private:
     ModulePort outlet_;
     std::vector<Slice> slices_;
     std::size_t next_{};

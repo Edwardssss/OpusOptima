@@ -13,10 +13,13 @@ extern "C" int reference_raster_oracle(float, float, float, int*);
 int main() {
     namespace rm = opusoptima::verification::reference_motion;
     std::uint32_t seed = 0x88d12d8;
-    auto next = [&]() { seed = seed * 1664525u + 1013904223u; return seed; };
+    auto next = [&]() {
+        seed = seed * 1664525u + 1013904223u;
+        return seed;
+    };
     std::size_t compared = 0;
-    const std::array<float, 9> times{0.f, 0x1p-22f, .125f, .25f, .5f, .75f,
-                                     .875f, 0x1.fffffep-1f, 1.f};
+    const std::array<float, 9> times{0.f,  0x1p-22f, .125f,          .25f, .5f,
+                                     .75f, .875f,    0x1.fffffep-1f, 1.f};
     constexpr int randomSamples = 20000;
     constexpr int structuredSamples = 4 * 11 * 3 * 6;
     constexpr int kinematicSamples = 4 * 6 * 2;
@@ -34,14 +37,13 @@ int main() {
         m.isPiston = sample % 3 == 0 || m.mechanism == rm::Mechanism::Piston;
         if (m.mechanism == rm::Mechanism::Swing || m.mechanism == rm::Mechanism::Pivot)
             m.rotation = static_cast<int>(next() % 3u) - 1;
-        if (m.mechanism == rm::Mechanism::Track)
-            m.translation = {coordinate(), coordinate()};
+        if (m.mechanism == rm::Mechanism::Track) m.translation = {coordinate(), coordinate()};
         if (m.mechanism == rm::Mechanism::Piston)
             m.pistonExtension = static_cast<int>(next() % 3u) - 1;
         if (sample >= randomSamples && sample < randomSamples + structuredSamples) {
             int index = sample - randomSamples;
-            constexpr std::array<rm::Hex, 6> directions{{{2, 0}, {0, 2}, {-2, 2},
-                                                        {-2, 0}, {0, -2}, {2, -2}}};
+            constexpr std::array<rm::Hex, 6> directions{
+                {{2, 0}, {0, 2}, {-2, 2}, {-2, 0}, {0, -2}, {2, -2}}};
             const auto direction = directions[index % 6];
             index /= 6;
             const int change = index % 3 - 1;
@@ -59,8 +61,7 @@ int main() {
                 m.rotation = change;
             if (m.mechanism == rm::Mechanism::Track)
                 m.translation = {change * direction.u, change * direction.v};
-            if (m.mechanism == rm::Mechanism::Piston)
-                m.pistonExtension = change;
+            if (m.mechanism == rm::Mechanism::Piston) m.pistonExtension = change;
         }
         if (sample >= randomSamples + structuredSamples) {
             int index = sample - randomSamples - structuredSamples;
@@ -68,12 +69,11 @@ int main() {
             index /= 2;
             const int direction = index % 6;
             index /= 6;
-            constexpr std::array<rm::Hex, 6> axes{{{1, 0}, {0, 1}, {-1, 1},
-                                                  {-1, 0}, {0, -1}, {1, -1}}};
+            constexpr std::array<rm::Hex, 6> axes{
+                {{1, 0}, {0, 1}, {-1, 1}, {-1, 0}, {0, -1}, {1, -1}}};
             const auto axis = axes[direction];
             auto rotate = [](rm::Hex p, int turn) -> rm::Hex {
-                return turn == 1 ? rm::Hex{-p.v, p.u + p.v}
-                                 : rm::Hex{p.u + p.v, -p.u};
+                return turn == 1 ? rm::Hex{-p.v, p.u + p.v} : rm::Hex{p.u + p.v, -p.u};
             };
             auto move = [&](rm::Hex p, rm::Hex origin, int turn, rm::Hex translation) {
                 rm::Hex relative{p.u - origin.u, p.v - origin.v};
@@ -89,21 +89,22 @@ int main() {
             m.grabberOffset = {2, 0};
             m.absoluteGrabPosition = {m.base.u + 2 * axis.u, m.base.v + 2 * axis.v};
             m.atom = {m.absoluteGrabPosition.u + 1, m.absoluteGrabPosition.v - 1};
-            const auto origin = m.mechanism == rm::Mechanism::Swing ? m.base : m.absoluteGrabPosition;
+            const auto origin =
+                m.mechanism == rm::Mechanism::Swing ? m.base : m.absoluteGrabPosition;
             if (m.mechanism == rm::Mechanism::Swing || m.mechanism == rm::Mechanism::Pivot)
                 m.rotation = change;
             if (m.mechanism == rm::Mechanism::Track || m.mechanism == rm::Mechanism::Piston)
                 m.translation = {change * axis.u, change * axis.v};
             m.atom = move(m.atom, origin, m.rotation, m.translation);
-            m.absoluteGrabPosition = move(m.absoluteGrabPosition, origin, m.rotation, m.translation);
+            m.absoluteGrabPosition =
+                move(m.absoluteGrabPosition, origin, m.rotation, m.translation);
             if (m.mechanism == rm::Mechanism::Track)
                 m.base = move(m.base, origin, 0, m.translation);
             if (m.mechanism == rm::Mechanism::Piston) {
                 m.pistonExtension = change;
                 m.grabberOffset.u += change;
             }
-            if (m.mechanism == rm::Mechanism::Swing)
-                m.baseRotation = (m.baseRotation + change) % 6;
+            if (m.mechanism == rm::Mechanism::Swing) m.baseRotation = (m.baseRotation + change) % 6;
 
             // Derive endpoint expectations from direction indices, not the move helper.
             const auto endAxis = axes[(direction + change + 6) % 6];
@@ -140,10 +141,21 @@ int main() {
             }
             ++checkedKinematicEndpoints;
         }
-        const std::array<int, 15> input{static_cast<int>(m.mechanism), m.isPiston,
-            m.base.u, m.base.v, m.grabberOffset.u, m.grabberOffset.v,
-            m.absoluteGrabPosition.u, m.absoluteGrabPosition.v, m.atom.u, m.atom.v,
-            m.translation.u, m.translation.v, m.baseRotation, m.rotation, m.pistonExtension};
+        const std::array<int, 15> input{static_cast<int>(m.mechanism),
+                                        m.isPiston,
+                                        m.base.u,
+                                        m.base.v,
+                                        m.grabberOffset.u,
+                                        m.grabberOffset.v,
+                                        m.absoluteGrabPosition.u,
+                                        m.absoluteGrabPosition.v,
+                                        m.atom.u,
+                                        m.atom.v,
+                                        m.translation.u,
+                                        m.translation.v,
+                                        m.baseRotation,
+                                        m.rotation,
+                                        m.pistonExtension};
         for (float t : times) {
             const auto actual = rm::AtomAt(m, t);
             if (!actual) {
@@ -157,8 +169,10 @@ int main() {
             }
             std::array<float, 2> expected{};
             reference_motion_oracle(input.data(), t, expected.data());
-            if (std::bit_cast<std::uint32_t>(actual->x) != std::bit_cast<std::uint32_t>(expected[0]) ||
-                std::bit_cast<std::uint32_t>(actual->y) != std::bit_cast<std::uint32_t>(expected[1])) {
+            if (std::bit_cast<std::uint32_t>(actual->x) !=
+                    std::bit_cast<std::uint32_t>(expected[0]) ||
+                std::bit_cast<std::uint32_t>(actual->y) !=
+                    std::bit_cast<std::uint32_t>(expected[1])) {
                 std::cerr << "Bit mismatch at sample " << sample << " time " << t << '\n';
                 return 1;
             }
@@ -166,7 +180,8 @@ int main() {
         }
     }
     if (compared != 187349 || rejectedSingularEndpoints != 211 ||
-        compared + rejectedSingularEndpoints != (randomSamples + structuredSamples + kinematicSamples) * times.size()) {
+        compared + rejectedSingularEndpoints !=
+            (randomSamples + structuredSamples + kinematicSamples) * times.size()) {
         std::cerr << "Unexpected differential coverage counts\n";
         return 1;
     }
@@ -174,17 +189,20 @@ int main() {
         std::cerr << "Incomplete kinematic endpoint coverage\n";
         return 1;
     }
-    constexpr std::array<rm::Point, 9> snapBoundaries{{
-        {0.f, 0.f}, {0.f, 71.f}, {41.f, 35.5f}, {-41.f, 35.5f},
-        {0.f, -71.f}, {-41.f, -35.5f}, {41.f, -35.5f},
-        {43.999f, 0.f}, {-43.999f, 0.f}
-    }};
+    constexpr std::array<rm::Point, 9> snapBoundaries{{{0.f, 0.f},
+                                                       {0.f, 71.f},
+                                                       {41.f, 35.5f},
+                                                       {-41.f, 35.5f},
+                                                       {0.f, -71.f},
+                                                       {-41.f, -35.5f},
+                                                       {41.f, -35.5f},
+                                                       {43.999f, 0.f},
+                                                       {-43.999f, 0.f}}};
     const int structuredSnapSamples = 12 + static_cast<int>(snapBoundaries.size()) * 9;
     std::size_t snapped = 0;
     for (int sample = 0; sample < 30000 + structuredSnapSamples; ++sample) {
-        rm::Point point{
-            static_cast<float>(static_cast<int>(next() % 160000001u) - 80000000) / 8.f,
-            static_cast<float>(static_cast<int>(next() % 160000001u) - 80000000) / 8.f};
+        rm::Point point{static_cast<float>(static_cast<int>(next() % 160000001u) - 80000000) / 8.f,
+                        static_cast<float>(static_cast<int>(next() % 160000001u) - 80000000) / 8.f};
         if (sample < 12) {
             const float x = sample < 6 ? 41.f : 44.f;
             const int offset = sample % 3 - 1;
@@ -226,6 +244,7 @@ int main() {
     std::cout << "Extracted C raster differential: " << snapped * 3 << " comparisons passed\n";
     std::cout << "Extracted C snap differential: " << snapped << " comparisons passed\n";
     std::cout << "Kinematic endpoint invariants: " << checkedKinematicEndpoints << " passed\n";
-    std::cout << "ReferenceMotion extracted C differential: " << compared << " bitwise point comparisons passed; "
-              << rejectedSingularEndpoints << " expected singular endpoints rejected\n";
+    std::cout << "ReferenceMotion extracted C differential: " << compared
+              << " bitwise point comparisons passed; " << rejectedSingularEndpoints
+              << " expected singular endpoints rejected\n";
 }

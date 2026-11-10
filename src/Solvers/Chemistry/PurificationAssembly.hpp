@@ -8,8 +8,8 @@ namespace opusoptima::solvers {
 [[nodiscard]] bool SupportsSingletonPurificationChain(const io::PuzzleData& puzzle);
 // Default admission requires cost-effective depth 4–5 and no genuine target feed.
 [[nodiscard]] bool AdmitsSingletonPurificationChain(const io::PuzzleData& puzzle);
-[[nodiscard]] io::SolutionData CompileSingletonPurificationChain(const io::PuzzleData& puzzle,
-    std::chrono::steady_clock::time_point deadline);
+[[nodiscard]] io::SolutionData CompileSingletonPurificationChain(
+    const io::PuzzleData& puzzle, std::chrono::steady_clock::time_point deadline);
 
 // Physical recursive purification feeding the serial row assembler. Monatomic
 // inputs can supply multiple derived metals from one common source metal; a
@@ -22,6 +22,7 @@ namespace opusoptima::solvers {
 [[nodiscard]] io::SolutionData CompilePurificationAssembly(const io::PuzzleData& puzzle,
                                                            bool allowFiniteFeed = false);
 // The absolute deadline bounds planning, row compilation, and purification emission.
-[[nodiscard]] io::SolutionData CompilePurificationAssembly(const io::PuzzleData& puzzle,
-    bool allowFiniteFeed, std::chrono::steady_clock::time_point deadline);
+[[nodiscard]] io::SolutionData CompilePurificationAssembly(
+    const io::PuzzleData& puzzle, bool allowFiniteFeed,
+    std::chrono::steady_clock::time_point deadline);
 } // namespace opusoptima::solvers

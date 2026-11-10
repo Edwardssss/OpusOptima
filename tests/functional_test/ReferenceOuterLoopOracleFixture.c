@@ -1,10 +1,8 @@
-static void close_to(float actual, float expected)
-{
+static void close_to(float actual, float expected) {
     assert(fabsf(actual - expected) < 0.0001f);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char** argv) {
     int configured = configure_arithmetic_test(argc, argv);
     if (configured) return configured;
     if (!qualified_arithmetic()) {
@@ -39,13 +37,10 @@ int main(int argc, char **argv)
 
     solution = (struct solution){0};
     board = (struct board){.chain_mode = DISCOVER_CHAIN};
-    struct atom_at_position atoms[2] = {
-        {.position = {10, 0}}, {.position = {10, 0}}
-    };
+    struct atom_at_position atoms[2] = {{.position = {10, 0}}, {.position = {10, 0}}};
     struct movement movements[2] = {
         {.base = {10, 0}, .absolute_grab_position = {10, 0}, .number_of_atoms = 2},
-        {.base = {10, 0}, .absolute_grab_position = {10, 0}, .number_of_atoms = 1}
-    };
+        {.base = {10, 0}, .absolute_grab_position = {10, 0}, .number_of_atoms = 1}};
     board.moving_atoms.atoms_at_positions = atoms;
     board.moving_atoms.length = 2;
     board.movements.movements = movements;
@@ -70,8 +65,10 @@ int main(int argc, char **argv)
     board.moving_atoms.length = 1;
     atoms[0].position = (struct vector){1, 0};
     movements[0] = (struct movement){.type = TRACK_MOVEMENT,
-        .base = {1, 0}, .absolute_grab_position = {1, 0},
-        .translation = {1, 0}, .number_of_atoms = 1};
+                                     .base = {1, 0},
+                                     .absolute_grab_position = {1, 0},
+                                     .translation = {1, 0},
+                                     .number_of_atoms = 1};
     arms[0] = (struct mechanism){.position = {1, 0}, .movement = {1, 0}};
     solution.arms = arms;
     solution.number_of_arms = 1;
@@ -93,15 +90,19 @@ int main(int argc, char **argv)
     for (size_t kind = 0; kind < 3; ++kind) {
         atoms[0].position = (struct vector){1, 0};
         movements[0] = (struct movement){.type = types[kind],
-            .grabber_offset = {1, 0}, .absolute_grab_position = {1, 0},
-            .rotation = kind < 2 ? 1 : 0, .piston_extension = 1,
-            .number_of_atoms = 1};
+                                         .grabber_offset = {1, 0},
+                                         .absolute_grab_position = {1, 0},
+                                         .rotation = kind < 2 ? 1 : 0,
+                                         .piston_extension = 1,
+                                         .number_of_atoms = 1};
         if (kind == 1) atoms[0].position = (struct vector){2, 0};
         event_count = 0;
         assert(!collision(&solution, &board, .5f, NULL));
         assert(event_count == 1 && events[0].cursor == 0);
         const float diagonal = 71.014083f;
-        close_to(events[0].collider.center.x, kind == 0 ? diagonal : kind == 1 ? 82.f + diagonal : 41.f);
+        close_to(events[0].collider.center.x, kind == 0   ? diagonal
+                                              : kind == 1 ? 82.f + diagonal
+                                                          : 41.f);
         close_to(events[0].collider.center.y, kind < 2 ? -41.f : 0.f);
     }
     event_count = 0;
@@ -134,17 +135,17 @@ int main(int argc, char **argv)
     stationary_atom = (struct atom_at_position){.position = {0, 0}, .atom = VALID};
     atoms[0] = (struct atom_at_position){.position = {1, 0}};
     movements[0] = (struct movement){.type = TRACK_MOVEMENT,
-        .base = {1, 0}, .absolute_grab_position = {1, 0},
-        .translation = {1, 0}, .number_of_atoms = 1};
+                                     .base = {1, 0},
+                                     .absolute_grab_position = {1, 0},
+                                     .translation = {1, 0},
+                                     .number_of_atoms = 1};
     board.moving_atoms.atoms_at_positions = atoms;
     board.moving_atoms.length = 1;
     board.movements.movements = movements;
     board.movements.length = 1;
     const float tangent_progress = 58.f / 82.f;
-    const float boundary_progress[] = {
-        nextafterf(tangent_progress, 0.f), tangent_progress,
-        nextafterf(tangent_progress, 1.f)
-    };
+    const float boundary_progress[] = {nextafterf(tangent_progress, 0.f), tangent_progress,
+                                       nextafterf(tangent_progress, 1.f)};
     for (size_t i = 0; i < 3; ++i) {
         event_count = 0;
         location = (struct vector){99, 99};
@@ -152,7 +153,8 @@ int main(int argc, char **argv)
         assert(event_count == 1 && events[0].collider.radius == 29.f);
         const float x = events[0].collider.center.x;
         assert(i == 0 ? x < 58.f : i == 1 ? x == 58.f : x > 58.f);
-        assert(vectors_equal(location, i == 0 ? stationary_atom.position : (struct vector){99, 99}));
+        assert(
+            vectors_equal(location, i == 0 ? stationary_atom.position : (struct vector){99, 99}));
     }
     stationary_atom_enabled = false;
     event_count = 0;
@@ -240,13 +242,14 @@ int main(int argc, char **argv)
     }
     /* These flags do not change ordinary collider geometry at this call boundary. */
     const atom classification_flags[] = {WHEEL_ATOM, GRABBED_ONCE, GRABBED, WHEEL_ATOM | GRABBED};
-    for (size_t kind = 0; kind < sizeof(classification_flags) / sizeof(classification_flags[0]); ++kind) {
+    for (size_t kind = 0; kind < sizeof(classification_flags) / sizeof(classification_flags[0]);
+         ++kind) {
         solution = (struct solution){.arms = arms, .number_of_arms = 1};
         arms[0] = (struct mechanism){0};
         board = (struct board){.chain_mode = DISCOVER_CHAIN};
         stationary_atom_enabled = true;
-        stationary_atom = (struct atom_at_position){
-            .position = {0, 0}, .atom = VALID | classification_flags[kind]};
+        stationary_atom = (struct atom_at_position){.position = {0, 0},
+                                                    .atom = VALID | classification_flags[kind]};
         event_count = 0;
         location = (struct vector){99, 99};
         assert(collision(&solution, &board, .5f, &location));
@@ -259,7 +262,7 @@ int main(int argc, char **argv)
 
         stationary_atom_enabled = false;
         atoms[0] = (struct atom_at_position){.position = {0, 0},
-            .atom = VALID | classification_flags[kind]};
+                                             .atom = VALID | classification_flags[kind]};
         movements[0] = (struct movement){.type = TRACK_MOVEMENT, .number_of_atoms = 1};
         board.moving_atoms.atoms_at_positions = atoms;
         board.moving_atoms.length = 1;
@@ -272,6 +275,12 @@ int main(int argc, char **argv)
         close_to(events[1].collider.center.x, 0.f);
         close_to(events[1].collider.center.y, 0.f);
     }
-    puts("ordinary outer-loop fixtures passed: 39 scenario groups; ordinary wheel/grabbed flag invariance; moving-base pair matrix; fixed-class pair matrix and moving/fixed pairs; fixed-prefix, movement exclusion, track reverse interpolation, moving bases, track/piston sample endpoints, swing, pivot, piston, stationary-board contact/removal/separation, strict tangency and adjacent-progress boundaries, non-divisor cadence; synthetic one-cell board; chain paths abort; no game-equivalence claim");
+    puts(
+        "ordinary outer-loop fixtures passed: 39 scenario groups; ordinary wheel/grabbed flag "
+        "invariance; moving-base pair matrix; fixed-class pair matrix and moving/fixed pairs; "
+        "fixed-prefix, movement exclusion, track reverse interpolation, moving bases, track/piston "
+        "sample endpoints, swing, pivot, piston, stationary-board contact/removal/separation, "
+        "strict tangency and adjacent-progress boundaries, non-divisor cadence; synthetic one-cell "
+        "board; chain paths abort; no game-equivalence claim");
     return 0;
 }

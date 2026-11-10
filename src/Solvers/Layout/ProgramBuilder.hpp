@@ -27,12 +27,12 @@ namespace opusoptima::solvers {
 // matches upstream where `ProgramWriter` still lays out the geometry.
 struct ProgramInstruction {
     char action{};
-    std::int64_t tick{};  // relative to the fragment start on first insertion
+    std::int64_t tick{}; // relative to the fragment start on first insertion
 };
 
 struct ProgramFragment {
     std::string arm;                              // stable arm identity
-    std::vector<ProgramInstruction> instructions;  // relative ticks, any order
+    std::vector<ProgramInstruction> instructions; // relative ticks, any order
     // Optional absolute lower bound for the fragment's first tick, used for
     // hand-off clearance ("this fragment may not start before tick N").
     std::int64_t anchor{};
@@ -44,7 +44,7 @@ struct PlacedInstruction {
 };
 
 class ProgramBuilder {
-public:
+    public:
     // Places the fragment at the smallest tick that satisfies its anchor and
     // keeps every instruction of that arm on a unique tick. Returns the shift
     // that was applied (the fragment's absolute start tick).
@@ -57,18 +57,22 @@ public:
     std::int64_t Makespan() const;
 
     // Ticks that at least one arm occupies; useful for hand-off clearance.
-    const std::vector<std::int64_t>& Occupied() const { return occupied_; }
+    const std::vector<std::int64_t>& Occupied() const {
+        return occupied_;
+    }
 
     // True when the arm already owns this tick.
     bool OccupiedBy(const std::string& arm, std::int64_t tick) const;
 
-    std::size_t FragmentCount() const { return fragmentCount_; }
+    std::size_t FragmentCount() const {
+        return fragmentCount_;
+    }
 
-private:
+    private:
     std::map<std::string, std::vector<PlacedInstruction>> arms_;
     std::vector<std::int64_t> occupied_;
     std::int64_t makespan_{};
     std::size_t fragmentCount_{};
 };
 
-}  // namespace opusoptima::solvers
+} // namespace opusoptima::solvers

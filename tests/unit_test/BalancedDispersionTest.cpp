@@ -1,9 +1,9 @@
+#include "AssemblySolver.hpp"
 #include "IO/BinaryWriter.hpp"
 #include "IO/SolutionVerifier.hpp"
-#include "AssemblySolver.hpp"
+#include "RepoRoot.hpp"
 #include <filesystem>
 #include <gtest/gtest.h>
-#include "RepoRoot.hpp"
 
 namespace opusoptima::solvers {
 io::SolutionData CompileBalancedDispersion(const io::PuzzleData&);
