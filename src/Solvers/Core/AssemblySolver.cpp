@@ -1339,10 +1339,11 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // every other value (unset included) keeps the shipped default.
     const char* composeMode = std::getenv("OPUSOPTIMA_COMPOSE");
     const bool composeEnabled = !composeMode || std::string_view(composeMode) != "off";
-    std::optional<io::SolutionData> composedSolution;
+    std::vector<io::SolutionData> composedSolutions;
     const auto publish = [&]() -> io::SolutionData {
-        if (!firstAccepted) return composedSolution ? *composedSolution : io::SolutionData{};
-        if (composedSolution) {
+        if (!firstAccepted)
+            return composedSolutions.empty() ? io::SolutionData{} : composedSolutions.front();
+        if (!composedSolutions.empty()) {
             if (firstAccepted->metrics.cycles == 0 && verify) {
                 // The family baseline may reach here before its metrics were copied
                 // from the gate report; measure it so the comparison is honest.
@@ -1358,7 +1359,16 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             };
             // Require a clear majority: the family baseline sometimes carries no
             // measured metrics, and a 2:1 majority is what the slot policy rewards.
-            if (wins(*composedSolution, *firstAccepted) >= 2) return *composedSolution;
+            const io::SolutionData* best = nullptr;
+            int bestWins = 1;
+            for (const auto& candidate : composedSolutions) {
+                const int candidateWins = wins(candidate, *firstAccepted);
+                if (candidateWins > bestWins) {
+                    bestWins = candidateWins;
+                    best = &candidate;
+                }
+            }
+            if (best) return *best;
         }
         return *firstAccepted;
     };
@@ -1367,17 +1377,22 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // submission) and published only when it wins more objective slots than the family
     // chain: it wins cycles by ~4.5x on its domain (58daac9a 295 -> 23) but costs 20 per
     // atom, so it loses cost/area on large products (e645d0a5 495 -> 780).
-    // Online composition is limited to single-atom products, where it is Pareto
-    // optimal (23/20/13 == reference) and costs one submission. Multi-atom composed
-    // machines are measured but not published: they starve a family submission and
-    // lose cost/area on large products (verified: 133/146 -> 132/146 coverage).
-    const bool composeOnline = SupportsComposedAssembly(puzzle) &&
-                               puzzle.outputs.front().atoms.size() == 1 &&
-                               puzzle.outputs.front().bonds.empty();
+    // Composition runs for every product the composer supports. The shared-ring
+    // variant costs one arm plus one bonder per bond, so it competes on cost/area as
+    // well as cycles; publication stays slot-aware (>=2 slot wins required).
+    const bool composeOnline = SupportsComposedAssembly(puzzle);
     if (composeEnabled && composeOnline && std::chrono::steady_clock::now() < Deadline()) {
-        if (auto result =
-                attempt("compose-assembly", [&] { return ComposeAssemblyMachine(puzzle); }))
-            composedSolution = std::move(*result);
+        try {
+            for (auto& variant : ComposeAssemblyVariants(puzzle)) {
+                if (std::chrono::steady_clock::now() >= Deadline()) break;
+                const auto candidate = variant;
+                if (auto result = attempt("compose-assembly", [&] { return candidate; }))
+                    composedSolutions.push_back(std::move(*result));
+            }
+        } catch (const std::invalid_argument& error) {
+            GetLoggerOrFallback("solver")->info(
+                "Assembly branch=compose-assembly event=unsupported detail={}", error.what());
+        }
     }
     const auto* wholeFeedFlag = std::getenv("OPUSOPTIMA_WHOLE_FEED_DOCKING");
     if (verify && wholeFeedFlag && std::string_view(wholeFeedFlag) == "1" &&

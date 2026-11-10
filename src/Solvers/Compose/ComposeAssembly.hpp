@@ -19,8 +19,13 @@ namespace opusoptima::solvers {
 /// can fall back to another family.
 bool SupportsComposedAssembly(const io::PuzzleData& puzzle);
 
-/// Emits the composed assembly machine. Throws `std::invalid_argument` outside
-/// the supported domain.
+/// Every composed variant, cheapest first: the shared-ring layout (one arm feeding
+/// several product cells) and the per-atom layout (one arm per atom). The portfolio
+/// verifies each and keeps the one that wins the most objective slots.
+std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzzle);
+
+/// Emits the cheapest composed assembly machine. Throws `std::invalid_argument`
+/// outside the supported domain.
 io::SolutionData ComposeAssemblyMachine(const io::PuzzleData& puzzle);
 
 } // namespace opusoptima::solvers
