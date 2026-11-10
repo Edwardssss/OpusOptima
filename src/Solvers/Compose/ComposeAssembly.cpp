@@ -21,6 +21,8 @@ constexpr std::array<core::HexCoord, 6> kSteps = {
 
 // `arm1` geometry: reach 3, and `r` advances the facing by one table step.
 constexpr int kArmReach = 3;
+// Above this product size the per-atom layout is neither cheap nor fast to search.
+constexpr std::size_t kMaxComposedAtoms = 6;
 constexpr int kRotateStep = 1;
 
 struct Cell {
@@ -122,7 +124,7 @@ void AppendBonders(io::SolutionData& machine, const io::Molecule& output) {
 // radius-three ring, which is the cheapest machine shape the gate accepts.
 std::optional<io::SolutionData> BuildRingGroup(const io::PuzzleData& puzzle,
                                                const std::vector<Cell>& targets) {
-    if (targets.size() < 2) return std::nullopt;
+    if (targets.size() < 2 || targets.size() > kMaxComposedAtoms) return std::nullopt;
     Cell best{};
     std::size_t bestCount = 0;
     for (int q = -6; q <= 6; ++q) {
@@ -223,6 +225,9 @@ class Placement {
     }
 
     bool Solve() {
+        // Bounded search: large products have no cheap arm-per-atom layout anyway, and
+        // an unbounded backtracking walk explodes on them.
+        if (targets_.size() > kMaxComposedAtoms) return false;
         occupied_ = std::set<Cell>(targets_.begin(), targets_.end());
         return Visit(0);
     }

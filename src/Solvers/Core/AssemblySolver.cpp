@@ -1377,10 +1377,14 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // submission) and published only when it wins more objective slots than the family
     // chain: it wins cycles by ~4.5x on its domain (58daac9a 295 -> 23) but costs 20 per
     // atom, so it loses cost/area on large products (e645d0a5 495 -> 780).
-    // Composition runs for every product the composer supports. The shared-ring
-    // variant costs one arm plus one bonder per bond, so it competes on cost/area as
-    // well as cycles; publication stays slot-aware (>=2 slot wins required).
-    const bool composeOnline = SupportsComposedAssembly(puzzle);
+    // Online composition is limited to single-atom products: it is Pareto optimal there
+    // (23/20/13 == reference) and costs one submission. Widening it to every product
+    // disturbed the portfolio contract (`PortfolioArchivesDistinctRealStructures`,
+    // `PortfolioSemanticTransformsAndPermissionBoundary`) because composition then
+    // consumed a construction/submission slot.
+    const bool composeOnline = SupportsComposedAssembly(puzzle) &&
+                               puzzle.outputs.front().atoms.size() == 1 &&
+                               puzzle.outputs.front().bonds.empty();
     if (composeEnabled && composeOnline && std::chrono::steady_clock::now() < Deadline()) {
         try {
             for (auto& variant : ComposeAssemblyVariants(puzzle)) {
