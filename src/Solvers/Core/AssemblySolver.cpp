@@ -5,6 +5,7 @@
 #include "CandidateArchive.hpp"
 #include "ChemicalPlanner.hpp"
 #include "ClosedMetalInventory.hpp"
+#include "ComposeTransfer.hpp"
 #include "DemandDrivenChain.hpp"
 #include "Disassembly.hpp"
 #include "FixedArmInventory.hpp"
@@ -1599,6 +1600,16 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         planningFailure("special-rules", error.what());
         throw std::invalid_argument(std::string("assembly rejected: special-rules: ") +
                                     error.what());
+    }
+    // Direct component composition runs before every family emitter: the whole
+    // machine follows from the product frame plus the reagent source, so it is far
+    // cheaper than a row/bond family on its domain. `OPUSOPTIMA_COMPOSE=off`
+    // disables it for A/B measurement; every other value keeps the default.
+    const char* composeMode = std::getenv("OPUSOPTIMA_COMPOSE");
+    const bool composeEnabled = !composeMode || std::string_view(composeMode) != "off";
+    if (composeEnabled && SupportsComposedTransfer(puzzle)) {
+        if (auto result = attempt("compose-transfer", [&] { return ComposeTransferMachine(puzzle); }))
+            if (keep(*result)) return *firstAccepted;
     }
     if (auto result = attempt("intact-feed", [&] { return CompileIntactFeed(puzzle); }))
         if (keep(*result)) return *firstAccepted;

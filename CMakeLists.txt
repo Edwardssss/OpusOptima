@@ -55,6 +55,7 @@ set(OPUSOPTIMA_INCLUDE_DIRS
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Chemistry"
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Execution"
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Layout"
+    "${OPUSOPTIMA_SRC_DIR}/Solvers/Compose"
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Production"
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Optimization"
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Legacy"
