@@ -23,6 +23,11 @@ bool SupportsComposedAssembly(const io::PuzzleData& puzzle);
 /// source, i.e. the machine must go through a chemistry glyph station.
 bool ComposedAssemblyRequiresChemistry(const io::PuzzleData& puzzle);
 
+/// `true` when `ComposeAssemblyVariants` leads with the armless in-place layout:
+/// either chemistry is required, or the product is a bonded frame larger than the
+/// bounded arm search (dense lattices).
+bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle);
+
 /// Every composed variant, cheapest first: the shared-ring layout (one arm feeding
 /// several product cells) and the per-atom layout (one arm per atom). The portfolio
 /// verifies each and keeps the one that wins the most objective slots.

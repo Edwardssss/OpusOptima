@@ -4,6 +4,7 @@
 #include "IO/SolutionVerifier.hpp"
 #include "RepoRoot.hpp"
 #include <filesystem>
+#include <fstream>
 #include <set>
 #include <utility>
 #include <gtest/gtest.h>
@@ -19,6 +20,68 @@ std::size_t Count(const io::SolutionData& machine, const char* type) {
     for (const auto& object : machine.objects)
         if (object.typeName == type) ++count;
     return count;
+}
+
+// A bonded salt lattice larger than the bounded arm search: 3 x 3 cells with every
+// adjacent pair bonded.
+io::PuzzleData SaltLattice() {
+    io::PuzzleData p;
+    p.version = 3;
+    p.name = "generated-salt-lattice";
+    p.permissionBits = (1ULL << 0) | (1ULL << 8) | (1ULL << 22) | (1ULL << 23);
+    p.outputMultiplier = 1;
+    p.inputs.push_back({{{core::AtomType::Salt, {0, 0}}}, {}});
+    static constexpr core::HexCoord kSteps[3] = {{1, 0}, {0, 1}, {1, -1}};
+    std::set<std::pair<int, int>> cells;
+    p.outputs.emplace_back();
+    for (int q = 0; q < 3; ++q)
+        for (int r = 0; r < 3; ++r) {
+            cells.insert({q, r});
+            p.outputs.front().atoms.push_back({core::AtomType::Salt, {q, r}});
+        }
+    for (const auto& [q, r] : cells)
+        for (const auto& step : kSteps) {
+            const std::pair<int, int> next{q + step.q, r + step.r};
+            if (cells.count(next) && std::make_pair(q, r) < next)
+                p.outputs.front().bonds.push_back(
+                    {1, {q, r}, {next.first, next.second}});
+        }
+    return p;
+}
+
+void WritePuzzle(const std::filesystem::path& path, const io::PuzzleData& p) {
+    std::ofstream out(path, std::ios::binary);
+    const auto word = [&](std::uint64_t value, int bytes) {
+        for (int i = 0; i < bytes; ++i) out.put(static_cast<char>(value >> (8 * i)));
+    };
+    word(3, 4);
+    word(p.name.size(), 1);
+    out.write(p.name.data(), static_cast<std::streamsize>(p.name.size()));
+    word(0, 8);
+    word(p.permissionBits, 8);
+    const auto list = [&](const std::vector<io::Molecule>& molecules) {
+        word(molecules.size(), 4);
+        for (const auto& m : molecules) {
+            word(m.atoms.size(), 4);
+            for (const auto& a : m.atoms) {
+                word(static_cast<std::uint8_t>(a.type), 1);
+                word(a.position.q, 1);
+                word(a.position.r, 1);
+            }
+            word(m.bonds.size(), 4);
+            for (const auto& b : m.bonds) {
+                word(b.bits, 1);
+                word(b.from.q, 1);
+                word(b.from.r, 1);
+                word(b.to.q, 1);
+                word(b.to.r, 1);
+            }
+        }
+    };
+    list(p.inputs);
+    list(p.outputs);
+    word(p.outputMultiplier, 4);
+    word(0, 1);
 }
 } // namespace
 
@@ -81,9 +144,21 @@ TEST(ComposeGlyphStationTest, DirectPuzzlesKeepTheArmMachine) {
     const auto root = opusoptima::test::RepoRoot(__FILE__);
     const auto puzzle = io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/easy/just-salt.puzzle");
     EXPECT_FALSE(ComposedAssemblyRequiresChemistry(puzzle));
+    EXPECT_FALSE(ComposedAssemblyUsesInPlaceLayout(puzzle));
     const auto variants = ComposeAssemblyVariants(puzzle);
     ASSERT_FALSE(variants.empty());
     for (const auto& machine : variants) EXPECT_GE(Count(machine, "arm1"), 1U);
+}
+
+TEST(ComposeGlyphStationTest, LargeBondedLatticeUsesInPlaceStations) {
+    const auto puzzle = SaltLattice();
+    EXPECT_TRUE(SupportsComposedAssembly(puzzle));
+    EXPECT_TRUE(ComposedAssemblyUsesInPlaceLayout(puzzle));
+    const auto machine = ComposeAssemblyMachine(puzzle);
+    EXPECT_EQ(Count(machine, "arm1"), 0U);
+    EXPECT_EQ(Count(machine, "input"), puzzle.outputs.front().atoms.size());
+    EXPECT_EQ(Count(machine, "bonder"), puzzle.outputs.front().bonds.size());
+    EXPECT_EQ(Count(machine, "out-std"), 1U);
 }
 
 #ifdef HAS_LIBVERIFY
@@ -108,6 +183,21 @@ TEST(ComposeGlyphStationTest, CalcificationAndProjectionMachinesVerifyTwice) {
         solution.metrics = report.metrics;
         io::BinaryWriter::WriteSolutionFile(path, solution);
         EXPECT_TRUE(io::VerifySolutionFiles(puzzlePath, path, 200000, 10000).Passed());
+    }
+    // Large direct lattice: the in-place layout has no arms and bonds everything in
+    // parallel, so it must verify natively as well.
+    {
+        const auto puzzlePath = root / "build/compose-glyph-lattice.puzzle";
+        WritePuzzle(puzzlePath, SaltLattice());
+        auto solution = ComposeAssemblyMachine(SaltLattice());
+        io::BinaryWriter::WriteSolutionFile(path, solution);
+        auto report = io::VerifySolutionFiles(puzzlePath, path, 200000, 10000);
+        ASSERT_TRUE(report.Passed()) << report.detail << " cycle=" << report.errorCycle;
+        solution.metrics = report.metrics;
+        io::BinaryWriter::WriteSolutionFile(path, solution);
+        EXPECT_TRUE(io::VerifySolutionFiles(puzzlePath, path, 200000, 10000).Passed());
+        std::error_code ec;
+        std::filesystem::remove(puzzlePath, ec);
     }
 }
 #endif

@@ -17,6 +17,7 @@ conclusions still hold, the measurements are dated.
 
 | document | what it covers |
 |---|---|
+| [analysis/OPUSSOLVER_GAP_ANALYSIS_20261111.md](analysis/OPUSSOLVER_GAP_ANALYSIS_20261111.md) | 2026-11-11 metric comparison by class/metric, structural attribution (serial piston/track vs arm1 network), gap buckets and the targeted capability plan |
 | [analysis/OPUSSOLVER_ARCHITECTURE_GAP_20261110.md](analysis/OPUSSOLVER_ARCHITECTURE_GAP_20261110.md) | structural comparison with the upstream OpusSolver (scheduling, geometry, arm mix) and the C1–C5 capability gap |
 | [analysis/OPUSSOLVER_CAPABILITY_GAP.md](analysis/OPUSSOLVER_CAPABILITY_GAP.md) | earlier capability inventory (superseded by the dated analysis) |
 | [analysis/OPUSSOLVER_CAPABILITY_GAP_PHASE1.md](analysis/OPUSSOLVER_CAPABILITY_GAP_PHASE1.md) | phase 1 execution notes for that inventory |

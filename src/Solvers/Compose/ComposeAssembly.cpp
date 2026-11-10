@@ -510,6 +510,16 @@ bool ComposedAssemblyRequiresChemistry(const io::PuzzleData& puzzle) {
     return false;
 }
 
+bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle) {
+    if (puzzle.productionInfo || puzzle.outputs.size() != 1) return false;
+    if (ComposedAssemblyRequiresChemistry(puzzle)) return true;
+    const auto& output = puzzle.outputs.front();
+    if (output.bonds.empty() || output.atoms.size() <= kMaxComposedAtoms) return false;
+    for (const auto& atom : output.atoms)
+        if (SingleAtomSourceIndex(puzzle, atom.type) < 0) return false;
+    return true;
+}
+
 std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzzle) {
     if (!SupportsComposedAssembly(puzzle))
         throw std::invalid_argument("composed assembly needs a reagent path for every product atom");
@@ -527,10 +537,15 @@ std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzz
     }
 
     std::vector<io::SolutionData> variants;
-    // A no-arm machine is only emitted when the product cannot be assembled from
-    // same-type reagents: for plain transfer puzzles the family/arm machines already
-    // cover the output frame and a stacked input area would be a degenerate machine.
-    if (ComposedAssemblyRequiresChemistry(puzzle)) {
+    // A no-arm machine is emitted when the product cannot be assembled from
+    // same-type reagents, and for large bonded products (lattices): the per-atom arm
+    // search is bounded, so a >6-atom frame has no arm layout at all and the in-place
+    // stations are the only competitive shape. Small direct products stay on the arm
+    // machine, where an in-place input area stacked on the output frame would be a
+    // degenerate machine.
+    const bool largeDirect = allDirect && targets.size() > kMaxComposedAtoms && !output.bonds.empty();
+    if (ComposedAssemblyUsesInPlaceLayout(puzzle) &&
+        (ComposedAssemblyRequiresChemistry(puzzle) || largeDirect)) {
         try {
             if (auto staticMachine = BuildStatic(puzzle, targets, types))
                 variants.push_back(std::move(*staticMachine));
