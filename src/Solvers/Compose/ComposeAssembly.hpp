@@ -29,8 +29,10 @@ bool ComposedAssemblyRequiresChemistry(const io::PuzzleData& puzzle);
 bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle);
 
 /// Every composed variant, cheapest first: the shared-ring layout (one arm feeding
-/// several product cells) and the per-atom layout (one arm per atom). The portfolio
-/// verifies each and keeps the one that wins the most objective slots.
+/// several product cells), the per-atom layout (one arm per atom) and, for a single
+/// molecular input, the extraction layout (one unbonder per input bond plus one swing
+/// arm per atom). The portfolio verifies each and keeps the one that wins the most
+/// objective slots.
 std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzzle);
 
 /// Emits the cheapest composed assembly machine. Throws `std::invalid_argument`

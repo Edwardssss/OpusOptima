@@ -3,9 +3,11 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -55,21 +57,15 @@ Cell Step(int direction) {
     return {step.q, step.r};
 }
 
-int HexDistance(Cell a, Cell b) {
-    const Cell delta = Subtract(a, b);
-    const int ds = -delta.q - delta.r;
-    const int aq = delta.q < 0 ? -delta.q : delta.q;
-    const int ar = delta.r < 0 ? -delta.r : delta.r;
-    const int as = ds < 0 ? -ds : ds;
-    int best = aq > ar ? aq : ar;
-    return best > as ? best : as;
-}
 
-// Direction whose radius-three ring cell is `target` seen from `base`.
-int RingDirection(Cell target, Cell base) {
+
+// Ring direction of `cell` seen from `pivot` when the two are exactly `length`
+// hexes apart along an arm axis; -1 when that arm cannot reach it.
+int AxisRingDirection(Cell cell, Cell pivot, int length) {
+    const Cell delta = Subtract(cell, pivot);
     for (int direction = 0; direction < 6; ++direction) {
-        const Cell cell = Add(base, Scale(Step(direction), kArmReach));
-        if (cell.q == target.q && cell.r == target.r) return direction;
+        const Cell ring = Scale(Step(direction), length);
+        if (delta.q == ring.q && delta.r == ring.r) return direction;
     }
     return -1;
 }
@@ -80,6 +76,70 @@ int DirectionOf(Cell delta) {
         if (delta.q == step.q && delta.r == step.r) return direction;
     }
     return -1;
+}
+
+// ── Swing transport kernel ──────────────────────────────────────────────────
+// An `arm1` of size L grabs only the six cells at hex distance L along an axis
+// (`pivot + L*step(d)`, `sim.c: record_swing_area` aborts above 3), and rotating
+// advances the held atom along that six-cell ring. So one swing carries an atom
+// from A to B exactly when `B - A == L*(step(drop) - step(grab))`, at a cost of 20
+// regardless of L. That is the transport primitive the reference machines use;
+// rails cost `5 * hex` plus a 40-cost piston for the same job.
+constexpr int kMaxArmSize = 3;
+// Face west first, then the neighbours: it reproduces the hand-verified
+// single-atom template and keeps small machines byte-identical.
+constexpr std::array<int, 6> kDropOrder = {3, 2, 4, 1, 5, 0};
+// One rotation first, then the longer sweeps.
+constexpr std::array<int, 5> kDeltaOrder = {1, -1, 2, -2, 3};
+
+struct Swing {
+    Cell pivot{};
+    Cell station{}; // where the atom is grabbed (reagent area or glyph cell)
+    Cell target{};  // where it is dropped (the product cell)
+    int length{kMaxArmSize};
+    int grab{};
+    int drop{};
+};
+
+// Every swing that lands a product atom on `target`, cheapest rotation first.
+// `station` is the ring cell the atom has to be picked from; callers decide
+// whether that cell can host a reagent, glyph or extracted input atom.
+std::vector<Swing> SwingCandidates(Cell target) {
+    std::vector<Swing> candidates;
+    for (const int delta : kDeltaOrder) {
+        for (const int length : {kMaxArmSize, 2, 1}) {
+            for (const int drop : kDropOrder) {
+                const int grab = ((drop - delta) % 6 + 6) % 6;
+                Swing swing;
+                swing.pivot = Subtract(target, Scale(Step(drop), length));
+                swing.station = Add(swing.pivot, Scale(Step(grab), length));
+                swing.target = target;
+                swing.length = length;
+                swing.grab = grab;
+                swing.drop = drop;
+                candidates.push_back(swing);
+            }
+        }
+    }
+    return candidates;
+}
+
+// Signed rotation count from `grab` to `drop`; positive turns counter-clockwise
+// (`r`), negative clockwise (`R`). Ties take the counter-clockwise route, which
+// is what the single-step template emits.
+int SwingRotation(int grab, int drop) {
+    const int forward = ((drop - grab) % 6 + 6) % 6;
+    return forward <= 6 - forward ? forward : forward - 6;
+}
+
+// Ring cells the grabber passes through between grab and drop, endpoints
+// excluded. A sweep that crosses an atom or another machine is a collision.
+std::vector<int> SweptDirections(int grab, int drop) {
+    const int rotation = SwingRotation(grab, drop);
+    std::vector<int> swept;
+    for (int step = 1; step < (rotation > 0 ? rotation : -rotation); ++step)
+        swept.push_back(((grab + (rotation > 0 ? step : -step)) % 6 + 6) % 6);
+    return swept;
 }
 
 int PushObject(io::SolutionData& machine, const char* type, Cell position, std::vector<int> body,
@@ -285,17 +345,24 @@ std::optional<io::SolutionData> BuildStatic(const io::PuzzleData& puzzle,
 std::optional<io::SolutionData> BuildRingGroup(const io::PuzzleData& puzzle,
                                                const std::vector<Cell>& targets) {
     if (targets.size() < 2 || targets.size() > kMaxComposedAtoms) return std::nullopt;
+    // One arm serves the whole ring: pick the pivot and size that put the most
+    // product atoms on the six cells that arm can reach, so one 20-cost mechanism
+    // replaces a mechanism per atom.
     Cell best{};
+    int bestLength = kMaxArmSize;
     std::size_t bestCount = 0;
     for (int q = -6; q <= 6; ++q) {
         for (int r = -6; r <= 6; ++r) {
-            const Cell base{q, r};
-            std::size_t count = 0;
-            for (const Cell& target : targets)
-                if (HexDistance(target, base) == kArmReach) ++count;
-            if (count > bestCount) {
-                bestCount = count;
-                best = base;
+            const Cell pivot{q, r};
+            for (int length = kMaxArmSize; length >= 1; --length) {
+                std::size_t count = 0;
+                for (const Cell& target : targets)
+                    if (AxisRingDirection(target, pivot, length) >= 0) ++count;
+                if (count > bestCount) {
+                    bestCount = count;
+                    best = pivot;
+                    bestLength = length;
+                }
             }
         }
     }
@@ -304,7 +371,7 @@ std::optional<io::SolutionData> BuildRingGroup(const io::PuzzleData& puzzle,
     std::vector<std::size_t> ring;
     std::vector<std::size_t> extra;
     for (std::size_t i = 0; i < targets.size(); ++i) {
-        if (HexDistance(targets[i], best) == kArmReach)
+        if (AxisRingDirection(targets[i], best, bestLength) >= 0)
             ring.push_back(i);
         else
             extra.push_back(i);
@@ -314,7 +381,7 @@ std::optional<io::SolutionData> BuildRingGroup(const io::PuzzleData& puzzle,
     std::vector<int> facing;
     facing.reserve(ring.size());
     for (const auto index : ring) {
-        const int direction = RingDirection(targets[index], best);
+        const int direction = AxisRingDirection(targets[index], best, bestLength);
         if (direction < 0) return std::nullopt;
         facing.push_back(direction);
     }
@@ -336,24 +403,27 @@ std::optional<io::SolutionData> BuildRingGroup(const io::PuzzleData& puzzle,
         tape.push_back({'G', tick++});
         AppendRotation(tape, tick, current, target);
         tape.push_back({'X', tick++});
-        PushObject(machine, "input", Add(best, Scale(Step(reagent), kArmReach)),
+        PushObject(machine, "input", Add(best, Scale(Step(reagent), bestLength)),
                    {1, 0, SingleAtomSourceIndex(puzzle, output.atoms[ring[k]].type), 0, 0});
     }
-    PushObject(machine, "arm1", best, {kArmReach, facing.front(), 0, 0, 0}, std::move(tape));
+    PushObject(machine, "arm1", best, {bestLength, facing.front(), 0, 0, 0}, std::move(tape));
 
     const std::set<Cell> occupied(targets.begin(), targets.end());
     for (const auto index : extra) {
         const Cell target = targets[index];
         bool placed = false;
-        for (const int grab : {3, 2, 4, 1, 5, 0}) {
-            const int drop = ((grab + kRotateStep) % 6 + 6) % 6;
-            const Cell base = Subtract(target, Scale(Step(drop), kArmReach));
-            const Cell reagent = Add(base, Scale(Step(grab), kArmReach));
-            if (occupied.count(base) || base == best) continue;
-            PushObject(machine, "input", reagent,
+        for (const auto& swing : SwingCandidates(target)) {
+            if (occupied.count(swing.pivot) || swing.pivot == best) continue;
+            PushObject(machine, "input", swing.station,
                        {1, 0, SingleAtomSourceIndex(puzzle, output.atoms[index].type), 0, 0});
-            PushObject(machine, "arm1", base, {kArmReach, grab, 0, 0, 0},
-                       {{'G', 0}, {kRotateStep > 0 ? 'r' : 'R', 1}, {'X', 2}});
+            std::vector<io::ArmInstruction> armTape{{'G', 0}};
+            int tick = 1;
+            int route = swing.grab;
+            AppendRotation(armTape, tick, route, swing.drop);
+            armTape.push_back({'O', tick++});
+            armTape.push_back({'X', tick++});
+            PushObject(machine, "arm1", swing.pivot,
+                       {swing.length, swing.grab, 0, 0, 0}, std::move(armTape));
             placed = true;
             break;
         }
@@ -379,9 +449,8 @@ class Placement {
         : puzzle_(puzzle), targets_(std::move(targets)), types_(std::move(types)) {}
 
     struct Arm {
-        Cell base{};
+        Swing swing;
         Station station{};
-        int grab{};
     };
 
     [[nodiscard]] const std::vector<Arm>& Arms() const noexcept {
@@ -400,13 +469,14 @@ class Placement {
     bool Visit(std::size_t index) {
         if (index == targets_.size()) return true;
         const Cell target = targets_[index];
-        // Facing 3 (west) first: it keeps the machine in the same minimal shape as the
-        // hand-verified single-atom template, then the neighbours, then the rest.
-        static constexpr std::array<int, 6> kFacingOrder = {3, 2, 4, 1, 5, 0};
-        for (const int grab : kFacingOrder) {
-            const int drop = ((grab + kRotateStep) % 6 + 6) % 6;
-            const Cell base = Subtract(target, Scale(Step(drop), kArmReach));
-            const Cell cell = Add(base, Scale(Step(grab), kArmReach));
+        // Every reachable swing is a legal station cell; the order inside
+        // `SwingCandidates` starts with the hand-verified west-facing 60-degree
+        // template, so existing machines stay byte-identical.
+        for (const auto& swing : SwingCandidates(target)) {
+            const Cell base = swing.pivot;
+            const int grab = swing.grab;
+            const int drop = swing.drop;
+            const Cell cell = swing.station;
             if (used_.count(base) || occupied_.count(base) || blocked_.count(base)) continue;
             if (occupied_.count(cell) || used_.count(cell)) continue;
             auto station = PlanStation(puzzle_, types_[index], cell);
@@ -425,13 +495,13 @@ class Placement {
                 if (occupied_.count(reagent) && !ContainsFootprint(*station, reagent))
                     clash = true;
             }
-            const std::array<Cell, 2> sweep = {
-                Add(base, Add(Scale(Step(grab), 2), Step(drop))),
-                Add(base, Add(Step(grab), Scale(Step(drop), 2))),
-            };
-            for (const Cell& swept : sweep) {
+            // The arm body stands on the pivot and sweeps the ring between grab and
+            // drop; only the target atom may be on that arc.
+            for (const int sweptDirection : SweptDirections(grab, drop)) {
+                const Cell swept =
+                    Add(base, Scale(Step(sweptDirection), swing.length));
                 if (clash) break;
-                if (occupied_.count(swept) && swept != target) clash = true;
+                if (occupied_.count(swept)) clash = true;
                 if (used_.count(swept) || blocked_.count(swept)) clash = true;
             }
             if (clash) continue;
@@ -441,7 +511,7 @@ class Placement {
             occupied_.insert(station->cell);
             for (std::size_t i = 0; i < station->footprintCount; ++i)
                 blocked_.insert(station->footprint[i]);
-            arms_.push_back({base, *station, grab});
+            arms_.push_back({swing, *station});
             if (Visit(index + 1)) return true;
             arms_.pop_back();
             for (std::size_t i = 0; i < station->footprintCount; ++i)
@@ -463,7 +533,7 @@ class Placement {
     std::vector<Arm> arms_;
 };
 
-std::vector<io::ArmInstruction> StationTape(int grab, int intro) {
+std::vector<io::ArmInstruction> StationTape(const Swing& swing, int intro) {
     std::vector<io::ArmInstruction> tape;
     int tick = 0;
     // A leading blank anchors the tape at index 0, so the intro delay repeats every
@@ -472,7 +542,9 @@ std::vector<io::ArmInstruction> StationTape(int grab, int intro) {
     if (intro > 0) tape.push_back({'O', tick++});
     while (tick < intro) tape.push_back({'O', tick++});
     tape.push_back({'G', tick++});
-    tape.push_back({'r', tick++});
+    const int rotation = SwingRotation(swing.grab, swing.drop);
+    for (int step = 0; step < (rotation > 0 ? rotation : -rotation); ++step)
+        tape.push_back({rotation > 0 ? 'r' : 'R', tick++});
     tape.push_back({'X', tick++});
     return tape;
 }
@@ -565,8 +637,9 @@ std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzz
         const auto& arms = placement.Arms();
         for (const auto& arm : arms) EmitStation(machine, arm.station);
         for (const auto& arm : arms)
-            PushObject(machine, "arm1", arm.base, {kArmReach, arm.grab, 0, 0, 0},
-                       StationTape(arm.grab, arm.station.Intro()));
+            PushObject(machine, "arm1", arm.swing.pivot,
+                       {arm.swing.length, arm.swing.grab, 0, 0, 0},
+                       StationTape(arm.swing, arm.station.Intro()));
         PushObject(machine, "out-std", Cell{0, 0}, {1, 0, 0, 0, 0});
         AppendBonders(machine, output);
         variants.push_back(std::move(machine));

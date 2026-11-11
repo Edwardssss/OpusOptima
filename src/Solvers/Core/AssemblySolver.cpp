@@ -1384,8 +1384,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // consumed a construction/submission slot.
     const bool composeOnline =
         SupportsComposedAssembly(puzzle) &&
-        (puzzle.outputs.front().atoms.size() == 1 || ComposedAssemblyUsesInPlaceLayout(puzzle) ||
-         (puzzle.inputs.size() == 1 && puzzle.outputs.front().atoms.size() <= 4));
+        (puzzle.outputs.front().atoms.size() <= 6 || ComposedAssemblyUsesInPlaceLayout(puzzle));
     if (composeEnabled && composeOnline && verify &&
         std::chrono::steady_clock::now() < Deadline()) {
         // Post stage: the composed variants are gated directly, so they never consume a
