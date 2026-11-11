@@ -22,9 +22,22 @@ namespace opusoptima::solvers {
 // Explicit, per-call intake mode used by the portfolio: +1 forces the local
 // source intake, -1 forces the shared feeder, 0 keeps the environment flag.
 static thread_local int g_intakeMode = 0;
+// Row-clock override: 0 = follow the OPUSOPTIMA_ROW_* defaults, >0 = force the
+// pipelined clocks, <0 = force the serialized emitter. Families that post-process
+// an emitted row (the wheel family relocates every object by a fixed offset) need
+// the serialized timing, because their own tape surgery assumes it.
+static thread_local int g_rowClockMode = 0;
 // Set while emitting: true when the local intake geometry was actually used, so
 // the portfolio only compiles a feeder fallback when it can differ.
 static thread_local bool g_intakeApplied = false;
+// One row-clock knob: the thread-local override wins, then the env flag, then the
+// shipped default (on). `=off` on any knob and `RowClockScope(-1)` both restore the
+// serialized emitter.
+static bool RowClockEnabledFrom(const char* name) {
+    if (g_rowClockMode != 0) return g_rowClockMode > 0;
+    const char* flag = std::getenv(name);
+    return !flag || std::string_view(flag) != "off";
+}
 namespace {
 SupplyPlan PlanProxySupply(const io::PuzzleData& p,
                            std::chrono::steady_clock::time_point deadline) {
@@ -1283,35 +1296,34 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             mixedInventory->phases.push_back({phaseProduct, name, begin, end});
     };
     // P2 opt-in per-arm feed clock. The feeder's extraction runs on its own
-    // absolute tick stream so it can prepare the next atom while the upper and
-    // lower arms finish the current row. Only the plain narrow ordinary row is
-    // eligible: every path with shared custody, reactions, buffers, escaping
-    // hand-off stations, wide feeds or a finite/single-product halt keeps the
-    // original serialized emitter byte-for-byte.
-    const bool feedPrefetchRequested = parallelClocks || [] {
-        const char* flag = std::getenv("OPUSOPTIMA_FEED_PREFETCH");
-        return flag && std::string_view(flag) == "on";
-    }();
-    // P2b opt-in bounded steady-state row pipeline. Requires the P2 independent
-    // feeder clock and additionally (a) gates each drop on the exact tick the
-    // hand-off cell is free instead of the whole shared assembly clock, and
-    // (b) lets the feeder pre-stage the next atom against the pickup while the
-    // current product's output/finish is still emitting. Unset reproduces the
-    // current default byte-for-byte; ROW_PIPELINE=on with FEED_PREFETCH unset
-    // implies the independent clock.
-    const bool rowPipelineFlag = parallelClocks || [] {
-        const char* flag = std::getenv("OPUSOPTIMA_ROW_PIPELINE");
-        return flag && std::string_view(flag) == "on";
-    }();
-    // P3 opt-in bounded assembly/output clock overlap. Requires the P2b row
-    // pipeline and additionally lets the upper-arm return/regrab/extend tail of
-    // one row run on its own absolute clock so it overlaps the lower-arm reset
-    // and the next row's atom staging. Unset (or not exactly "on") reproduces
-    // the current default byte-for-byte.
-    const bool assemblyClocksRequested = parallelClocks || [] {
-        const char* flag = std::getenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
-        return flag && std::string_view(flag) == "on";
-    }();
+    // Independent feeder clock: the feeder keeps its own absolute tick stream so it
+    // can prepare the next atom while the upper and lower arms finish the current
+    // row. Only the plain narrow ordinary row is eligible: every path with shared
+    // custody, reactions, buffers, escaping hand-off stations, wide feeds or a
+    // finite/single-product halt keeps the original serialized emitter byte-for-byte.
+    // Default on since 2026-11-11: with the assembly clock below it is the single
+    // largest cycles lever the row has (146-puzzle A/B improved=32 regressed=0,
+    // isolated samples -20% to -42% cycles: bdaa166d 23072 -> 13388, 284971e2
+    // 3656 -> 2348, 0f6f9d67 12005 -> 8135). The master opt-out is
+    // `OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS=off`, because the assembly clock below implies
+    // this one; `RowClockScope(-1)` forces the serialized emitter for one compile.
+    const bool feedPrefetchRequested = parallelClocks || RowClockEnabledFrom(
+        "OPUSOPTIMA_FEED_PREFETCH");
+    // P2b bounded steady-state row pipeline. Requires the P2 independent feeder
+    // clock and additionally (a) gates each drop on the exact tick the hand-off
+    // cell is free instead of the whole shared assembly clock, and (b) lets the
+    // feeder pre-stage the next atom against the pickup while the current
+    // product's output/finish is still emitting. Default on with the clocks below;
+    // `OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS=off` is the master opt-out.
+    const bool rowPipelineFlag =
+        parallelClocks || RowClockEnabledFrom("OPUSOPTIMA_ROW_PIPELINE");
+    // P3 bounded assembly/output clock overlap. Requires the P2b row pipeline and
+    // additionally lets the upper-arm return/regrab/extend tail of one row run on
+    // its own absolute clock so it overlaps the lower-arm reset and the next row's
+    // atom staging. Default on since 2026-11-11 (see the feeder-clock note above);
+    // `OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS=off` restores the serialized emitter.
+    const bool assemblyClocksRequested =
+        parallelClocks || RowClockEnabledFrom("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
     const bool rowPipelineRequested = rowPipelineFlag || assemblyClocksRequested;
     const bool bufferedSupply = !bufferSlots.empty();
     const bool feedPrefetch =
@@ -3191,6 +3203,14 @@ RowIntakeModeScope::RowIntakeModeScope(int mode) : previous_(g_intakeMode) {
 
 RowIntakeModeScope::~RowIntakeModeScope() {
     g_intakeMode = previous_;
+}
+
+RowClockScope::RowClockScope(int mode) : previous_(g_rowClockMode) {
+    g_rowClockMode = mode;
+}
+
+RowClockScope::~RowClockScope() {
+    g_rowClockMode = previous_;
 }
 
 io::SolutionData CompileScheduledRowClockAssembly(const io::PuzzleData& puzzle,

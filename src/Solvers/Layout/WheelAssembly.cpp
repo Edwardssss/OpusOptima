@@ -106,9 +106,17 @@ io::SolutionData CompileMolecularWheel(const io::PuzzleData& puzzle, bool normal
             (!normalize &&
              (step.kind == SupplyPlan::Kind::Discard || step.kind == SupplyPlan::Kind::Reagent)))
             throw std::invalid_argument("molecular wheel requires direct or calcified disassembly");
-    auto result = normalize && shared ? CompileSharedOrdinaryOutputs(logical)
-                                      : CompileRowAssembly(logical, AssemblyPlanner::Plan(logical),
-                                                           shared ? &puzzle : nullptr);
+    // The wheel family relocates every emitted object by a fixed offset and appends
+    // its own tape surgery, so it needs the serialized row schedule.
+    std::optional<io::SolutionData> row;
+    {
+        const RowClockScope serialized(-1);
+        row = normalize && shared
+                  ? CompileSharedOrdinaryOutputs(logical)
+                  : CompileRowAssembly(logical, AssemblyPlanner::Plan(logical),
+                                       shared ? &puzzle : nullptr);
+    }
+    auto result = std::move(*row);
     int minQ = 128, maxQ = -128;
     for (const auto& atom : target.atoms) {
         minQ = std::min(minQ, atom.position.q);
@@ -281,6 +289,11 @@ io::SolutionData CompileWheelAssembly(const io::PuzzleData& puzzle) {
         finite.inputs.push_back(input);
     }
     if (feeds.empty()) throw std::invalid_argument("wheel assembly requires a derived cardinal");
+    // The cardinal (calcified-salt) lane only appends its own hardware to the row's
+    // object list and derives its feed schedule from object positions, so it keeps
+    // the shipped pipelined row; only the molecular lane above needs the serialized
+    // timing. Measured 2026-11-11: keeping this lane pipelined is what carries
+    // bdaa166d (23072 -> 13388 cycles) and 0f6f9d67 (12005 -> 8135).
     auto result = CompileRowAssembly(finite, AssemblyPlanner::Plan(finite), nullptr);
     int minQ = 128, maxQ = -128;
     for (const auto& atom : puzzle.outputs[0].atoms) {

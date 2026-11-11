@@ -153,6 +153,24 @@ private:
     int previous_;
 };
 
+// Temporarily override the row clocks for the compiling thread:
+//   0  = follow `OPUSOPTIMA_ROW_*` (pipelined by default since 2026-11-11)
+//  >0  = force the pipelined clocks
+//  <0  = force the serialized emitter
+// Families that post-process an emitted row need the serialized timing: the wheel
+// family relocates every object by a fixed offset and appends its own tape surgery,
+// which assumes the original serialized schedule. Restored on destruction.
+class RowClockScope {
+public:
+    explicit RowClockScope(int mode);
+    ~RowClockScope();
+    RowClockScope(const RowClockScope&) = delete;
+    RowClockScope& operator=(const RowClockScope&) = delete;
+
+private:
+    int previous_;
+};
+
 // Result of auditing an emitted machine against the upstream scheduling
 // contract (C3): every arm's tape must be strictly ordered in time, so the
 // per-arm fragment merge can never displace an instruction.

@@ -20,6 +20,62 @@
 #include "SolutionVerifier.hpp"
 
 namespace {
+struct ScopedFeedPrefetch {
+    std::optional<std::string> prior;
+    explicit ScopedFeedPrefetch(const char* value) {
+        if (const auto* existing = std::getenv("OPUSOPTIMA_FEED_PREFETCH")) prior = existing;
+        if (value)
+            setenv("OPUSOPTIMA_FEED_PREFETCH", value, 1);
+        else
+            unsetenv("OPUSOPTIMA_FEED_PREFETCH");
+    }
+    ~ScopedFeedPrefetch() {
+        if (prior)
+            setenv("OPUSOPTIMA_FEED_PREFETCH", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_FEED_PREFETCH");
+    }
+};
+struct ScopedRowPipeline {
+    std::optional<std::string> prior;
+    explicit ScopedRowPipeline(const char* value) {
+        if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_PIPELINE")) prior = existing;
+        if (value)
+            setenv("OPUSOPTIMA_ROW_PIPELINE", value, 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_PIPELINE");
+    }
+    ~ScopedRowPipeline() {
+        if (prior)
+            setenv("OPUSOPTIMA_ROW_PIPELINE", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_PIPELINE");
+    }
+};
+struct ScopedRowAssemblyClocks {
+    std::optional<std::string> prior;
+    explicit ScopedRowAssemblyClocks(const char* value) {
+        if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS")) prior = existing;
+        if (value)
+            setenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS", value, 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
+    }
+    ~ScopedRowAssemblyClocks() {
+        if (prior)
+            setenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS", prior->c_str(), 1);
+        else
+            unsetenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
+    }
+};
+// Sets all three row-clock knobs at once; `nullptr` selects the pipelined default.
+struct ScopedRowClocks {
+    ScopedFeedPrefetch feed;
+    ScopedRowPipeline pipeline;
+    ScopedRowAssemblyClocks assembly;
+    explicit ScopedRowClocks(const char* value) : feed(value), pipeline(value), assembly(value) {}
+};
+
 using namespace opusoptima;
 using solvers::AssemblyPlan;
 using solvers::AssemblyPlanner;
@@ -2129,15 +2185,27 @@ TEST_F(AssemblyVerifierTest, RowEmptyResetRetiming) {
         if (mutation == 2) std::reverse(p.inputs.begin(), p.inputs.end());
         p.permissionBits |= (1ULL << 2) | (1ULL << 3);
         const auto plan = AssemblyPlanner::Plan(p);
-        const auto parent = solvers::CompileRowAssembly(p, plan);
-        const auto retimed = solvers::CompileRetimedRowAssembly(p, plan);
+        // Empty-reset retiming is only observable on the serialized emitter: with
+        // the row clocks on by default the pipeline already removes that slack, so
+        // both machines would agree and the equivalence would be vacuous.
+        io::SolutionData parent;
+        io::SolutionData retimed;
+        {
+            ScopedRowClocks clocks("off");
+            parent = solvers::CompileRowAssembly(p, plan);
+            retimed = solvers::CompileRetimedRowAssembly(p, plan);
+        }
         EXPECT_LT(retimed.metrics.cycles, parent.metrics.cycles);
         EXPECT_EQ(retimed.objects.size(), parent.objects.size());
         // This test isolates retiming equivalence; the compact scheduled
         // layout is covered by CompactLayout.* and would change the geometry.
         ScopedCompactLayout compactOff("off");
-        const auto scheduled = solvers::CompileScheduledRowAssembly(
-            p, plan, std::chrono::steady_clock::now() + std::chrono::seconds(3));
+        io::SolutionData scheduled;
+        {
+            ScopedRowClocks clocks("off");
+            scheduled = solvers::CompileScheduledRowAssembly(
+                p, plan, std::chrono::steady_clock::now() + std::chrono::seconds(3));
+        }
         EXPECT_EQ(io::BinaryWriter::WriteSolution(scheduled),
                   io::BinaryWriter::WriteSolution(retimed));
         WriteGeneratedPuzzle(puzzlePath, p);
@@ -3017,7 +3085,14 @@ TEST_F(AssemblyVerifierTest, ComponentRowHandoff) {
             const auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
             EXPECT_TRUE(report.Passed())
                 << "family=" << family << " " << report.detail << " cycle=" << report.errorCycle;
-            auto parent = solvers::CompileRowAssembly(p, plan);
+            // The component hand-off earns its place against the serialized row;
+            // with the row clocks on the plain row already pipelines, so comparing
+            // against the default would measure the pipeline instead of the hand-off.
+            io::SolutionData parent;
+            {
+                ScopedRowClocks clocks("off");
+                parent = solvers::CompileRowAssembly(p, plan);
+            }
             io::BinaryWriter::WriteSolutionFile(solutionPath, parent);
             const auto parentReport =
                 io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
@@ -3126,22 +3201,6 @@ TEST_F(AssemblyVerifierTest, SerialWorkstationPreregisteredFamilies) {
 #endif
 
 namespace {
-struct ScopedFeedPrefetch {
-    std::optional<std::string> prior;
-    explicit ScopedFeedPrefetch(const char* value) {
-        if (const auto* existing = std::getenv("OPUSOPTIMA_FEED_PREFETCH")) prior = existing;
-        if (value)
-            setenv("OPUSOPTIMA_FEED_PREFETCH", value, 1);
-        else
-            unsetenv("OPUSOPTIMA_FEED_PREFETCH");
-    }
-    ~ScopedFeedPrefetch() {
-        if (prior)
-            setenv("OPUSOPTIMA_FEED_PREFETCH", prior->c_str(), 1);
-        else
-            unsetenv("OPUSOPTIMA_FEED_PREFETCH");
-    }
-};
 // These diagnostics describe the shared serpentine feeder, so they pin the
 // feeder machine even though the shipped compact candidate now uses the local
 // source intake by default.
@@ -3173,9 +3232,11 @@ int LastTick(const io::SolutionData& solution) {
 }
 } // namespace
 
-// The opt-in feeder clock must be byte-deterministic, must keep every arm's
-// action sequence and cost/area unchanged, and must never lengthen the machine.
-TEST(AssemblyDiagnostics, FeedPrefetchIsOptInDeterministicAndRetimesOnlyTheFeeder) {
+// The feeder clock is on by default since 2026-11-11. It must be
+// byte-deterministic, keep every arm's action sequence and cost/area unchanged,
+// never lengthen the machine, and `=off` must restore the serialized emitter
+// byte for byte.
+TEST(AssemblyDiagnostics, FeedPrefetchDefaultsOnDeterministicAndRetimesOnlyTheFeeder) {
     ScopedSharedFeeder sharedFeeder;
     auto puzzle = Generated({{0, 0}, {1, 0}, {2, 0}}, {{0, 1}, {1, 2}});
     puzzle.name = "generated-feed-prefetch";
@@ -3183,59 +3244,44 @@ TEST(AssemblyDiagnostics, FeedPrefetchIsOptInDeterministicAndRetimesOnlyTheFeede
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto plan = AssemblyPlanner::Plan(puzzle, false, deadline);
 
-    std::vector<std::byte> baseline;
+    // `=off` on every knob is the serialized emitter of the pre-2026-11-11 default.
+    std::vector<std::byte> serialized;
     io::SolutionData off;
     {
-        ScopedFeedPrefetch flag(nullptr);
+        ScopedRowClocks flag("off");
         off = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
-        baseline = io::BinaryWriter::WriteSolution(off);
+        serialized = io::BinaryWriter::WriteSolution(off);
         EXPECT_EQ(io::BinaryWriter::WriteSolution(
                       solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)),
-                  baseline);
-    }
-    // Any value other than exactly "on" preserves the serialized emitter.
-    {
-        ScopedFeedPrefetch flag("off");
-        EXPECT_EQ(io::BinaryWriter::WriteSolution(
-                      solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)),
-                  baseline);
+                  serialized);
     }
 
-    ScopedFeedPrefetch flag("on");
-    const auto on = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
-    const auto onBytes = io::BinaryWriter::WriteSolution(on);
-    EXPECT_EQ(io::BinaryWriter::WriteSolution(
-                  solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)),
-              onBytes);
-    EXPECT_NE(onBytes, baseline);
+    // Unset is the pipelined default and must match an explicit "on".
+    std::vector<std::byte> shipped;
+    io::SolutionData on;
+    {
+        ScopedRowClocks flag(nullptr);
+        on = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
+        shipped = io::BinaryWriter::WriteSolution(on);
+        EXPECT_EQ(io::BinaryWriter::WriteSolution(
+                      solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)),
+                  shipped);
+    }
+    {
+        ScopedRowClocks flag("on");
+        EXPECT_EQ(io::BinaryWriter::WriteSolution(
+                      solvers::CompileScheduledRowAssembly(puzzle, plan, deadline)),
+                  shipped);
+    }
+    EXPECT_NE(shipped, serialized);
 
     ASSERT_EQ(on.objects.size(), off.objects.size());
     for (std::size_t i = 0; i < off.objects.size(); ++i) {
         EXPECT_EQ(ActionSequence(on.objects[i]), ActionSequence(off.objects[i]))
             << "object " << i << " (" << off.objects[i].typeName << ")";
     }
-    EXPECT_LE(LastTick(on), LastTick(off));
     EXPECT_LT(LastTick(on), LastTick(off));
 }
-
-namespace {
-struct ScopedRowPipeline {
-    std::optional<std::string> prior;
-    explicit ScopedRowPipeline(const char* value) {
-        if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_PIPELINE")) prior = existing;
-        if (value)
-            setenv("OPUSOPTIMA_ROW_PIPELINE", value, 1);
-        else
-            unsetenv("OPUSOPTIMA_ROW_PIPELINE");
-    }
-    ~ScopedRowPipeline() {
-        if (prior)
-            setenv("OPUSOPTIMA_ROW_PIPELINE", prior->c_str(), 1);
-        else
-            unsetenv("OPUSOPTIMA_ROW_PIPELINE");
-    }
-};
-} // namespace
 
 // The opt-in row pipeline gates each feeder drop on the exact hand-off clearance
 // (rather than the whole shared assembly clock) and pre-stages the next atom.
@@ -3251,20 +3297,22 @@ TEST(AssemblyDiagnostics, RowPipelineIsOptInDeterministicAndNeverLaterThanPrefet
 
     io::SolutionData off;
     {
-        ScopedRowPipeline pipelineFlag(nullptr);
-        ScopedFeedPrefetch feedFlag(nullptr);
+        ScopedRowClocks clocks("off");
         off = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     }
     io::SolutionData prefetch;
     {
-        ScopedRowPipeline pipelineFlag(nullptr);
-        ScopedFeedPrefetch feedFlag("on");
+        // Feeder clock only: the shipped default for it, with the pipeline off.
+        ScopedFeedPrefetch feedFlag(nullptr);
+        ScopedRowPipeline pipelineFlag("off");
+        ScopedRowAssemblyClocks clocksFlag("off");
         prefetch = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     }
     io::SolutionData pipeline, pipelineAgain;
     {
-        ScopedRowPipeline pipelineFlag("on");
         ScopedFeedPrefetch feedFlag(nullptr);
+        ScopedRowPipeline pipelineFlag(nullptr);
+        ScopedRowAssemblyClocks clocksFlag("off");
         pipeline = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
         pipelineAgain = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     }
@@ -3281,25 +3329,6 @@ TEST(AssemblyDiagnostics, RowPipelineIsOptInDeterministicAndNeverLaterThanPrefet
     EXPECT_LT(LastTick(pipeline), LastTick(off));
 }
 
-namespace {
-struct ScopedRowAssemblyClocks {
-    std::optional<std::string> prior;
-    explicit ScopedRowAssemblyClocks(const char* value) {
-        if (const auto* existing = std::getenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS")) prior = existing;
-        if (value)
-            setenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS", value, 1);
-        else
-            unsetenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
-    }
-    ~ScopedRowAssemblyClocks() {
-        if (prior)
-            setenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS", prior->c_str(), 1);
-        else
-            unsetenv("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
-    }
-};
-} // namespace
-
 // The opt-in assembly clocks give the upper-arm return/regrab tail and the
 // conveyor's empty row-entry return their own absolute clocks, so they overlap
 // the lower-arm reset/staging. The transform must be byte-deterministic, retime
@@ -3313,24 +3342,20 @@ TEST(AssemblyDiagnostics, RowAssemblyClocksAreOptInDeterministicAndNeverLaterTha
 
     io::SolutionData off;
     {
-        ScopedRowAssemblyClocks clocks(nullptr);
-        ScopedRowPipeline pipelineFlag(nullptr);
-        ScopedFeedPrefetch feedFlag(nullptr);
+        ScopedRowClocks clocks("off");
         off = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     }
     io::SolutionData pipeline;
     {
-        ScopedRowAssemblyClocks clocks(nullptr);
-        ScopedRowPipeline pipelineFlag("on");
         ScopedFeedPrefetch feedFlag(nullptr);
+        ScopedRowPipeline pipelineFlag(nullptr);
+        ScopedRowAssemblyClocks clocksFlag("off");
         pipeline = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     }
     io::SolutionData assembly, assemblyAgain;
     {
-        // The assembly-clock flag alone implies the pipeline.
-        ScopedRowAssemblyClocks clocksFlag("on");
-        ScopedRowPipeline pipelineFlag(nullptr);
-        ScopedFeedPrefetch feedFlag(nullptr);
+        // Unset is the shipped default: the assembly clock alone implies the pipeline.
+        ScopedRowClocks clocksFlag(nullptr);
         assembly = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
         assemblyAgain = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
     }
@@ -3358,7 +3383,12 @@ TEST(AssemblyDiagnostics, ClockedScheduledRowKeepsActionsAndShortensTicks) {
     puzzle.permissionBits |= (1ULL << 2) | (1ULL << 3); // piston + track
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     const auto plan = AssemblyPlanner::Plan(puzzle, false, deadline);
-    const auto compact = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
+    io::SolutionData compact;
+    {
+        // The serialized emitter, so the clocked candidate still has something to beat.
+        ScopedRowClocks clocks("off");
+        compact = solvers::CompileScheduledRowAssembly(puzzle, plan, deadline);
+    }
     const auto clocked = solvers::CompileScheduledRowClockAssembly(puzzle, plan, deadline);
     const auto again = solvers::CompileScheduledRowClockAssembly(puzzle, plan, deadline);
     EXPECT_EQ(io::BinaryWriter::WriteSolution(clocked), io::BinaryWriter::WriteSolution(again));
