@@ -21,6 +21,14 @@ namespace opusoptima::solvers {
 // trimming and two-copy tape compression) were removed: v9/v10 were native-rejected
 // on every parent and v11/v12 produced byte-identical no-op children. No switch
 // re-enables them.
+// After the variant queue, a gate-priced peephole phase spends only leftover budget
+// (default 2000 ms, three-second publication reserve) on cost-only edits: dropping
+// rails no machine stands on or moves along, idle mechanisms, redundant glyphs,
+// cheaper hardware types with the same tape, and cutting the rail cells outside a
+// machine's traversed range (tape A/a walk the base one cell). Every edit is
+// verified before it can enter a slot, so the phase cannot raise cost or touch
+// cycles/area. Exact OPUSOPTIMA_COST_PEEPHOLE=off disables it; a positive value is
+// the submission budget (default 256) and OPUSOPTIMA_COST_PEEPHOLE_MS caps the slice.
 void OptimizeVerified(io::CandidateArchive& archive,
                       std::chrono::steady_clock::time_point deadline);
 [[nodiscard]] io::SolutionData LocalTrial(const io::SolutionData& parent, int variant);

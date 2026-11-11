@@ -565,6 +565,289 @@ bool CompactReturns(io::SolutionData& candidate) {
             CompactEmptyReturns(candidate)) ||
            ParallelReturns(candidate);
 }
+// ── Gate-priced peephole cost phase ─────────────────────────────────────────
+// Verifications are the scarce resource: each one replays the whole machine, so a
+// cost phase is bounded both by the deadline and by an explicit submission budget.
+int PeepholeBudget() {
+    const char* value = std::getenv("OPUSOPTIMA_COST_PEEPHOLE");
+    if (value && std::string_view(value) == "off") return 0;
+    if (!value) return 256;
+    const int parsed = std::atoi(value);
+    return parsed > 0 ? parsed : 256;
+}
+// Wall-clock slice for the peephole phase, in milliseconds. Leftover budget only:
+// the search and the variant queue keep the time they always had.
+int PeepholeMillis() {
+    const char* value = std::getenv("OPUSOPTIMA_COST_PEEPHOLE_MS");
+    if (!value) return 2000;
+    const int parsed = std::atoi(value);
+    return parsed >= 0 ? parsed : 2000;
+}
+// A rail body serializes as {1, rotation, 0, 0, count, (q, r) * count, 0}, so the
+// trailing terminator sits after the last relative cell.
+bool TrackBodyWellFormed(const io::SolutionObject& track) {
+    if (track.bodyData.size() < 8) return false;
+    const int count = track.bodyData[4];
+    return count >= 2 &&
+           track.bodyData.size() == 6 + 2 * static_cast<std::size_t>(count);
+}
+void TrimTrackHead(io::SolutionObject& track, int cells) {
+    for (int i = 0; i < cells; ++i) {
+        track.bodyData.erase(track.bodyData.begin() + 5, track.bodyData.begin() + 7);
+        --track.bodyData[4];
+    }
+}
+void TrimTrackTail(io::SolutionObject& track, int cells) {
+    for (int i = 0; i < cells; ++i) {
+        track.bodyData.erase(track.bodyData.end() - 3, track.bodyData.end() - 1);
+        --track.bodyData[4];
+    }
+}
+// Timeouts, unavailable authorities and engine errors end the phase; a rejection is
+// just a proposal the gate refused.
+bool PeepholeFatal(const io::VerificationReport& report) {
+    return report.status == io::VerificationStatus::Timeout ||
+           report.status == io::VerificationStatus::Unavailable ||
+           report.status == io::VerificationStatus::Error;
+}
+bool PeepholeCheaper(const io::VerificationReport& report, std::int32_t base) {
+    return report.Passed() && report.metrics.cost < base;
+}
+bool Mechanical(const io::SolutionObject& object) {
+    return object.typeName == "arm1" || object.typeName == "arm2" ||
+           object.typeName == "arm3" || object.typeName == "arm6" ||
+           object.typeName == "piston" || object.typeName == "baron";
+}
+// A rail nobody stands on cannot influence the machine, but the gate still rules.
+bool PeepholeUnusedTrack(io::CandidateArchive& archive,
+                         std::chrono::steady_clock::time_point deadline, int& budget) {
+    const auto entry = archive.Slots()[0];
+    if (!entry || budget <= 0) return false;
+    const auto base = entry->verification.metrics.cost;
+    std::set<std::pair<long long, long long>> occupied;
+    for (const auto& object : entry->solution.objects)
+        if (Mechanical(object))
+            occupied.emplace(object.position.q, object.position.r);
+    for (std::size_t index = 0; index < entry->solution.objects.size() && budget > 0; ++index) {
+        const auto& track = entry->solution.objects[index];
+        if (track.typeName != "track" || !TrackBodyWellFormed(track)) continue;
+        const int count = track.bodyData[4];
+        bool used = false;
+        for (int cell = 0; cell < count && !used; ++cell)
+            used = occupied.count({static_cast<long long>(track.position.q) + track.bodyData[5 + 2 * cell],
+                                   static_cast<long long>(track.position.r) +
+                                       track.bodyData[6 + 2 * cell]}) > 0;
+        if (used) continue;
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        auto candidate = entry->solution;
+        candidate.objects.erase(candidate.objects.begin() + static_cast<std::ptrdiff_t>(index));
+        --budget;
+        const auto report = archive.Submit(candidate, "cost-drop-unused-track", deadline);
+        if (PeepholeFatal(report)) return false;
+        if (PeepholeCheaper(report, base)) return true;
+    }
+    return false;
+}
+// Cheaper mechanisms that keep the same position, rotation and tape. The gate
+// decides whether the substitution still runs the machine.
+bool PeepholeSubstitute(io::CandidateArchive& archive,
+                        std::chrono::steady_clock::time_point deadline, int& budget) {
+    const auto entry = archive.Slots()[0];
+    if (!entry || budget <= 0) return false;
+    const auto base = entry->verification.metrics.cost;
+    for (std::size_t index = 0; index < entry->solution.objects.size() && budget > 0; ++index) {
+        const auto& object = entry->solution.objects[index];
+        const char* replacement = nullptr;
+        if (object.typeName == "bonder-prisma")
+            replacement = "bonder";
+        else if (object.typeName == "arm2" || object.typeName == "arm3" ||
+                 object.typeName == "arm6" || object.typeName == "baron")
+            replacement = "arm1";
+        else if (object.typeName == "piston" &&
+                 std::none_of(object.instructions.begin(), object.instructions.end(),
+                              [](const auto& instruction) {
+                                  // Tape 'E'/'e' extend and retract the shaft; an arm1 cannot.
+                                  return instruction.action == 'E' || instruction.action == 'e';
+                              }))
+            replacement = "arm1";
+        if (!replacement) continue;
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        auto candidate = entry->solution;
+        candidate.objects[index].typeName = replacement;
+        --budget;
+        const auto report = archive.Submit(candidate, "cost-substitute-hardware", deadline);
+        if (PeepholeFatal(report)) return false;
+        if (PeepholeCheaper(report, base)) return true;
+    }
+    return false;
+}
+// Redundant bonders, unbonders and glyphs cost 10-20 each. Every removal is priced
+// by the gate and kept only while the cost slot strictly improves.
+bool PeepholeDropGlyph(io::CandidateArchive& archive,
+                       std::chrono::steady_clock::time_point deadline, int& budget) {
+    const auto entry = archive.Slots()[0];
+    if (!entry || budget <= 0) return false;
+    const auto base = entry->verification.metrics.cost;
+    for (std::size_t index = 0; index < entry->solution.objects.size() && budget > 0; ++index) {
+        const auto& object = entry->solution.objects[index];
+        const bool optional = object.typeName == "bonder" || object.typeName == "unbonder" ||
+                              object.typeName == "bonder-prisma" ||
+                              object.typeName.rfind("glyph-", 0) == 0;
+        if (!optional) continue;
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        auto candidate = entry->solution;
+        candidate.objects.erase(candidate.objects.begin() + static_cast<std::ptrdiff_t>(index));
+        --budget;
+        const auto report = archive.Submit(candidate, "cost-drop-glyph", deadline);
+        if (PeepholeFatal(report)) return false;
+        if (PeepholeCheaper(report, base)) return true;
+    }
+    return false;
+}
+// An arm or piston with nothing but idle tape entries still costs 20-40 and never
+// touches an atom. Removing it is only safe when the gate agrees.
+bool PeepholeDropIdleMechanism(io::CandidateArchive& archive,
+                               std::chrono::steady_clock::time_point deadline, int& budget) {
+    const auto entry = archive.Slots()[0];
+    if (!entry || budget <= 0) return false;
+    const auto base = entry->verification.metrics.cost;
+    const auto idle = [](const io::SolutionObject& object) {
+        return std::all_of(object.instructions.begin(), object.instructions.end(),
+                           [](const auto& instruction) {
+                               return instruction.action == ' ' || instruction.action == 'O';
+                           });
+    };
+    for (std::size_t index = 0; index < entry->solution.objects.size() && budget > 0; ++index) {
+        const auto& object = entry->solution.objects[index];
+        if (!Mechanical(object) || !idle(object)) continue;
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        auto candidate = entry->solution;
+        candidate.objects.erase(candidate.objects.begin() + static_cast<std::ptrdiff_t>(index));
+        --budget;
+        const auto report = archive.Submit(candidate, "cost-drop-idle-mechanism", deadline);
+        if (PeepholeFatal(report)) return false;
+        if (PeepholeCheaper(report, base)) return true;
+    }
+    return false;
+}
+// A rail only carries machines: when no standing machine ever issues track motion
+// the rail is dead weight. The gate still rules on every removal.
+bool PeepholeDropRailWithoutMotion(io::CandidateArchive& archive,
+                                   std::chrono::steady_clock::time_point deadline, int& budget) {
+    const auto entry = archive.Slots()[0];
+    if (!entry || budget <= 0) return false;
+    const auto base = entry->verification.metrics.cost;
+    const auto moves = [](const io::SolutionObject& object) {
+        return std::any_of(object.instructions.begin(), object.instructions.end(),
+                           [](const auto& instruction) {
+                               return instruction.action == 'g' || instruction.action == 'G' ||
+                                      instruction.action == 't' || instruction.action == 'T';
+                           });
+    };
+    std::map<std::pair<long long, long long>, bool> ridden;
+    for (const auto& object : entry->solution.objects)
+        if (Mechanical(object) && moves(object))
+            ridden[{object.position.q, object.position.r}] = true;
+    for (std::size_t index = 0; index < entry->solution.objects.size() && budget > 0; ++index) {
+        const auto& track = entry->solution.objects[index];
+        if (track.typeName != "track" || !TrackBodyWellFormed(track)) continue;
+        const int count = track.bodyData[4];
+        bool used = false;
+        for (int cell = 0; cell < count && !used; ++cell)
+            used = ridden.count({static_cast<long long>(track.position.q) +
+                                     track.bodyData[5 + 2 * cell],
+                                 static_cast<long long>(track.position.r) +
+                                     track.bodyData[6 + 2 * cell]}) > 0;
+        if (used) continue;
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        auto candidate = entry->solution;
+        candidate.objects.erase(candidate.objects.begin() + static_cast<std::ptrdiff_t>(index));
+        --budget;
+        const auto report = archive.Submit(candidate, "cost-drop-static-track", deadline);
+        if (PeepholeFatal(report)) return false;
+        if (PeepholeCheaper(report, base)) return true;
+    }
+    return false;
+}
+// Rail hexes cost 5 each. Tape 'A'/'a' walk the base one cell along the rail, so the
+// visited range is exact: trim every cell outside it in a single gate submission.
+bool PeepholeTrimTrack(io::CandidateArchive& archive,
+                       std::chrono::steady_clock::time_point deadline, int& budget) {
+    const auto entry = archive.Slots()[0];
+    if (!entry || budget <= 0) return false;
+    const auto base = entry->verification.metrics.cost;
+    const auto& objects = entry->solution.objects;
+    for (std::size_t index = 0; index < objects.size() && budget > 0; ++index) {
+        const auto& track = objects[index];
+        if (track.typeName != "track" || !TrackBodyWellFormed(track)) continue;
+        const int count = track.bodyData[4];
+        std::map<std::pair<long long, long long>, int> cells;
+        for (int cell = 0; cell < count; ++cell)
+            cells[{static_cast<long long>(track.position.q) + track.bodyData[5 + 2 * cell],
+                   static_cast<long long>(track.position.r) + track.bodyData[6 + 2 * cell]}] = cell;
+        int low = count, high = -1;
+        for (const auto& object : objects) {
+            if (!Mechanical(object)) continue;
+            const auto found = cells.find({object.position.q, object.position.r});
+            if (found == cells.end()) continue;
+            int position = found->second;
+            low = std::min(low, position);
+            high = std::max(high, position);
+            for (const auto& instruction : object.instructions) {
+                if (instruction.action == 'A') ++position;
+                else if (instruction.action == 'a') --position;
+                else continue;
+                low = std::min(low, position);
+                high = std::max(high, position);
+            }
+        }
+        if (high < 0) continue;
+        const int head = std::max(low, 0);
+        const int tail = std::max(count - 1 - high, 0);
+        if (head <= 0 && tail <= 0) continue;
+        if (std::chrono::steady_clock::now() >= deadline) return false;
+        auto candidate = entry->solution;
+        auto& trimmed = candidate.objects[index];
+        if (tail > 0) TrimTrackTail(trimmed, std::min(tail, count - 1));
+        if (head > 0 && trimmed.bodyData[4] > 1) TrimTrackHead(trimmed, std::min(head, trimmed.bodyData[4] - 1));
+        --budget;
+        const auto report = archive.Submit(candidate, "cost-trim-track-range", deadline);
+        if (PeepholeFatal(report)) return false;
+        if (PeepholeCheaper(report, base)) return true;
+    }
+    return false;
+}
+// Unit trims catch the rare rail whose visited range is wrong in the tape's favour;
+// the gate prices every cell before it is dropped.
+bool PeepholeTrimTrackUnits(io::CandidateArchive& archive,
+                            std::chrono::steady_clock::time_point deadline, int& budget) {
+    const auto entry = archive.Slots()[0];
+    if (!entry || budget <= 0) return false;
+    const auto base = entry->verification.metrics.cost;
+    for (std::size_t index = 0; index < entry->solution.objects.size() && budget > 0; ++index) {
+        if (!TrackBodyWellFormed(entry->solution.objects[index])) continue;
+        if (entry->solution.objects[index].typeName != "track") continue;
+        const int count = entry->solution.objects[index].bodyData[4];
+        for (int cells = 1; cells <= 24 && cells < count; ++cells) {
+            for (int head = 0; head < 2; ++head) {
+                if (budget <= 0) return false;
+                if (std::chrono::steady_clock::now() >= deadline) return false;
+                auto candidate = entry->solution;
+                auto& track = candidate.objects[index];
+                if (head)
+                    TrimTrackHead(track, cells);
+                else
+                    TrimTrackTail(track, cells);
+                --budget;
+                const auto report = archive.Submit(
+                    candidate, head ? "cost-trim-track-head" : "cost-trim-track-tail", deadline);
+                if (PeepholeFatal(report)) return false;
+                if (PeepholeCheaper(report, base)) return true;
+            }
+        }
+    }
+    return false;
+}
 } // namespace
 static io::SolutionData LocalTrialImpl(const io::SolutionData& parent, int variant,
                                        const char** transformation = nullptr) {
@@ -781,6 +1064,30 @@ void OptimizeVerified(io::CandidateArchive& archive,
                 report.status == io::VerificationStatus::Error)
                 return;
         }
+    }
+    // Gate-priced peephole cost phase, last so it only spends leftover budget:
+    // unused rails, cheaper hardware, redundant glyphs and dead rail cells. Every
+    // edit is verified before it can reach a slot, so the phase is monotone in cost
+    // and cannot trade another objective away. Publication keeps its own reserve and
+    // machines whose single verification is slow are left alone.
+    int peepholeBudget = PeepholeBudget();
+    auto peepholeEnd =
+        std::min(deadline - std::chrono::seconds(3),
+                 std::chrono::steady_clock::now() + std::chrono::milliseconds(PeepholeMillis()));
+    const auto costEntry = archive.Slots()[0];
+    const bool peepholeWorthwhile =
+        costEntry && peepholeBudget > 0 && costEntry->solution.objects.size() <= 96 &&
+        std::chrono::steady_clock::now() < peepholeEnd;
+    for (int round = 0; round < 32 && peepholeWorthwhile && peepholeBudget > 0; ++round) {
+        if (std::chrono::steady_clock::now() >= peepholeEnd) break;
+        if (PeepholeUnusedTrack(archive, peepholeEnd, peepholeBudget)) continue;
+        if (PeepholeDropRailWithoutMotion(archive, peepholeEnd, peepholeBudget)) continue;
+        if (PeepholeDropIdleMechanism(archive, peepholeEnd, peepholeBudget)) continue;
+        if (PeepholeSubstitute(archive, peepholeEnd, peepholeBudget)) continue;
+        if (PeepholeDropGlyph(archive, peepholeEnd, peepholeBudget)) continue;
+        if (PeepholeTrimTrack(archive, peepholeEnd, peepholeBudget)) continue;
+        if (PeepholeTrimTrackUnits(archive, peepholeEnd, peepholeBudget)) continue;
+        break;
     }
 }
 } // namespace opusoptima::solvers
