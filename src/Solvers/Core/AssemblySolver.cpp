@@ -1383,7 +1383,11 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // `PortfolioSemanticTransformsAndPermissionBoundary`) because composition then
     // consumed a construction/submission slot.
     const bool composeOnline =
-        (SupportsComposedAssembly(puzzle) || SupportsComposedMolecularAssembly(puzzle)) &&
+        (SupportsComposedAssembly(puzzle) ||
+         // Molecular extraction is a fallback generator: it only runs when the family
+         // chain produced nothing, so it can never take a submission slot away from the
+         // portfolio (`PortfolioArchivesDistinctRealStructures`).
+         (!firstAccepted && SupportsComposedMolecularAssembly(puzzle))) &&
         (puzzle.outputs.front().atoms.size() <= 6 || ComposedAssemblyUsesInPlaceLayout(puzzle));
     if (composeEnabled && composeOnline && verify &&
         std::chrono::steady_clock::now() < Deadline()) {

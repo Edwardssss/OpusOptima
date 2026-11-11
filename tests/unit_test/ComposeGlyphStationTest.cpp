@@ -112,8 +112,6 @@ io::PuzzleData MolecularRearrangement() {
 TEST(ComposeGlyphStationTest, MolecularInputIsExtractedAtomByAtom) {
     const auto puzzle = MolecularRearrangement();
     EXPECT_FALSE(SupportsComposedAssembly(puzzle));
-    // The extraction layout is opt-in until its relay scheduler stops colliding.
-    setenv("OPUSOPTIMA_MOLECULAR_EXTRACTION", "on", 1);
     EXPECT_TRUE(SupportsComposedMolecularAssembly(puzzle));
     const auto variants = ComposeAssemblyVariants(puzzle);
     ASSERT_FALSE(variants.empty());
@@ -125,10 +123,9 @@ TEST(ComposeGlyphStationTest, MolecularInputIsExtractedAtomByAtom) {
 }
 
 #ifdef HAS_LIBVERIFY
-// Blocked: the relay drops its second atom on the shared product row while the third
-// arm is still sweeping, and the gate reports `collision during motion phase`. Enable
-// with `OPUSOPTIMA_MOLECULAR_EXTRACTION=on` once the scheduler packs the row.
-TEST(ComposeGlyphStationTest, DISABLED_MolecularExtractionVerifiesNatively) {
+// The relay drops the freed atoms onto the shared product row one at a time and
+// the sweep planner rejects any arc that would cross a parked product atom.
+TEST(ComposeGlyphStationTest, MolecularExtractionVerifiesNatively) {
     const auto root = opusoptima::test::RepoRoot(__FILE__);
     const auto puzzlePath = root / "build/compose-glyph-molecular.puzzle";
     const auto solutionPath = root / "build/compose-glyph-molecular.solution";
@@ -140,7 +137,6 @@ TEST(ComposeGlyphStationTest, DISABLED_MolecularExtractionVerifiesNatively) {
             std::filesystem::remove(solution, ec);
         }
     } cleanup{puzzlePath, solutionPath};
-    setenv("OPUSOPTIMA_MOLECULAR_EXTRACTION", "on", 1);
     WritePuzzle(puzzlePath, MolecularRearrangement());
     auto solution = ComposeAssemblyMachine(MolecularRearrangement());
     io::BinaryWriter::WriteSolutionFile(solutionPath, solution);

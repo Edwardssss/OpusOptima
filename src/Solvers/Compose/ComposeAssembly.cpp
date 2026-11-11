@@ -1,6 +1,7 @@
 #include "ComposeAssembly.hpp"
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -8,7 +9,6 @@
 #include <optional>
 #include <set>
 #include <string>
-#include <string_view>
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -328,8 +328,57 @@ struct ExtractionPlan {
     std::vector<std::vector<Swing>> chains;
 };
 
+// Hex distance in the simulator's axial metric.
+int HexDistance(Cell a, Cell b) {
+    const Cell delta = Subtract(a, b);
+    const int third = -delta.q - delta.r;
+    return (std::abs(delta.q) + std::abs(delta.r) + std::abs(third)) / 2;
+}
+
+// Angle of a cell relative to a pivot, using the same pixel transform as
+// `collision.c: to_xy` (82 px per column, 71 px per row), so the sweep test
+// agrees with the continuous collision check.
+double CellAngleDegrees(Cell delta) {
+    const double x = 82.0 * (static_cast<double>(delta.q) + 0.5 * static_cast<double>(delta.r));
+    const double y = 71.0 * static_cast<double>(delta.r);
+    const double degrees = std::atan2(y, x) * (180.0 / 3.14159265358979323846);
+    return std::fmod(degrees + 360.0, 360.0);
+}
+
+// Cells the held atom passes over while the arm turns from `grab` to `drop`, with
+// the endpoints excluded. The grabber holds the atom at a fixed radius, so it
+// travels along a circular arc and visits the centre of *every* cell on that ring,
+// not only the six axis vertices. `collision.c` checks that continuous motion, so
+// a sweep that crosses a waiting atom or a parked product cell is a collision even
+// when the cell is not a vertex -- the shared output row of a rearrangement is
+// exactly that case.
+std::vector<Cell> SweptCells(Cell pivot, int length, int grab, int drop) {
+    std::vector<Cell> swept;
+    const int rotation = SwingRotation(grab, drop);
+    if (rotation == 0) return swept;
+    const double start = static_cast<double>(grab) * 60.0;
+    const double span = static_cast<double>(rotation > 0 ? rotation : -rotation) * 60.0;
+    constexpr double kEpsilon = 1e-6;
+    for (int dq = -length; dq <= length; ++dq) {
+        for (int dr = -length; dr <= length; ++dr) {
+            const Cell delta{dq, dr};
+            if (HexDistance(delta, Cell{}) != length) continue;
+            const double angle = CellAngleDegrees(delta);
+            const double phase = rotation > 0 ? angle - start : start - angle;
+            const double rel = std::fmod(std::fmod(phase, 360.0) + 360.0, 360.0);
+            if (rel <= kEpsilon || rel >= span - kEpsilon) continue;
+            swept.push_back(Add(pivot, delta));
+        }
+    }
+    return swept;
+}
+
 // Shortest chain of swings carrying an atom from `from` to `to`, at most `maxHops`.
-std::vector<Swing> PlanRelay(Cell from, Cell to, const std::set<Cell>& blocked, int maxHops) {
+// `pivots` holds every arm base already placed by earlier chains, and the chain's
+// own earlier bases are tracked per BFS node, because a rotating atom must neither
+// cross a static atom nor graze an arm base.
+std::vector<Swing> PlanRelay(Cell from, Cell to, const std::set<Cell>& blocked,
+                             const std::set<Cell>& pivots, int maxHops) {
     if (from == to) return {};
     struct Node {
         Cell cell{};
@@ -344,15 +393,30 @@ std::vector<Swing> PlanRelay(Cell from, Cell to, const std::set<Cell>& blocked, 
         std::vector<int> next;
         for (const int index : frontier) {
             const Cell base = nodes[static_cast<std::size_t>(index)].cell;
+            std::set<Cell> pathPivots;
+            for (int at = index; at > 0;
+                 at = nodes[static_cast<std::size_t>(at)].parent)
+                pathPivots.insert(nodes[static_cast<std::size_t>(at)].hop.pivot);
             for (int length = kMaxArmSize; length >= 1; --length) {
                 for (int grab = 0; grab < 6; ++grab) {
                     const Cell pivot = Subtract(base, Scale(Step(grab), length));
-                    if (blocked.count(pivot)) continue;
+                    if (blocked.count(pivot) || pivots.count(pivot) ||
+                        pathPivots.count(pivot))
+                        continue;
                     for (int drop = 0; drop < 6; ++drop) {
                         if (drop == grab) continue;
                         const Cell landing = Add(pivot, Scale(Step(drop), length));
                         const bool goal = landing == to;
                         if (!goal && (blocked.count(landing) || seen.count(landing))) continue;
+                        bool arcBlocked = false;
+                        for (const Cell& cell : SweptCells(pivot, length, grab, drop)) {
+                            if (blocked.count(cell) || pivots.count(cell) ||
+                                pathPivots.count(cell)) {
+                                arcBlocked = true;
+                                break;
+                            }
+                        }
+                        if (arcBlocked) continue;
                         nodes.push_back(
                             {landing, index, Swing{pivot, base, landing, length, grab, drop}});
                         const int created = static_cast<int>(nodes.size()) - 1;
@@ -432,15 +496,10 @@ std::optional<ExtractionPlan> PlanExtraction(const io::PuzzleData& puzzle,
                     if (used[a] || input.atoms[a].type != types[index]) continue;
                     std::set<Cell> localBlocked = occupied;
                     localBlocked.erase(landing[a]);
-                    auto chain = PlanRelay(landing[a], targets[index], localBlocked, 3);
+                    auto chain =
+                        PlanRelay(landing[a], targets[index], localBlocked, usedPivots, 3);
                     if (chain.empty()) continue;
-                    bool clash = false;
-                    for (const auto& hop : chain)
-                        if (!usedPivots.insert(hop.pivot).second) clash = true;
-                    if (clash) {
-                        for (const auto& hop : chain) usedPivots.erase(hop.pivot);
-                        continue;
-                    }
+                    for (const auto& hop : chain) usedPivots.insert(hop.pivot);
                     chains.push_back(chain);
                     used[a] = true;
                     matched = true;
@@ -834,11 +893,10 @@ bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle) {
 }
 
 bool SupportsComposedMolecularAssembly(const io::PuzzleData& puzzle) {
-    // Opt-in: the relay scheduler still collides at the shared product row (see
-    // docs/analysis/OPUSSOLVER_GAP_ANALYSIS_20261111.md 9), so the shipped default
-    // keeps the row family for these puzzles.
-    const char* flag = std::getenv("OPUSOPTIMA_MOLECULAR_EXTRACTION");
-    if (!flag || std::string_view(flag) != "on") return false;
+    // Pure single-molecule rearrangement: the planner relays each freed atom with
+    // swing arms instead of a per-atom piston row. The relay scheduler rejects any
+    // sweep that would cross a parked product atom (`SweptCells`), so this shape is
+    // safe to publish by default now.
     return !SupportsComposedAssembly(puzzle) && SupportsMolecularAssembly(puzzle);
 }
 
