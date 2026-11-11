@@ -814,6 +814,14 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             canConstruct()) {
             staticEmbeddingAttempted = true;
             ++constructionAttempts;
+            // One shared life/death feed resource across both products. Still opt-in:
+            // the 146-puzzle A/B is improved=4 regressed=0 and exactly one improvement
+            // survives isolation (7b837aa2 6605/88450/1766 -> 5735/86266/1533). Flipping
+            // the default would have to move more than one puzzle to be worth the extra
+            // compile, and the asset corpus cannot settle it: two runs of the same
+            // 37-puzzle comparison singled out different puzzles (journal9-p/P106
+            // 1075 -> 1095 in one, journal3/P068 885 -> 880 in the other), i.e. the
+            // residual is load noise rather than a systematic win or loss. `=on` opts in.
             const char* sharedFeedFlag = std::getenv("OPUSOPTIMA_SHARED_FEED_RESOURCE");
             const bool sharedFeed =
                 sharedFeedFlag && std::string_view(sharedFeedFlag) == "on" &&
@@ -1338,26 +1346,33 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         if (acceptedCount == 0 || submissions + 1 > MaxCandidateSubmissions ||
             acceptedCount >= acceptedCap || std::chrono::steady_clock::now() >= Deadline())
             return;
+        // A sibling is a bonus candidate, so every failure mode of it has to stay
+        // contained here: an escaping exception would abort the whole solve and take
+        // the already admitted machine with it.
+        std::optional<io::SolutionData> sibling;
         try {
-            auto sibling = compile();
-            if (std::chrono::steady_clock::now() >= Deadline()) return;
-            // The archive also feeds the downstream local search, so the sibling is
-            // packed before admission: an unpacked entry would compete for the same
-            // optimizer budget and cost the plain machine its own local variant
-            // (`160f11ef` cost 2040 -> 2050 without this pass).
-            try {
-                sibling = solvers::LocalTrial(sibling, 8);
-            } catch (const std::exception&) {
-                // Keep the raw widened machine when the local pass declines.
-            }
-            // Keep the portfolio's own budget: the sibling is a distinct tape set,
-            // so it gets its own acceptance instead of taking one from the family
-            // chain (`journal8/P102` cost 17150 -> 17970 when it did).
-            if (verifyAt(stage, sibling).Passed()) ++acceptedCap;
-        } catch (const std::invalid_argument& error) {
+            sibling = compile();
+        } catch (const std::exception& error) {
             GetLoggerOrFallback("solver")->info("Assembly branch={} event=unsupported detail={}",
                                                 stage, error.what());
-        } catch (const std::runtime_error& error) {
+            return;
+        }
+        if (!sibling || std::chrono::steady_clock::now() >= Deadline()) return;
+        // The archive also feeds the downstream local search, so the sibling is packed
+        // before admission: an unpacked entry would compete for the same optimizer
+        // budget and cost the plain machine its own local variant (`160f11ef` cost
+        // 2040 -> 2050 without this pass).
+        try {
+            *sibling = solvers::LocalTrial(*sibling, 8);
+        } catch (const std::exception&) {
+            // Keep the raw widened machine when the local pass declines.
+        }
+        try {
+            // The sibling is a distinct tape set, so it gets its own acceptance instead
+            // of taking one from the family chain (`journal8/P102` cost 17150 -> 17970
+            // when it did).
+            if (verifyAt(stage, *sibling).Passed()) ++acceptedCap;
+        } catch (const std::exception& error) {
             // The bounded collection budget ran out; the admitted candidate stands.
             GetLoggerOrFallback("solver")->info("Assembly branch={} event=skipped detail={}",
                                                 stage, error.what());

@@ -643,7 +643,9 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             // may span three rows and must have one atom per column. The widened
             // intake addresses every atom by its own (column, row), so a stacked
             // column is a sequence of pickups rather than a separate mechanism: the
-            // arm walks to the column once and extends to each row.
+            // arm walks to the column once and extends to each row. Pickups must run
+            // bottom-up, because the extending shaft crosses the cells it does not
+            // grab and leans on the gate to reject a top-down order.
             if (highRow - lowRow > 2) return false;
             if (columns.size() != input.atoms.size() && !widenedIntake) return false;
         }
