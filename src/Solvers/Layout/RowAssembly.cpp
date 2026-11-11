@@ -898,7 +898,23 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     }
     if (mixedInventory && mixedInventory->cacheCapacity && expandedFeeds)
         throw std::invalid_argument("near inventory cache requires narrow source stations");
-    if (expandedFeeds && bufferCount) feedReach += 3;
+    // Reagent buffers park on the serpentine's upper row and every slot stretches
+    // the shared feeder rail by one stride unit on both sides (`5 + 2*feedReach`),
+    // so the stride costs five per buffer per unit. The legacy distance of three
+    // kept a full feeder cycle between two parked atoms; the narrow feeder clock
+    // schedules the pickups, so a packed row separates them in time and pays for one
+    // rail unit instead of three. Measured on the 146 reference puzzles: 10 improved,
+    // 0 regressed, cost wins 61 -> 63 (e59c2d6b 1030 -> 880). The wide extraction
+    // (`expandedFeeds`) keeps three: its courier reads the slot distance as clearance
+    // and packs two parked atoms into a motion-phase collision
+    // (`DisassemblyVerifierTest.WideExtractionInventoryBuffers`).
+    // `OPUSOPTIMA_FEED_BUFFER_STRIDE=3` restores the legacy spacing everywhere.
+    const int bufferStride = [&] {
+        const char* value = std::getenv("OPUSOPTIMA_FEED_BUFFER_STRIDE");
+        if (!value) return expandedFeeds ? 3 : 1;
+        return std::clamp(std::atoi(value), 1, 3);
+    }();
+    if (expandedFeeds && bufferCount) feedReach += bufferStride;
     for (int b = 0; b < bufferCount; ++b) {
         checkDeadline();
         if (mixedInventory && mixedInventory->cacheCapacity) {
@@ -906,10 +922,13 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         } else {
             feedReach += compactLayout                                      ? compactStride
                          : mixedInventory && mixedInventory->compactBuffers ? 1
-                                                                            : 3;
+                                                                            : bufferStride;
             bufferSlots.push_back({-1, b, 5 + 2 * feedReach, 2});
         }
     }
+    if (std::getenv("OPUSOPTIMA_DEBUG_INTAKE"))
+        std::fprintf(stderr, "[feed] buffers=%d stride=%d feedReach=%d width=%d\n", bufferCount,
+                     bufferStride, feedReach, width);
     auto& feedData = result.objects[feedTrack].bodyData;
     if (directInput) {
         result.objects[feedArm].position = {-feedOffset, -20};
