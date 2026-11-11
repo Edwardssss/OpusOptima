@@ -134,16 +134,6 @@ int SwingRotation(int grab, int drop) {
     return forward <= 6 - forward ? forward : forward - 6;
 }
 
-// Ring cells the grabber passes through between grab and drop, endpoints
-// excluded. A sweep that crosses an atom or another machine is a collision.
-std::vector<int> SweptDirections(int grab, int drop) {
-    const int rotation = SwingRotation(grab, drop);
-    std::vector<int> swept;
-    for (int step = 1; step < (rotation > 0 ? rotation : -rotation); ++step)
-        swept.push_back(((grab + (rotation > 0 ? step : -step)) % 6 + 6) % 6);
-    return swept;
-}
-
 int PushObject(io::SolutionData& machine, const char* type, Cell position, std::vector<int> body,
                std::vector<io::ArmInstruction> tape = {}) {
     io::SolutionObject object;
@@ -795,11 +785,10 @@ class Placement {
                 if (occupied_.count(reagent) && !ContainsFootprint(*station, reagent))
                     clash = true;
             }
-            // The arm body stands on the pivot and sweeps the ring between grab and
-            // drop; only the target atom may be on that arc.
-            for (const int sweptDirection : SweptDirections(grab, drop)) {
-                const Cell swept =
-                    Add(base, Scale(Step(sweptDirection), swing.length));
+            // The arm body stands on the pivot and the held atom travels along the
+            // whole radius-`length` arc between grab and drop, so every cell centre on
+            // that arc is swept -- not only the six axis vertices (see `SweptCells`).
+            for (const Cell& swept : SweptCells(base, swing.length, grab, drop)) {
                 if (clash) break;
                 if (occupied_.count(swept)) clash = true;
                 if (used_.count(swept) || blocked_.count(swept)) clash = true;
