@@ -605,6 +605,13 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     // narrow ordinary row is eligible. The source-shape test runs before any
     // geometry is emitted: an unsupported source must fall back to the shared
     // feeder instead of abandoning the whole candidate.
+    //
+    // Measured 2026-11-11: widening the intake past the compact layout
+    // (`allowCompactLayout == false`) gives 14 puzzles 10-25% lower cost and
+    // shorter periods (b2c42099 755->635, cd9b4ea9 7610->1620), but it also parks
+    // the serpentine off-board, so when the intake machine is rejected by the gate
+    // the whole stage is lost: 31 of 146 puzzles stopped producing. It can only
+    // ship with a feeder fallback compiled as a second, gate-only candidate.
     const bool directInputRequested = (g_intakeMode != 0 ? g_intakeMode > 0 : [] {
         const char* flag = std::getenv("OPUSOPTIMA_DIRECT_INPUT");
         return !flag || std::string_view(flag) != "off";
@@ -637,9 +644,26 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         return true;
     }();
     g_intakeApplied = directInput;
-    if (std::getenv("OPUSOPTIMA_DEBUG_INTAKE"))
-        std::fprintf(stderr, "[intake] clocks=%d mode=%d direct=%d compact=%d\n",
-                     int(parallelClocks), g_intakeMode, int(directInput), int(compactLayout));
+    if (std::getenv("OPUSOPTIMA_DEBUG_INTAKE")) {
+        std::fprintf(stderr, "[intake] clocks=%d mode=%d direct=%d compact=%d inputs=%zu\n",
+                     int(parallelClocks), g_intakeMode, int(directInput), int(compactLayout),
+                     p.inputs.size());
+        for (const auto& input : p.inputs) {
+            const auto layout = PlanExtractionLayout(input);
+            int lowRow = 256, highRow = -256;
+            std::set<int> columns;
+            for (const auto& atom : input.atoms) {
+                auto cell = atom.position;
+                for (int n = 0; n < layout.rotation; ++n)
+                    cell = core::RotateClockwise(cell);
+                lowRow = std::min(lowRow, cell.r);
+                highRow = std::max(highRow, cell.r);
+                columns.insert(cell.q);
+            }
+            std::fprintf(stderr, "[intake]   src atoms=%zu rows=%d..%d cols=%zu\n",
+                         input.atoms.size(), lowRow, highRow, columns.size());
+        }
+    }
     // Measurement-only overrides; they are read only when the layout flag is on.
     const int compactGap = [&] {
         if (compactLayout && compactGapOverride >= 0) return std::clamp(compactGapOverride, 0, 8);
