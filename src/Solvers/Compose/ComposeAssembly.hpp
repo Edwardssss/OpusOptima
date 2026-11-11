@@ -28,6 +28,10 @@ bool ComposedAssemblyRequiresChemistry(const io::PuzzleData& puzzle);
 /// bounded arm search (dense lattices).
 bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle);
 
+/// `true` when the puzzle is one molecular input whose atoms are exactly the
+/// product's atoms: the machine needs no reagent stations at all.
+bool SupportsComposedMolecularAssembly(const io::PuzzleData& puzzle);
+
 /// Every composed variant, cheapest first: the shared-ring layout (one arm feeding
 /// several product cells), the per-atom layout (one arm per atom) and, for a single
 /// molecular input, the extraction layout (one unbonder per input bond plus one swing

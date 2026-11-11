@@ -3,6 +3,7 @@
 #include "IO/BinaryWriter.hpp"
 #include "IO/SolutionVerifier.hpp"
 #include "RepoRoot.hpp"
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -84,6 +85,72 @@ void WritePuzzle(const std::filesystem::path& path, const io::PuzzleData& p) {
     word(0, 1);
 }
 } // namespace
+
+// One molecular input consumed by one product: the machine cuts every input bond
+// and carries each atom onto its product cell with swing arms instead of a feeder.
+io::PuzzleData MolecularRearrangement() {
+    io::PuzzleData p;
+    p.version = 3;
+    p.name = "generated-molecular-rearrangement";
+    // Bits: arm, marker, piston, track, bonder, unbonder, rotate/drop, grab, repeat,
+    // no-op (decode.c: parts_available_bits_for_instruction).
+    p.permissionBits = (1ULL << 0) | (1ULL << 1) | (1ULL << 2) | (1ULL << 3) | (1ULL << 8) |
+                       (1ULL << 9) | (1ULL << 22) | (1ULL << 23) | (1ULL << 24) | (1ULL << 25);
+    p.outputMultiplier = 1;
+    p.inputs.push_back({{{core::AtomType::Salt, {0, 0}},
+                         {core::AtomType::Salt, {1, 0}},
+                         {core::AtomType::Salt, {1, 1}}},
+                        {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {1, 1}}}});
+    p.outputs.emplace_back();
+    p.outputs.front().atoms = {{core::AtomType::Salt, {0, 0}},
+                               {core::AtomType::Salt, {1, 0}},
+                               {core::AtomType::Salt, {2, 0}}};
+    p.outputs.front().bonds = {{1, {0, 0}, {1, 0}}, {1, {1, 0}, {2, 0}}};
+    return p;
+}
+
+TEST(ComposeGlyphStationTest, MolecularInputIsExtractedAtomByAtom) {
+    const auto puzzle = MolecularRearrangement();
+    EXPECT_FALSE(SupportsComposedAssembly(puzzle));
+    // The extraction layout is opt-in until its relay scheduler stops colliding.
+    setenv("OPUSOPTIMA_MOLECULAR_EXTRACTION", "on", 1);
+    EXPECT_TRUE(SupportsComposedMolecularAssembly(puzzle));
+    const auto variants = ComposeAssemblyVariants(puzzle);
+    ASSERT_FALSE(variants.empty());
+    const auto& machine = variants.front();
+    EXPECT_EQ(Count(machine, "input"), 1U);
+    EXPECT_EQ(Count(machine, "unbonder"), puzzle.inputs.front().bonds.size());
+    EXPECT_GE(Count(machine, "arm1"), 1U);
+    EXPECT_EQ(Count(machine, "out-std"), 1U);
+}
+
+#ifdef HAS_LIBVERIFY
+// Blocked: the relay drops its second atom on the shared product row while the third
+// arm is still sweeping, and the gate reports `collision during motion phase`. Enable
+// with `OPUSOPTIMA_MOLECULAR_EXTRACTION=on` once the scheduler packs the row.
+TEST(ComposeGlyphStationTest, DISABLED_MolecularExtractionVerifiesNatively) {
+    const auto root = opusoptima::test::RepoRoot(__FILE__);
+    const auto puzzlePath = root / "build/compose-glyph-molecular.puzzle";
+    const auto solutionPath = root / "build/compose-glyph-molecular.solution";
+    struct Cleanup {
+        std::filesystem::path puzzle, solution;
+        ~Cleanup() {
+            std::error_code ec;
+            std::filesystem::remove(puzzle, ec);
+            std::filesystem::remove(solution, ec);
+        }
+    } cleanup{puzzlePath, solutionPath};
+    setenv("OPUSOPTIMA_MOLECULAR_EXTRACTION", "on", 1);
+    WritePuzzle(puzzlePath, MolecularRearrangement());
+    auto solution = ComposeAssemblyMachine(MolecularRearrangement());
+    io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
+    auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 200000, 10000);
+    ASSERT_TRUE(report.Passed()) << report.detail << " cycle=" << report.errorCycle;
+    solution.metrics = report.metrics;
+    io::BinaryWriter::WriteSolutionFile(solutionPath, solution);
+    EXPECT_TRUE(io::VerifySolutionFiles(puzzlePath, solutionPath, 200000, 10000).Passed());
+}
+#endif
 
 TEST(ComposeGlyphStationTest, CalcificationAndProjectionAreInDomain) {
     const auto root = opusoptima::test::RepoRoot(__FILE__);

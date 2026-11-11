@@ -1383,7 +1383,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // `PortfolioSemanticTransformsAndPermissionBoundary`) because composition then
     // consumed a construction/submission slot.
     const bool composeOnline =
-        SupportsComposedAssembly(puzzle) &&
+        (SupportsComposedAssembly(puzzle) || SupportsComposedMolecularAssembly(puzzle)) &&
         (puzzle.outputs.front().atoms.size() <= 6 || ComposedAssemblyUsesInPlaceLayout(puzzle));
     if (composeEnabled && composeOnline && verify &&
         std::chrono::steady_clock::now() < Deadline()) {

@@ -3,10 +3,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <map>
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -307,6 +309,245 @@ bool SupportsEveryAtom(const io::PuzzleData& puzzle, const io::Molecule& output)
     return true;
 }
 
+// ── Molecular input extraction ──────────────────────────────────────────────
+// A single molecular input whose atoms are exactly the product's atoms needs no
+// reagent stations: the input area lands the molecule, one `unbonder` per input
+// bond cuts it, and a relay of swing arms carries each freed atom onto its product
+// cell. Each arm tape is balanced (grab, swing, drop, swing back) so the machine is
+// periodic, and the next relay stage grabs one cycle after the previous one dropped.
+Cell Rotate(Cell cell, int turns) {
+    core::HexCoord rotated{cell.q, cell.r};
+    for (int i = 0; i < ((turns % 6) + 6) % 6; ++i) rotated = core::RotateClockwise(rotated);
+    return Cell{rotated.q, rotated.r};
+}
+
+struct ExtractionPlan {
+    int rotation{};
+    Cell origin{};
+    // One chain per product atom, in travel order; every hop is one arm.
+    std::vector<std::vector<Swing>> chains;
+};
+
+// Shortest chain of swings carrying an atom from `from` to `to`, at most `maxHops`.
+std::vector<Swing> PlanRelay(Cell from, Cell to, const std::set<Cell>& blocked, int maxHops) {
+    if (from == to) return {};
+    struct Node {
+        Cell cell{};
+        int parent{-1};
+        Swing hop{};
+    };
+    std::vector<Node> nodes;
+    nodes.push_back({from, -1, Swing{}});
+    std::set<Cell> seen{from};
+    std::vector<int> frontier{0};
+    for (int depth = 0; depth < maxHops; ++depth) {
+        std::vector<int> next;
+        for (const int index : frontier) {
+            const Cell base = nodes[static_cast<std::size_t>(index)].cell;
+            for (int length = kMaxArmSize; length >= 1; --length) {
+                for (int grab = 0; grab < 6; ++grab) {
+                    const Cell pivot = Subtract(base, Scale(Step(grab), length));
+                    if (blocked.count(pivot)) continue;
+                    for (int drop = 0; drop < 6; ++drop) {
+                        if (drop == grab) continue;
+                        const Cell landing = Add(pivot, Scale(Step(drop), length));
+                        const bool goal = landing == to;
+                        if (!goal && (blocked.count(landing) || seen.count(landing))) continue;
+                        nodes.push_back(
+                            {landing, index, Swing{pivot, base, landing, length, grab, drop}});
+                        const int created = static_cast<int>(nodes.size()) - 1;
+                        if (goal) {
+                            std::vector<Swing> hops;
+                            for (int at = created; at > 0;
+                                 at = nodes[static_cast<std::size_t>(at)].parent)
+                                hops.push_back(nodes[static_cast<std::size_t>(at)].hop);
+                            std::reverse(hops.begin(), hops.end());
+                            return hops;
+                        }
+                        seen.insert(landing);
+                        next.push_back(created);
+                    }
+                }
+            }
+        }
+        frontier = std::move(next);
+        if (frontier.empty()) break;
+    }
+    return {};
+}
+
+// Places the single molecular input so every atom reaches its product cell by a
+// short relay.
+std::optional<ExtractionPlan> PlanExtraction(const io::PuzzleData& puzzle,
+                                             const std::vector<Cell>& targets,
+                                             const std::vector<core::AtomType>& types,
+                                             int inputIndex) {
+    const auto& input = puzzle.inputs[static_cast<std::size_t>(inputIndex)];
+    if (input.atoms.size() != targets.size() || targets.empty()) return std::nullopt;
+    for (const auto& bond : input.bonds)
+        if (bond.bits != 1) return std::nullopt;
+
+    std::set<Cell> blocked(targets.begin(), targets.end());
+    std::vector<Cell> local;
+    local.reserve(input.atoms.size());
+    for (const auto& atom : input.atoms) local.push_back(Cell{atom.position.q, atom.position.r});
+
+    int minQ = targets.front().q;
+    int maxQ = targets.front().q;
+    for (const auto& target : targets) {
+        minQ = std::min(minQ, target.q);
+        maxQ = std::max(maxQ, target.q);
+    }
+    std::vector<Cell> origins;
+    for (const int gap : {6, 8, 10, 12, 16}) {
+        origins.push_back(Cell{minQ - gap, 0});
+        origins.push_back(Cell{maxQ + gap, 0});
+        origins.push_back(Cell{minQ - gap, gap});
+        origins.push_back(Cell{minQ - gap, -gap});
+    }
+
+    for (int rotation = 0; rotation < 6; ++rotation) {
+        std::vector<Cell> shape;
+        shape.reserve(local.size());
+        for (const auto& cell : local) shape.push_back(Rotate(cell, rotation));
+        for (const Cell origin : origins) {
+            std::vector<Cell> landing(shape.size());
+            bool clipped = false;
+            for (std::size_t i = 0; i < shape.size() && !clipped; ++i) {
+                landing[i] = Add(origin, shape[i]);
+                if (blocked.count(landing[i])) clipped = true;
+            }
+            if (clipped) continue;
+            // Atoms wait on their landing cells for the whole period and the product
+            // cells carry bonders, so no relay may pivot or stop there.
+            std::set<Cell> occupied = blocked;
+            for (const auto& cell : landing) occupied.insert(cell);
+            std::set<Cell> usedPivots;
+            std::vector<bool> used(shape.size(), false);
+            std::vector<std::vector<Swing>> chains;
+            bool ok = true;
+            for (std::size_t index = 0; index < targets.size() && ok; ++index) {
+                bool matched = false;
+                for (std::size_t a = 0; a < shape.size() && !matched; ++a) {
+                    if (used[a] || input.atoms[a].type != types[index]) continue;
+                    std::set<Cell> localBlocked = occupied;
+                    localBlocked.erase(landing[a]);
+                    auto chain = PlanRelay(landing[a], targets[index], localBlocked, 3);
+                    if (chain.empty()) continue;
+                    bool clash = false;
+                    for (const auto& hop : chain)
+                        if (!usedPivots.insert(hop.pivot).second) clash = true;
+                    if (clash) {
+                        for (const auto& hop : chain) usedPivots.erase(hop.pivot);
+                        continue;
+                    }
+                    chains.push_back(chain);
+                    used[a] = true;
+                    matched = true;
+                }
+                ok = matched;
+            }
+            if (!ok) continue;
+            ExtractionPlan plan;
+            plan.rotation = rotation;
+            plan.origin = origin;
+            plan.chains = std::move(chains);
+            return plan;
+        }
+    }
+    return std::nullopt;
+}
+
+bool SupportsMolecularAssembly(const io::PuzzleData& puzzle) {
+    if (puzzle.productionInfo || puzzle.outputs.size() != 1 || puzzle.inputs.size() != 1)
+        return false;
+    const auto& output = puzzle.outputs.front();
+    if (output.atoms.empty() || output.atoms.size() != puzzle.inputs.front().atoms.size())
+        return false;
+    for (const auto& bond : output.bonds)
+        if (bond.bits != 1) return false;
+    // Pure rearrangement only: every input atom reappears unchanged, so a glyph that
+    // upgrades an element (lead -> gold) stays with the row family.
+    std::map<int, int> counts;
+    for (const auto& atom : puzzle.inputs.front().atoms) ++counts[static_cast<int>(atom.type)];
+    for (const auto& atom : output.atoms)
+        if (--counts[static_cast<int>(atom.type)] < 0) return false;
+    return std::all_of(counts.begin(), counts.end(),
+                       [](const auto& entry) { return entry.second == 0; });
+}
+
+std::optional<io::SolutionData> BuildMolecularExtraction(const io::PuzzleData& puzzle,
+                                                         const std::vector<Cell>& targets,
+                                                         const std::vector<core::AtomType>& types) {
+    if (!SupportsMolecularAssembly(puzzle)) return std::nullopt;
+    const auto plan = PlanExtraction(puzzle, targets, types, 0);
+    if (!plan) return std::nullopt;
+    const auto& output = puzzle.outputs.front();
+    const auto& input = puzzle.inputs.front();
+
+    io::SolutionData machine;
+    machine.puzzleName = puzzle.name;
+    machine.solutionName = "Composed molecular extraction";
+    PushObject(machine, "input", plan->origin, {1, plan->rotation, 0, 0, 0});
+    // One unbonder per input bond, facing its partner. A branching atom hosts only
+    // one glyph, so a second edge uses the other endpoint.
+    std::set<Cell> glyphCells;
+    for (const auto& bond : input.bonds) {
+        Cell a = Add(plan->origin, Rotate(Cell{bond.from.q, bond.from.r}, plan->rotation));
+        Cell b = Add(plan->origin, Rotate(Cell{bond.to.q, bond.to.r}, plan->rotation));
+        if (glyphCells.count(a)) std::swap(a, b);
+        if (!glyphCells.insert(a).second) return std::nullopt;
+        const int facing = DirectionOf(Subtract(b, a));
+        if (facing < 0) return std::nullopt;
+        PushObject(machine, "unbonder", a, {1, facing, 0, 0, 0});
+    }
+    // Relay schedule. Every tape is balanced — grab, swing, drop, swing back — so the
+    // arm orientation returns to its start and the machine is periodic; the next
+    // stage grabs one cycle after the previous stage dropped. Atoms are staggered so
+    // two sweeps never share a cycle.
+    std::vector<Swing> hops;
+    std::vector<int> startTick;
+    int atomOffset = 0;
+    int chainEnd = 0;
+    for (const auto& chain : plan->chains) {
+        int tick = atomOffset;
+        for (const auto& hop : chain) {
+            const int rotation = std::abs(SwingRotation(hop.grab, hop.drop));
+            hops.push_back(hop);
+            startTick.push_back(tick);
+            chainEnd = std::max(chainEnd, tick + 2 * rotation + 2);
+            tick += 2 * rotation + 2;
+        }
+        atomOffset = tick;
+    }
+    const int period = std::max(chainEnd + 1, 3);
+    for (std::size_t i = 0; i < hops.size(); ++i) {
+        const auto& hop = hops[i];
+        const int rotation = SwingRotation(hop.grab, hop.drop);
+        std::vector<io::ArmInstruction> tape;
+        int at = 0;
+        while (at < startTick[i]) tape.push_back({'O', at++});
+        tape.push_back({'G', at++});
+        for (int step = 0; step < std::abs(rotation); ++step)
+            tape.push_back({rotation > 0 ? 'r' : 'R', at++});
+        // Drop at the product cell, then swing the empty grabber back so the arm is
+        // in the same state at the start of the next period.
+        tape.push_back({'g', at++});
+        for (int step = 0; step < std::abs(rotation); ++step)
+            tape.push_back({rotation > 0 ? 'R' : 'r', at++});
+        while (at < period - 1) tape.push_back({'O', at++});
+        tape.push_back({'X', at++});
+        PushObject(machine, "arm1", hop.pivot, {hop.length, hop.grab, 0, 0, 0}, std::move(tape));
+    }
+    PushObject(machine, "out-std", Cell{0, 0}, {1, 0, 0, 0, 0});
+    try {
+        AppendBonders(machine, output);
+    } catch (const std::invalid_argument&) {
+        return std::nullopt;
+    }
+    return machine;
+}
+
 // Static layout: every station sits directly on its product cell, so the machine
 // needs no arms at all — the reagents appear where the product must be, the
 // glyphs transform them in place and the output area consumes them. This is the
@@ -592,8 +833,19 @@ bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle) {
     return true;
 }
 
+bool SupportsComposedMolecularAssembly(const io::PuzzleData& puzzle) {
+    // Opt-in: the relay scheduler still collides at the shared product row (see
+    // docs/analysis/OPUSSOLVER_GAP_ANALYSIS_20261111.md 9), so the shipped default
+    // keeps the row family for these puzzles.
+    const char* flag = std::getenv("OPUSOPTIMA_MOLECULAR_EXTRACTION");
+    if (!flag || std::string_view(flag) != "on") return false;
+    return !SupportsComposedAssembly(puzzle) && SupportsMolecularAssembly(puzzle);
+}
+
 std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzzle) {
-    if (!SupportsComposedAssembly(puzzle))
+    const bool reagentComposition = SupportsComposedAssembly(puzzle);
+    const bool molecularComposition = !reagentComposition && SupportsMolecularAssembly(puzzle);
+    if (!reagentComposition && !molecularComposition)
         throw std::invalid_argument("composed assembly needs a reagent path for every product atom");
 
     const auto& output = puzzle.outputs.front();
@@ -609,6 +861,12 @@ std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzz
     }
 
     std::vector<io::SolutionData> variants;
+    if (molecularComposition) {
+        if (auto extracted = BuildMolecularExtraction(puzzle, targets, types))
+            variants.push_back(std::move(*extracted));
+        if (variants.empty())
+            throw std::invalid_argument("no collision-free molecular extraction layout");
+    }
     // A no-arm machine is emitted when the product cannot be assembled from
     // same-type reagents, and for large bonded products (lattices): the per-atom arm
     // search is bounded, so a >6-atom frame has no arm layout at all and the in-place
@@ -616,7 +874,7 @@ std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzz
     // machine, where an in-place input area stacked on the output frame would be a
     // degenerate machine.
     const bool largeDirect = allDirect && targets.size() > kMaxComposedAtoms && !output.bonds.empty();
-    if (ComposedAssemblyUsesInPlaceLayout(puzzle) &&
+    if (reagentComposition && ComposedAssemblyUsesInPlaceLayout(puzzle) &&
         (ComposedAssemblyRequiresChemistry(puzzle) || largeDirect)) {
         try {
             if (auto staticMachine = BuildStatic(puzzle, targets, types))
@@ -625,12 +883,12 @@ std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzz
             // Non-adjacent bonds never reach a static layout; fall back to the arms.
         }
     }
-    if (allDirect) {
+    if (reagentComposition && allDirect) {
         if (auto ring = BuildRingGroup(puzzle, targets)) variants.push_back(std::move(*ring));
     }
 
     Placement placement(puzzle, targets, types);
-    if (placement.Solve()) {
+    if (reagentComposition && placement.Solve()) {
         io::SolutionData machine;
         machine.puzzleName = puzzle.name;
         machine.solutionName = "Composed assembly";
