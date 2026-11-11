@@ -1036,6 +1036,11 @@ io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle, bool singleProdu
     return CompileLifeDeathGeometry(puzzle, singleProduct, false);
 }
 
+io::SolutionData CompileLifeDeathLocalIntake(const io::PuzzleData& puzzle) {
+    const RowIntakeModeScope widened(2);
+    return CompileLifeDeathGeometry(puzzle, false, false);
+}
+
 io::SolutionData CompileSharedLifeDeath(const io::PuzzleData& puzzle,
                                         std::chrono::steady_clock::time_point deadline) {
     return CompileLifeDeathGeometry(puzzle, false, false, false, false, true, deadline);

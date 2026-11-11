@@ -133,6 +133,26 @@ io::SolutionData CompileScheduledRowFeederClockAssembly(
 // True when the most recent scheduled-row compile actually used the intake.
 bool ScheduledRowIntakeApplied();
 
+// Temporarily override the local-intake decision for the compiling thread:
+//   0  = follow `OPUSOPTIMA_DIRECT_INPUT` (the shipped default)
+//  >0  = force the intake on
+//  <0  = force the shared serpentine feeder
+//  == 2 = widened intake: the intake may also run outside the compact layout and
+//        on up to eight sources. Measured 2026-11-11 as 10-25% lower cost on the
+//        near-parity row puzzles (b2c42099 755 -> 635, cd9b4ea9 7610 -> 1620),
+//        but it re-parks the serpentine, so it is only ever compiled as a sibling
+//        candidate next to the plain machine. Restored on destruction.
+class RowIntakeModeScope {
+public:
+    explicit RowIntakeModeScope(int mode);
+    ~RowIntakeModeScope();
+    RowIntakeModeScope(const RowIntakeModeScope&) = delete;
+    RowIntakeModeScope& operator=(const RowIntakeModeScope&) = delete;
+
+private:
+    int previous_;
+};
+
 // Result of auditing an emitted machine against the upstream scheduling
 // contract (C3): every arm's tape must be strictly ordered in time, so the
 // per-arm fragment merge can never displace an instruction.

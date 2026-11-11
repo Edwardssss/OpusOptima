@@ -1316,6 +1316,53 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         rejections.push_back(std::string(stage) + ": candidate failed acceptance");
         return std::nullopt;
     };
+    // Widened local intake (M1): the intake machine and the shared serpentine feeder
+    // are independent compiles, so the widened sibling is offered to the archive as
+    // an *extra* candidate after the plain machine has already been admitted. The
+    // archive keeps the per-objective minimum (`CandidateArchive::Submit`), so a
+    // worse sibling cannot take a slot away, and a sibling that throws or fails the
+    // gate leaves the plain machine's route untouched. Measured 2026-11-11 on the
+    // 146-puzzle corpus, three serial runs per puzzle and mode: two puzzles win all
+    // three slots (`b2c42099` 755/4346/217 -> 635/2727/164, `63df4fe9`
+    // 580/3032/157 -> 500/1993/125) and the other 144 machines are byte-identical.
+    // Offering the widened machine *instead of* the plain one drops production on 31
+    // puzzles, which is why it must never replace it.
+    const char* intakeTwinFlag = std::getenv("OPUSOPTIMA_INTAKE_TWIN");
+    const bool intakeTwin = !intakeTwinFlag || std::string_view(intakeTwinFlag) != "off";
+    auto submitIntakeSibling = [&](const char* stage, auto&& compile) {
+        // Scope: one shared assembly row with one product. The serpentine the widened
+        // intake replaces is a single shared rail; a multi-output machine replicates a
+        // row per product, and rebuilding the sibling there only spends the puzzle's
+        // verification budget (`journal8/P102`, two outputs, 17150 -> 17970).
+        if (!intakeTwin || !sink || !verify || puzzle.outputs.size() != 1) return;
+        if (acceptedCount == 0 || submissions + 1 > MaxCandidateSubmissions ||
+            acceptedCount >= acceptedCap || std::chrono::steady_clock::now() >= Deadline())
+            return;
+        try {
+            auto sibling = compile();
+            if (std::chrono::steady_clock::now() >= Deadline()) return;
+            // The archive also feeds the downstream local search, so the sibling is
+            // packed before admission: an unpacked entry would compete for the same
+            // optimizer budget and cost the plain machine its own local variant
+            // (`160f11ef` cost 2040 -> 2050 without this pass).
+            try {
+                sibling = solvers::LocalTrial(sibling, 8);
+            } catch (const std::exception&) {
+                // Keep the raw widened machine when the local pass declines.
+            }
+            // Keep the portfolio's own budget: the sibling is a distinct tape set,
+            // so it gets its own acceptance instead of taking one from the family
+            // chain (`journal8/P102` cost 17150 -> 17970 when it did).
+            if (verifyAt(stage, sibling).Passed()) ++acceptedCap;
+        } catch (const std::invalid_argument& error) {
+            GetLoggerOrFallback("solver")->info("Assembly branch={} event=unsupported detail={}",
+                                                stage, error.what());
+        } catch (const std::runtime_error& error) {
+            // The bounded collection budget ran out; the admitted candidate stands.
+            GetLoggerOrFallback("solver")->info("Assembly branch={} event=skipped detail={}",
+                                                stage, error.what());
+        }
+    };
     auto attemptAccepted = [&](const char* stage,
                                auto compiler) -> std::optional<io::SolutionData> {
         std::exception_ptr acceptanceError;
@@ -1844,8 +1891,11 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         if (auto result = attempt(wheelAssemblyStage, [&] { return CompileWheelAssembly(puzzle); }))
             if (keep(*result)) return publish();
     }
-    if (auto result = attempt("life-death", [&] { return CompileLifeDeath(puzzle); }))
+    if (auto result = attempt("life-death", [&] { return CompileLifeDeath(puzzle); })) {
+        submitIntakeSibling("life-death-local-intake",
+                            [&] { return CompileLifeDeathLocalIntake(puzzle); });
         if (keep(*result)) return publish();
+    }
     if (auto result = attempt("triplex", [&] { return CompileTriplex(puzzle); }))
         if (keep(*result)) return publish();
     if (auto result = attempt("unification", [&] { return CompileUnification(puzzle); }))

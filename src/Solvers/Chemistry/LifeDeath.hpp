@@ -26,6 +26,13 @@ namespace opusoptima::solvers {
 [[nodiscard]] bool SupportsCompactSpareChemistry(const io::PuzzleData& puzzle);
 [[nodiscard]] io::SolutionData CompileCompactSpareChemistry(const io::PuzzleData& puzzle);
 [[nodiscard]] io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle);
+/// Same finite-product geometry, but the narrow row feeds are compiled with the
+/// local source intake widened past the compact layout (`RowIntakeModeScope(2)`):
+/// the piston rail above the sources replaces the serpentine delay line, which is
+/// 10-25% cheaper and much faster on near-parity row puzzles. The serpentine is
+/// then parked off-board, so this machine is a sibling candidate, never a
+/// replacement: callers must compile the plain machine too and keep the better.
+[[nodiscard]] io::SolutionData CompileLifeDeathLocalIntake(const io::PuzzleData& puzzle);
 /// Default-OFF finite sharing stays within each of one or two ordinary or existing
 /// colored outputs and requires genuine multiatom Animismus feed. Singleton inputs
 /// remain independent. Colored masks are nonempty subsets of 14 with Fire endpoints

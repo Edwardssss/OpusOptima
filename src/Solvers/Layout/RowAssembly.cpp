@@ -610,12 +610,14 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
     // (`allowCompactLayout == false`) gives 14 puzzles 10-25% lower cost and
     // shorter periods (b2c42099 755->635, cd9b4ea9 7610->1620), but it also parks
     // the serpentine off-board, so when the intake machine is rejected by the gate
-    // the whole stage is lost: 31 of 146 puzzles stopped producing. It can only
-    // ship with a feeder fallback compiled as a second, gate-only candidate.
+    // the whole stage is lost: 31 of 146 puzzles stopped producing. It therefore
+    // only runs inside `RowIntakeModeScope(2)`, i.e. as a sibling candidate that is
+    // compiled and gated next to the plain machine and never replaces it.
+    const bool widenedIntake = g_intakeMode == 2;
     const bool directInputRequested = (g_intakeMode != 0 ? g_intakeMode > 0 : [] {
         const char* flag = std::getenv("OPUSOPTIMA_DIRECT_INPUT");
         return !flag || std::string_view(flag) != "off";
-    }()) && compactLayout && p.inputs.size() <= 4 &&
+    }()) && (compactLayout || widenedIntake) && p.inputs.size() <= (widenedIntake ? 8U : 4U) &&
         std::none_of(supply.steps.begin(), supply.steps.end(), [](const auto& step) {
             return step.kind == SupplyPlan::Kind::Store ||
                    step.kind == SupplyPlan::Kind::Purify ||
@@ -638,8 +640,12 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
                 columns.insert(cell.q);
             }
             // The intake rail sits on row 3 and reaches three cells, so the source
-            // may span three rows and must have one atom per column.
-            if (highRow - lowRow > 2 || columns.size() != input.atoms.size()) return false;
+            // may span three rows and must have one atom per column. The widened
+            // intake addresses every atom by its own (column, row), so a stacked
+            // column is a sequence of pickups rather than a separate mechanism: the
+            // arm walks to the column once and extends to each row.
+            if (highRow - lowRow > 2) return false;
+            if (columns.size() != input.atoms.size() && !widenedIntake) return false;
         }
         return true;
     }();
@@ -856,7 +862,7 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
             std::set<int> atomColumns;
             for (const auto& a : input.atoms)
                 atomColumns.insert(rotate(a.position, turns).q);
-            if (atomColumns.size() != input.atoms.size())
+            if (atomColumns.size() != input.atoms.size() && !widenedIntake)
                 throw std::invalid_argument("direct input requires one atom per source column");
             const core::HexCoord origin{directCursor - hi, -lowR};
             object("input", origin, 1, turns, i);
@@ -3175,6 +3181,14 @@ io::SolutionData CompileScheduledRowFeederClockAssembly(
 
 bool ScheduledRowIntakeApplied() {
     return g_intakeApplied;
+}
+
+RowIntakeModeScope::RowIntakeModeScope(int mode) : previous_(g_intakeMode) {
+    g_intakeMode = mode;
+}
+
+RowIntakeModeScope::~RowIntakeModeScope() {
+    g_intakeMode = previous_;
 }
 
 io::SolutionData CompileScheduledRowClockAssembly(const io::PuzzleData& puzzle,
