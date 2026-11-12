@@ -15,6 +15,7 @@
 #include "LogManager.hpp"
 #include "MaterialPlanning.hpp"
 #include "MolecularMetalSplit.hpp"
+#include "PipelineCompiler.hpp"
 #include "ProductionAssembly.hpp"
 #include "ProductionChemistry.hpp"
 #include "ProductionDirectFeed.hpp"
@@ -983,6 +984,67 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 GetLoggerOrFallback("solver")->info(
                     "Assembly branch=portfolio-shared-near-cache event=unsupported detail={}",
                     error.what());
+            }
+        }
+        // Architecture portfolio (M-A..M-E): logical command sequence -> module
+        // library -> tick schedule -> part pruning. Every (schedule, arm) setting
+        // is a distinct machine, so each one is gated on its own and the archive
+        // keeps the per-objective minimum. It runs FIRST because the pipelined
+        // schedule is the only lever that changes the period from "sum of atom
+        // work" to "slowest arm", and the submission budget is first come first
+        // served. The family is bounded to three submissions.
+        // Measured 2026-11-12 on the 162-puzzle corpus, three serial runs per
+        // puzzle and mode: the family reaches 13 puzzles, is accepted on 9 of
+        // them, and changes no objective slot (produced 141/141, any-win 65/65,
+        // all-three 51/51, `d61cc536` cost 1170 -> 1165 on one of three runs,
+        // i.e. load noise). The pipelined schedule is the only lever in the four
+        // modules that the row families cannot express, but the puzzles it can
+        // build are already at the period floor (cycles = 3). It therefore stays
+        // opt-in until a generator module (MetalProjector, MetalPurifier,
+        // MorsVitae, Quintessence) widens the domain; `=on` re-enables it.
+        const char* architectureFlag = std::getenv("OPUSOPTIMA_PIPELINE_ARCHITECTURE");
+        const bool architectureEnabled =
+            architectureFlag && std::string_view(architectureFlag) == "on";
+        // Called even when the domain rejects the puzzle so the reason is logged;
+        // `CompilePipelineVariants` returns an empty list in that case.
+        if (architectureEnabled && ordinaryPortfolio) {
+            // Two: the pipelined compact and reach placements. More would
+            // only spend the budget of the families that already produce.
+            constexpr std::size_t kArchitectureSubmissions = 2;
+            std::size_t architectureSubmissions = 0;
+            auto variants = architecture::CompilePipelineVariants(puzzle, true);
+            GetLoggerOrFallback("solver")->info(
+                "Assembly branch=pipeline-architecture event=entered variants={} submissions={} "
+                "accepted={} cap={}",
+                variants.size(), submissions, acceptedCount, acceptedCap);
+            for (auto& variant : variants) {
+                if (architectureSubmissions >= kArchitectureSubmissions) break;
+                if (std::chrono::steady_clock::now() >= Deadline()) break;
+                if (submissions >= MaxCandidateSubmissions || acceptedCount >= acceptedCap) {
+                    GetLoggerOrFallback("solver")->info(
+                        "Assembly branch=pipeline-architecture event=budget submissions={} "
+                        "accepted={} cap={}",
+                        submissions, acceptedCount, acceptedCap);
+                    break;
+                }
+                ++architectureSubmissions;
+                try {
+                    const auto report =
+                        verifyAt("portfolio-pipeline-architecture", variant.solution);
+                    GetLoggerOrFallback("solver")->info(
+                        "Assembly branch=portfolio-pipeline-architecture event=gate variant={} "
+                        "accepted={} cycles={} cost={} area={} consumes={} generates={} "
+                        "pass_throughs={} waste={} depth={} pruned={} detail={}",
+                        variant.name, report.Passed(), report.metrics.cycles, report.metrics.cost,
+                        report.metrics.area, variant.consumes, variant.generates,
+                        variant.passThroughs, variant.waste, variant.depth, variant.pruned,
+                        report.detail);
+                } catch (const std::runtime_error& error) {
+                    GetLoggerOrFallback("solver")->info(
+                        "Assembly branch=portfolio-pipeline-architecture event=skipped detail={}",
+                        error.what());
+                    break;
+                }
             }
         }
         if (ordinaryPortfolio && std::chrono::steady_clock::now() < Deadline()) {
