@@ -81,6 +81,10 @@ io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle) {
     return CompileLifeDeath(puzzle, false);
 }
 namespace {
+// Sibling selection without touching the geometry signature: the per-feed clock
+// schedule is a scheduling variant, so it is switched by scope like
+// `RowIntakeModeScope` rather than by environment.
+thread_local bool g_perFeedClocks = false;
 io::SolutionData CompileLifeDeathGeometry(
     const io::PuzzleData& puzzle, bool singleProduct, bool compactRelay, bool relayBaseline = false,
     bool compactSpare = false, bool shareFeeds = false,
@@ -934,10 +938,33 @@ io::SolutionData CompileLifeDeathGeometry(
             });
             for (auto& o : machine.objects)
                 o.instructions.clear();
-            int shift = 2;
+            // Each molecular feed gets its own clock. Previously every object's tape
+            // was appended to one global cursor, so the period was the *sum* of all
+            // work (`instr/cycles` = 1.02 and `lastTick/cycles` = 1.00 on the losing
+            // puzzles). Independent clocks make it the *max*, which is what the
+            // reference machines do. Coordinates are untouched.
+            int globalShift = 2;
+            std::vector<int> feedShift(molecularFeeds.size(), 2);
+            const bool perFeedClocks =
+                g_perFeedClocks || std::getenv("OPUSOPTIMA_LD_FEED_CLOCKS") != nullptr;
+            int* clockPtr = &globalShift;
             int activeArm = 0;
+            // A machine may be shared between feeds (the transport rail is), so the
+            // clock alone cannot order its tape. Each object keeps its own cursor and
+            // a write never lands earlier than the clock it belongs to; that keeps the
+            // timeline parallel across objects while staying strictly increasing
+            // within one, which the decoder requires.
+            std::vector<int> objectCursor(machine.objects.size(), 2);
             auto emit = [&](char action) {
-                machine.objects[activeArm].instructions.push_back({action, shift++});
+                if (!perFeedClocks) {
+                    // Legacy path byte-for-byte: one shared cursor, never behind.
+                    machine.objects[activeArm].instructions.push_back({action, (*clockPtr)++});
+                    return;
+                }
+                int& cursor = objectCursor[static_cast<std::size_t>(activeArm)];
+                if (cursor < *clockPtr) cursor = *clockPtr;
+                machine.objects[activeArm].instructions.push_back({action, cursor++});
+                *clockPtr = std::max(*clockPtr, cursor);
             };
             std::size_t event = 0;
             for (int repeat = 0; repeat < repetitions; ++repeat) {
@@ -949,10 +976,10 @@ io::SolutionData CompileLifeDeathGeometry(
                         if (factories[f].type == AtomType::Quintessence && quintCarrier >= 0) {
                             for (std::size_t j = 0; j < quintProgram.size(); ++j)
                                 for (auto ins : quintProgram[j].instructions) {
-                                    ins.parameter += shift;
+                                    ins.parameter += globalShift;
                                     machine.objects[quintObjects[j]].instructions.push_back(ins);
                                 }
-                            shift += quintDuration + 1;
+                            globalShift += quintDuration + 1;
                             activeArm = quintCarrier;
                             emit('G');
                             for (int i = 0; i < 24; ++i)
@@ -962,12 +989,16 @@ io::SolutionData CompileLifeDeathGeometry(
                                 emit('a');
                             continue;
                         }
-                        for (auto& feed : molecularFeeds) {
+                        for (std::size_t feedIndex = 0; feedIndex < molecularFeeds.size();
+                             ++feedIndex) {
+                            auto& feed = molecularFeeds[feedIndex];
                             if (feed.factoryQ != factories[f].q) continue;
                             checkDeadline();
                             auto& producer = feed.sharedProducer
                                                  ? molecularFeeds.at(*feed.sharedProducer)
                                                  : feed;
+                            int& shift = perFeedClocks ? feedShift[feedIndex] : globalShift;
+                            if (perFeedClocks) clockPtr = &shift;
                             const auto slice = producer.resource->Reserve(shift);
                             const int end = slice.end;
                             for (int id : producer.objects)
@@ -1044,6 +1075,7 @@ io::SolutionData CompileLifeDeathGeometry(
                                 moveTransport(*std::find_if(
                                     transportPath.begin(), transportPath.end(),
                                     [](core::HexCoord cell) { return cell.r == 87; }));
+                            if (perFeedClocks) clockPtr = &globalShift;
                         }
                         if (std::any_of(spareOutlets.begin(), spareOutlets.end(),
                                         [&](const auto& outlet) { return outlet.factory == f; })) {
@@ -1088,9 +1120,9 @@ io::SolutionData CompileLifeDeathGeometry(
                            replay[replayIndex].instruction.parameter == t) {
                         const auto& entry = replay[replayIndex++];
                         machine.objects[entry.object].instructions.push_back(
-                            {entry.instruction.action, shift});
+                            {entry.instruction.action, globalShift});
                     }
-                    ++shift;
+                    ++globalShift;
                 }
             }
             for (const auto& feed : molecularFeeds) {
@@ -1101,7 +1133,11 @@ io::SolutionData CompileLifeDeathGeometry(
             }
             checkDeadline();
             for (auto& o : machine.objects)
-                if (!o.instructions.empty()) o.instructions.push_back({'B', shift});
+                if (!o.instructions.empty()) {
+                    int end = globalShift;
+                    for (const int value : feedShift) end = std::max(end, value);
+                    o.instructions.push_back({'B', end});
+                }
         }
         int low = 0, high = 0;
         for (const auto& o : machine.objects) {
@@ -1139,6 +1175,14 @@ io::SolutionData CompileLifeDeathGeometry(
 } // namespace
 io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle, bool singleProduct) {
     return CompileLifeDeathGeometry(puzzle, singleProduct, false);
+}
+
+io::SolutionData CompileLifeDeathClocked(const io::PuzzleData& puzzle) {
+    struct Scope {
+        Scope() { g_perFeedClocks = true; }
+        ~Scope() { g_perFeedClocks = false; }
+    } scope;
+    return CompileLifeDeathGeometry(puzzle, false, false);
 }
 
 io::SolutionData CompileLifeDeathLocalIntake(const io::PuzzleData& puzzle) {

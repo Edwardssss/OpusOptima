@@ -1400,12 +1400,22 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // puzzles, which is why it must never replace it.
     const char* intakeTwinFlag = std::getenv("OPUSOPTIMA_INTAKE_TWIN");
     const bool intakeTwin = !intakeTwinFlag || std::string_view(intakeTwinFlag) != "off";
-    auto submitIntakeSibling = [&](const char* stage, auto&& compile) {
-        // Scope: one shared assembly row with one product. The serpentine the widened
-        // intake replaces is a single shared rail; a multi-output machine replicates a
-        // row per product, and rebuilding the sibling there only spends the puzzle's
-        // verification budget (`journal8/P102`, two outputs, 17150 -> 17970).
-        if (!intakeTwin || !sink || !verify || puzzle.outputs.size() != 1) return;
+    // Per-feed clocks turn the period from the sum of all work into its max
+    // (`cd9b4ea9` 20014 -> 3033). Machines that share a courier between feeds can
+    // collide instead, so it is offered as a bonus candidate only.
+    const char* clockSiblingFlag = std::getenv("OPUSOPTIMA_LD_CLOCK_SIBLING");
+    const bool clockSibling =
+        clockSiblingFlag != nullptr && std::string_view(clockSiblingFlag) != "off";
+    auto submitIntakeSibling = [&](bool enabled, bool singleOutputOnly, const char* stage,
+                                   auto&& compile) {
+        // Scope for the widened intake: one shared assembly row with one product. The
+        // serpentine it replaces is a single shared rail; a multi-output machine
+        // replicates a row per product, and rebuilding the sibling there only spends
+        // the puzzle's verification budget (`journal8/P102`, two outputs, 17150 ->
+        // 17970). The per-feed clock sibling is exactly aimed at those multi-output
+        // puzzles (`cd9b4ea9` has two), so it passes `singleOutputOnly = false`.
+        if (!enabled || !sink || !verify) return;
+        if (singleOutputOnly && puzzle.outputs.size() != 1) return;
         if (acceptedCount == 0 || submissions + 1 > MaxCandidateSubmissions ||
             acceptedCount >= acceptedCap || std::chrono::steady_clock::now() >= Deadline())
             return;
@@ -2007,8 +2017,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             if (keep(*result)) return publish();
     }
     if (auto result = attempt("life-death", [&] { return CompileLifeDeath(puzzle); })) {
-        submitIntakeSibling("life-death-local-intake",
+        submitIntakeSibling(intakeTwin, true, "life-death-local-intake",
                             [&] { return CompileLifeDeathLocalIntake(puzzle); });
+        submitIntakeSibling(clockSibling, false, "life-death-feed-clocks",
+                            [&] { return CompileLifeDeathClocked(puzzle); });
         if (keep(*result)) return publish();
     }
     if (auto result = attempt("triplex", [&] { return CompileTriplex(puzzle); }))

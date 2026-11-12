@@ -33,6 +33,12 @@ namespace opusoptima::solvers {
 /// then parked off-board, so this machine is a sibling candidate, never a
 /// replacement: callers must compile the plain machine too and keep the better.
 [[nodiscard]] io::SolutionData CompileLifeDeathLocalIntake(const io::PuzzleData& puzzle);
+/// Same geometry, but every molecular feed advances its own clock instead of all
+/// of them appending to one global cursor. That turns the period from the *sum*
+/// of all work into the *max*: measured 20014 -> 3033 on `cd9b4ea9`. Machines that
+/// share a courier between feeds can still collide in the motion phase, so this is
+/// a sibling candidate, never a replacement.
+[[nodiscard]] io::SolutionData CompileLifeDeathClocked(const io::PuzzleData& puzzle);
 /// Default-OFF finite sharing stays within each of one or two ordinary or existing
 /// colored outputs and requires genuine multiatom Animismus feed. Singleton inputs
 /// remain independent. Colored masks are nonempty subsets of 14 with Fire endpoints
