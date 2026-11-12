@@ -46,9 +46,13 @@ static bool RowClockEnabledFrom(const char* name) {
 // default is off. Used for families whose widened clock coverage is only correct
 // for some puzzles, so the portfolio has to try both.
 static bool RowClockOptIn(const char* name) {
+    // A forced mode always wins: `RowClockScope(-1)` marks phases whose tape
+    // surgery assumes the serialized timing, and letting the finite-only opt-in
+    // jump the queue emits an illegal machine there ("atom moved while being held
+    // stationary by another arm").
+    if (g_rowClockMode != 0) return g_rowClockMode > 0;
     if (std::string_view(name) == "OPUSOPTIMA_ROW_FINITE_CLOCKS" && g_rowFiniteClockOptIn != 0)
         return g_rowFiniteClockOptIn > 0;
-    if (g_rowClockMode != 0) return g_rowClockMode > 0;
     const char* flag = std::getenv(name);
     return flag && std::string_view(flag) != "off";
 }

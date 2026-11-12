@@ -694,8 +694,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             if (improves && acceptedCap < maxAccepted + kMaxExtraSlotAdmissions) ++acceptedCap;
         }
         GetLoggerOrFallback("solver")->info(
-            "Assembly branch={} event=gate accepted={} submission={}", stage, report.Passed(),
-            submissions);
+            "Assembly branch={} event=gate accepted={} submission={} cycles={} detail={}", stage,
+            report.Passed(), submissions, report.metrics.cycles, report.detail);
         seen.emplace_back(std::move(bytes), report);
         return report;
     };
@@ -1406,6 +1406,18 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     const char* clockSiblingFlag = std::getenv("OPUSOPTIMA_LD_CLOCK_SIBLING");
     const bool clockSibling =
         clockSiblingFlag != nullptr && std::string_view(clockSiblingFlag) != "off";
+    // Bounded-run clocks are on by default for the one shape that survives the
+    // gate: one molecular input, several outputs, each <=4 atoms (11 of 162 corpus
+    // puzzles). They give `cd9b4ea9` 20014 -> 3033 and `b4769272` 22544 -> 8465,
+    // and the other nine puzzles of that shape are byte-identical, so the lead
+    // costs nothing where it does not help. `=off` restores the old order.
+    const char* finiteLeadFlag = std::getenv("OPUSOPTIMA_LD_FINITE_CLOCK_LEAD");
+    const bool finiteClockLead =
+        (!finiteLeadFlag || std::string_view(finiteLeadFlag) != "off") &&
+        puzzle.inputs.size() == 1 && puzzle.inputs.front().atoms.size() > 1 &&
+        puzzle.outputs.size() > 1 &&
+        std::all_of(puzzle.outputs.begin(), puzzle.outputs.end(),
+                    [](const auto& output) { return output.atoms.size() <= 4; });
     auto submitIntakeSibling = [&](bool enabled, bool singleOutputOnly, const char* stage,
                                    auto&& compile) {
         // Scope for the widened intake: one shared assembly row with one product. The
@@ -2016,12 +2028,19 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         if (auto result = attempt(wheelAssemblyStage, [&] { return CompileWheelAssembly(puzzle); }))
             if (keep(*result)) return publish();
     }
-    if (auto result = attempt("life-death", [&] { return CompileLifeDeath(puzzle); })) {
-        submitIntakeSibling(intakeTwin, true, "life-death-local-intake",
-                            [&] { return CompileLifeDeathLocalIntake(puzzle); });
-        submitIntakeSibling(clockSibling, false, "life-death-feed-clocks",
-                            [&] { return CompileLifeDeathClocked(puzzle); });
-        if (keep(*result)) return publish();
+    // On the bounded-run shape the clocks machine is strictly better, but the
+    // life-death emitter rejects it outright ("atom moved while being held
+    // stationary by another arm"), so the fast machine only comes out of
+    // `independent-outputs` below. Standing it down here is what lets the solve
+    // reach that stage instead of publishing the 20014-cycle machine first.
+    if (!finiteClockLead) {
+        if (auto result = attempt("life-death", [&] { return CompileLifeDeath(puzzle); })) {
+            submitIntakeSibling(intakeTwin, true, "life-death-local-intake",
+                                [&] { return CompileLifeDeathLocalIntake(puzzle); });
+            submitIntakeSibling(clockSibling, false, "life-death-feed-clocks",
+                                [&] { return CompileLifeDeathClocked(puzzle); });
+            if (keep(*result)) return publish();
+        }
     }
     if (auto result = attempt("triplex", [&] { return CompileTriplex(puzzle); }))
         if (keep(*result)) return publish();
@@ -2051,6 +2070,13 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                                   [&] { return CompileSharedOrdinaryOutputs(puzzle); }))
             if (keep(*result)) return publish();
         if (auto result = attempt("independent-outputs", [&]() -> io::SolutionData {
+                // The bounded-run row clocks are what make this stage competitive:
+                // `cd9b4ea9` drops from 20014 to 3033 and `b4769272` from 22544 to
+                // 8465, and both come from here rather than from `life-death` (which
+                // rejects the clocks machine outright). Scoped to the shape that
+                // survives the gate so the other families keep their tape exactly.
+                std::optional<FiniteClockScope> clockScope;
+                if (finiteClockLead) clockScope.emplace(1);
                 if (puzzle.productionInfo) Reject("multiple production outputs are unsupported");
                 io::SolutionData result;
                 result.puzzleName = puzzle.name;
