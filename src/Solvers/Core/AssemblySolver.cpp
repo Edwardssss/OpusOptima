@@ -38,6 +38,20 @@
 #include <filesystem>
 
 #include <algorithm>
+
+namespace {
+// `independent-outputs` compiles one sub-machine per output by re-entering Solve and
+// then interleaves those machines on a single board. A geometry choice that is safe
+// for a lone machine (packed molecular factories) is not safe there, so the nesting
+// depth is visible to the families.
+thread_local int g_compositionDepth = 0;
+struct CompositionDepthScope {
+    CompositionDepthScope() { ++g_compositionDepth; }
+    ~CompositionDepthScope() { --g_compositionDepth; }
+    CompositionDepthScope(const CompositionDepthScope&) = delete;
+    CompositionDepthScope& operator=(const CompositionDepthScope&) = delete;
+};
+} // namespace
 #include <chrono>
 #include <exception>
 #include <limits>
@@ -2045,12 +2059,14 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // (`third_party/omsim/decode.c`). A life-death machine that already spends the
     // bulk of that budget is a long-rail machine - one piston shuttling the whole
     // transport corridor - and every other family beats it: `17a58334` reaches the
-    // gate with 90801 instructions here, where the material search answers 16486.
+    // gate with 73533 instructions here, where the material search answers 16486.
     // Verifying it is what costs those families the 20 s solve budget, so a machine
     // this long is held back until they have had their turn, and only offered if
-    // nothing else was admitted. Machines at 79400 (`89d6e08e`) and below stay in
-    // front: they still win by 1.30-1.34x, so the guard is a rail-length test, not a
-    // quality test.
+    // nothing else was admitted. Machines at 60323 (`89d6e08e`) and below stay in
+    // front: they still win by 1.74x, so the guard is a rail-length test, not a
+    // quality test. Two thirds of the gate budget is the measured separator - the
+    // largest winning life-death tape sits at 60.3% and the machine that must be
+    // held back at 73.5%.
     constexpr std::int64_t kGateTapeLimit = 100000;
     const auto instructionCount = [](const io::SolutionData& solution) {
         std::int64_t count = 0;
@@ -2059,26 +2075,46 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         return count;
     };
     const char* tapeGuardFlag = std::getenv("OPUSOPTIMA_LD_TAPE_GUARD");
+    // The guard exists for one shape: a single product whose atom count is a large
+    // multiple of the inputs', which life-death builds as a long rail. Multi-output
+    // puzzles go through composition and their portfolio constructions depend on
+    // this family being archived, so they are left alone.
     const std::int64_t tapeGuard =
-        tapeGuardFlag != nullptr && std::string_view(tapeGuardFlag) != "off"
-            ? std::atoll(tapeGuardFlag)
-            : kGateTapeLimit * 85 / 100;
+        puzzle.outputs.size() != 1 ? 0
+        : tapeGuardFlag == nullptr ? kGateTapeLimit * 2 / 3
+        : std::string_view(tapeGuardFlag) == "off"
+            ? 0
+            : std::atoll(tapeGuardFlag);
     std::optional<io::SolutionData> postponedLifeDeath;
     if (!finiteClockLead) {
         if (auto result = attempt("life-death", [&] {
-                auto compiled = CompileLifeDeath(puzzle);
-                const auto count = instructionCount(compiled);
-                if (tapeGuard > 0 && count > tapeGuard) {
-                    // Held back, not rejected: the machine is legal, it is just the
-                    // wrong thing to spend the whole budget on.
-                    postponedLifeDeath = compiled;
-                    throw std::invalid_argument(
-                        "life-death tape of " + std::to_string(count) +
-                        " instructions exceeds the long-rail guard of " +
-                        std::to_string(tapeGuard) +
-                        "; deferred behind the shorter families");
-                }
-                return compiled;
+                const auto build = [&] {
+                    auto compiled = CompileLifeDeath(puzzle);
+                    const auto count = instructionCount(compiled);
+                    if (tapeGuard > 0 && count > tapeGuard) {
+                        // Held back, not rejected: the machine is legal, it is just
+                        // the wrong thing to spend the whole budget on.
+                        postponedLifeDeath = compiled;
+                        throw std::invalid_argument(
+                            "life-death tape of " + std::to_string(count) +
+                            " instructions exceeds the long-rail guard of " +
+                            std::to_string(tapeGuard) +
+                            "; deferred behind the shorter families");
+                    }
+                    return compiled;
+                };
+                // Packed factories: no air between adjacent envelopes instead of the
+                // shipped 40 cells. The corridor is feeds x (width + clearance) long
+                // and the piston walks every cell twice per round trip, so the spacing
+                // is a direct multiplier on the period (`1dc60983` 58148 -> 43948,
+                // `89d6e08e` 72850 -> 53850, `7b837aa2` 63018 -> 52980). Only at the
+                // top level: `independent-outputs` re-enters the solver once per
+                // output and those machines are later interleaved on one board, where
+                // the packed spacing collides (`deecf24d`, `collision during motion
+                // phase`).
+                if (g_compositionDepth > 0) return build();
+                FactoryClearanceScope spacing(0);
+                return build();
             })) {
             submitIntakeSibling(intakeTwin, true, "life-death-local-intake",
                                 [&] { return CompileLifeDeathLocalIntake(puzzle); });
@@ -2135,6 +2171,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     auto single = puzzle;
                     single.outputs = {puzzle.outputs[output]};
                     auto machine = [&] {
+                        CompositionDepthScope nested;
                         try {
                             return Solve(single);
                         } catch (const std::invalid_argument& error) {
