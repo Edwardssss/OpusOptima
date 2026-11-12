@@ -2,9 +2,12 @@
 #include "AssemblySolver.hpp"
 #include "ChemistryPipeline.hpp"
 #include "FiniteFeedResource.hpp"
+#include "LogManager.hpp"
 #include "PurificationAssembly.hpp"
 #include "RowAssembly.hpp"
+#include "RowAssemblyInternal.hpp"
 #include "Unification.hpp"
+#include "IO/BinaryWriter.hpp"
 
 #include <array>
 
@@ -272,11 +275,24 @@ io::SolutionData CompileLifeDeathGeometry(
         std::vector<int> actual;
         std::vector<ChemistryFeed> feeds;
         std::vector<AtomType> desired;
+        // Representative product atom for each deduplicated feed, so a factory can be
+        // matched back to the emission that reports when its atom is in place.
+        std::vector<std::size_t> atomOfFeed;
+        // Every product atom's feed, so an emission can be resolved to the factory
+        // that serves it even when one feed covers several product atoms.
+        std::vector<std::size_t> feedOfAtom;
         std::size_t demandIndex = 0;
+        std::size_t atomIndex = 0;
         for (const auto& atom : puzzle.outputs[output].atoms) {
             const auto feed = chemistry.feeds[demandIndex++];
+            const std::size_t thisAtom = atomIndex++;
             if (atom.type == AtomType::Repeat) Reject("life/death repeating targets unsupported");
-            if (std::find(desired.begin(), desired.end(), atom.type) != desired.end()) continue;
+            const auto existing = std::find(desired.begin(), desired.end(), atom.type);
+            if (existing != desired.end()) {
+                feedOfAtom.push_back(static_cast<std::size_t>(existing - desired.begin()));
+                continue;
+            }
+            feedOfAtom.push_back(desired.size());
             const int source = feed.input;
             if (feed.kind == ChemistryFeedKind::Animismus ||
                 feed.kind == ChemistryFeedKind::Wheel || feed.kind == ChemistryFeedKind::Unify ||
@@ -284,6 +300,7 @@ io::SolutionData CompileLifeDeathGeometry(
                 needed = true;
             if (sourceMap[source].input < 0) needed = true;
             feeds.push_back(feed);
+            atomOfFeed.push_back(thisAtom);
             desired.push_back(atom.type);
             const auto proxy = static_cast<AtomType>(desired.size() + 1);
             single.inputs.push_back({{{proxy, {0, 0}}}, {}});
@@ -356,11 +373,32 @@ io::SolutionData CompileLifeDeathGeometry(
         if (shareFeeds && feedSpacing != 3) Reject("shared feed requires ordinary feed spacing");
         if (singleProduct && triplex)
             Reject("single-product chemistry does not support colored bonds");
+        // Explicit pickup schedule. `CompileRows` can report one emission per atom it
+        // hands to the row (`readyCycle` = when the atom is in place), which is the
+        // information `events` currently recovers by walking the feed arm's tape. The
+        // tape walk cannot survive a widened intake -- its arm only travels 0..9 cells
+        // and never crosses the factory columns -- so the explicit table is the only
+        // route to that layout.
+        const char* emissionFlag = std::getenv("OPUSOPTIMA_LD_EMISSION_SCHEDULE");
+        const bool useEmissions = emissionFlag != nullptr && std::string_view(emissionFlag) == "on";
+        std::vector<SharedFactoryEmission> emissions;
+        std::vector<ProductAtomRef> emissionOwners;
+        if (useEmissions)
+            for (std::size_t atom = 0; atom < single.outputs[0].atoms.size(); ++atom)
+                emissionOwners.push_back({0, atom});
         auto machine = singleProduct ? CompileRowAssemblySingleProduct(single, plan)
                        : triplex     ? CompileTriplexRowAssembly(single, plan, labels, false,
                                                                  feedSpacing, deadline)
                        : shareFeeds  ? CompileRowAssembly(single, plan, deadline)
-                                     : CompileRowAssembly(single, plan, feedSpacing);
+                       : useEmissions
+                             ? CompileRows(single, plan, nullptr, nullptr, nullptr, true, nullptr,
+                                           false, 0, nullptr, nullptr, feedSpacing, false, false,
+                                           false, false, &emissions, &emissionOwners)
+                             : CompileRowAssembly(single, plan, feedSpacing);
+        if (useEmissions)
+            GetLoggerOrFallback("solver")->info(
+                "Assembly branch=life-death event=emissions count={} atoms={} owners={}",
+                emissions.size(), single.outputs[0].atoms.size(), emissionOwners.size());
         int feedArm = -1, feedOffset = 0;
         for (std::size_t i = 0; i < machine.objects.size(); ++i) {
             const auto& o = machine.objects[i];
@@ -374,6 +412,9 @@ io::SolutionData CompileLifeDeathGeometry(
             int q, distance;
             AtomType type;
             bool animismus = false;
+            // Feed this factory is supplied from; matched against the emission table
+            // through `feedOfAtom`.
+            std::size_t feed{};
         };
         struct SpareOutlet {
             int factory, arm;
@@ -558,7 +599,7 @@ io::SolutionData CompileLifeDeathGeometry(
                 const int factory = static_cast<int>(factories.size());
                 if (molecular) addFeed(center, index, cell.q);
                 if (molecular || park)
-                    factories.push_back({cell.q, 5 + 2 * (-feedOffset - cell.q), type});
+                    factories.push_back({cell.q, 5 + 2 * (-feedOffset - cell.q), type, false, static_cast<std::size_t>(index)});
                 object("glyph-dispersion", center, 1, rotation);
                 if (feeds[index].calcifySource) object("glyph-calcification", cell, 1, 0);
                 for (int other = 0; other < 4; ++other)
@@ -603,7 +644,7 @@ io::SolutionData CompileLifeDeathGeometry(
                     Reject("molecular unification batch unsupported");
                 const int q = o.position.q;
                 o.typeName = "glyph-marker";
-                factories.push_back({q, 5 + 2 * (-feedOffset - q), type});
+                factories.push_back({q, 5 + 2 * (-feedOffset - q), type, false, static_cast<std::size_t>(index)});
                 quintessence = CompileSaltQuintessenceBatch(puzzle, actual[index], deadline);
                 core::HexCoord delivery{};
                 for (const auto& part : quintessence.objects)
@@ -652,7 +693,7 @@ io::SolutionData CompileLifeDeathGeometry(
                 if (type == AtomType::Salt && sourceType != AtomType::Salt)
                     object("glyph-calcification", cell, 1, 0);
                 if (molecularInput(actual[index], sourceType))
-                    factories.push_back({cell.q, 5 + 2 * (-feedOffset - cell.q), type});
+                    factories.push_back({cell.q, 5 + 2 * (-feedOffset - cell.q), type, false, static_cast<std::size_t>(index)});
                 continue;
             }
             const int q = o.position.q;
@@ -661,7 +702,7 @@ io::SolutionData CompileLifeDeathGeometry(
             o.position = {q + (type == AtomType::Mors), 3};
             o.bodyData[1] = type == AtomType::Mors ? 3 : 0;
             o.bodyData[2] = 0;
-            factories.push_back({q, 5 + 2 * (-feedOffset - q), type, true});
+            factories.push_back({q, 5 + 2 * (-feedOffset - q), type, true, static_cast<std::size_t>(index)});
             // ianh/omsim sim.c, ANIMISMUS (a88d12d8d100784aa525ee90259255b869bcba38):
             // ungrabbed, unbonded salts at (0,0),(1,0), vitae at (0,1), mors
             // at (1,-1). A blocked output stops conversion.
@@ -777,6 +818,68 @@ io::SolutionData CompileLifeDeathGeometry(
                         if (position == factories[f].distance)
                             events.push_back({ins.parameter - factories[f].distance - 8, f});
                 }
+            if (const char* probe = std::getenv("OPUSOPTIMA_LD_EMISSION_PROBE");
+                probe != nullptr && *probe != '\0') {
+                std::string line = "Assembly branch=life-death event=emission-probe tapeEvents=";
+                for (std::size_t i = 0; i < events.size() && i < 4; ++i)
+                    line += std::to_string(events[i].time) + "/" + std::to_string(events[i].factory) +
+                            " ";
+                line += "| emissions:";
+                for (std::size_t i = 0; i < emissions.size() && i < 4; ++i) {
+                    const auto& e = emissions[i];
+                    line += " [beg=" + std::to_string(e.beginCycle) +
+                            " hold=" + std::to_string(e.holderReleaseCycle) +
+                            " rdy=" + std::to_string(e.readyCycle) +
+                            " rel=" + std::to_string(e.releaseCycle) +
+                            " atom=" + std::to_string(e.consumer.atom) + "]";
+                }
+                GetLoggerOrFallback("solver")->info("{}", line);
+            }
+            if (useEmissions && !emissions.empty()) {
+                // Replace the tape-position inference with the explicit table: each
+                // emission says when its atom is in place, and every factory knows
+                // which product atom it feeds. `LEAD` retracts the schedule so the
+                // molecular extraction still finishes ahead of the drop.
+                // `beginCycle` is exactly the quantity the tape walk recovered
+                // (`'G' tick - distance - 8`), verified against the plain layout below,
+                // so the schedule is reproduced verbatim; a widened layout, whose arm
+                // never crosses the factory columns, supplies its own lead instead.
+                const char* leadFlag = std::getenv("OPUSOPTIMA_LD_EMISSION_LEAD");
+                const bool explicitLead = leadFlag != nullptr;
+                const int lead = explicitLead ? std::max(0, std::atoi(leadFlag)) : 0;
+                events.clear();
+                const auto feedOf = [&](std::size_t atom) -> std::size_t {
+                    return atom < feedOfAtom.size() ? feedOfAtom[atom] : 0;
+                };
+                // One event per *extraction*, not per product atom: a single
+                // dispersion/unification hands several atoms to different factories at
+                // the same `beginCycle`, and the tape walk recorded one pickup for it.
+                std::vector<int> extractions;
+                for (const auto& emission : emissions) {
+                    if (std::find(extractions.begin(), extractions.end(), emission.beginCycle) !=
+                        extractions.end())
+                        continue;
+                    int factory = -1;
+                    for (int f = 0; f < static_cast<int>(factories.size()); ++f)
+                        if (factories[f].feed == feedOf(emission.consumer.atom)) {
+                            factory = f;
+                            break;
+                        }
+                    if (factory < 0) continue;
+                    extractions.push_back(emission.beginCycle);
+                    // `beginCycle` already equals the value the tape walk derived
+                    // (`'G' tick - distance - 8`); subtracting again would double-count.
+                    events.push_back({emission.beginCycle - (explicitLead ? lead : 0), factory});
+                }
+                std::sort(events.begin(), events.end(),
+                          [](const Event& a, const Event& b) { return a.time < b.time; });
+                int lowest = period;
+                for (const auto& entry : events) lowest = std::min(lowest, entry.time);
+                GetLoggerOrFallback("solver")->info(
+                    "Assembly branch=life-death event=emission-schedule events={} period={} "
+                    "lowest={} lead={}",
+                    events.size(), period, lowest, lead);
+            }
             std::sort(events.begin(), events.end(),
                       [](const Event& a, const Event& b) { return a.time < b.time; });
             if (events.empty() || events.front().time < 0)
@@ -1029,6 +1132,8 @@ io::SolutionData CompileLifeDeathGeometry(
     if (compactRelay) result.solutionName = "Experimental compact molecular relay";
     if (!needed && !compactRelay && !relayBaseline)
         Reject("life/death target requires no chemistry conversion");
+    if (const char* dump = std::getenv("OPUSOPTIMA_LD_DUMP"); dump != nullptr && *dump != '\0')
+        io::BinaryWriter::WriteSolutionFile(dump, result);
     return result;
 }
 } // namespace
