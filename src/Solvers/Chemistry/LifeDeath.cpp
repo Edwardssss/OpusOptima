@@ -528,7 +528,18 @@ io::SolutionData CompileLifeDeathGeometry(
             // Rotate each factory into a disjoint horizontal envelope, leaving
             // clearance for its arms and held molecules instead of a fixed stride.
             const int left = nextFactoryRight + minimumQ;
-            nextFactoryRight = left - maximumQ - 40;
+            // The factories accumulate leftwards, so this clearance is multiplied by
+            // the feed count and then becomes the transport corridor length - which
+            // the period pays one instruction per cell for. Lowering it is a real
+            // win (`1dc60983` 78166 -> 63966 at 0) but it is not universally safe:
+            // `deecf24d`, `e55f57a6` and `ac8d3e1b` lose their layout, and they reach
+            // this code through independent-outputs where the original multi-output
+            // shape is no longer visible. Shipped value stays 40; the knob is here for
+            // measurement and for whoever teaches the planner to stack the factories
+            // vertically instead of spreading them along the corridor.
+            const char* factoryClearFlag = std::getenv("OPUSOPTIMA_LD_FACTORY_CLEARANCE");
+            const int factoryClear = factoryClearFlag ? std::atoi(factoryClearFlag) : 40;
+            nextFactoryRight = left - maximumQ - factoryClear;
             feed.pickup = compactRelay ? cell.q - 4 : left - 2;
             core::HexCoord delivery{};
             for (const auto& part : feed.batch.objects)
@@ -769,6 +780,10 @@ io::SolutionData CompileLifeDeathGeometry(
                 transportPath.push_back({q, transportRow});
             transport = object("piston", transportPath.front(), 1, 1);
             const int rail = object("track", transportPath.front(), 1, 0);
+            if (std::getenv("OPUSOPTIMA_LD_TRANSPORT_DIAG"))
+                std::fprintf(stderr,
+                             "TRANSPORT pickup=%d bend=%d right=%d feeds=%zu path=%zu\n",
+                             pickup, bend, right, molecularFeeds.size(), transportPath.size());
             auto& data = machine.objects[rail].bodyData;
             data = {1, 0, 0, 0, static_cast<int>(transportPath.size())};
             for (auto cell : transportPath)
