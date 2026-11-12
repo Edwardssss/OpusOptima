@@ -27,6 +27,10 @@ static thread_local int g_intakeMode = 0;
 // an emitted row (the wheel family relocates every object by a fixed offset) need
 // the serialized timing, because their own tape surgery assumes it.
 static thread_local int g_rowClockMode = 0;
+// Narrow override for the finite-family opt-in only. `RowClockScope` forces every
+// row knob at once, which changes the emitted machine on families that need the
+// stock defaults, so the bounded-run sibling flips just this one flag instead.
+static thread_local int g_rowFiniteClockOptIn = 0;
 // Set while emitting: true when the local intake geometry was actually used, so
 // the portfolio only compiles a feeder fallback when it can differ.
 static thread_local bool g_intakeApplied = false;
@@ -37,6 +41,16 @@ static bool RowClockEnabledFrom(const char* name) {
     if (g_rowClockMode != 0) return g_rowClockMode > 0;
     const char* flag = std::getenv(name);
     return !flag || std::string_view(flag) != "off";
+}
+// Opt-in variant of the knob above: same RowClockScope override, but the shipped
+// default is off. Used for families whose widened clock coverage is only correct
+// for some puzzles, so the portfolio has to try both.
+static bool RowClockOptIn(const char* name) {
+    if (std::string_view(name) == "OPUSOPTIMA_ROW_FINITE_CLOCKS" && g_rowFiniteClockOptIn != 0)
+        return g_rowFiniteClockOptIn > 0;
+    if (g_rowClockMode != 0) return g_rowClockMode > 0;
+    const char* flag = std::getenv(name);
+    return flag && std::string_view(flag) != "off";
 }
 namespace {
 SupplyPlan PlanProxySupply(const io::PuzzleData& p,
@@ -1326,11 +1340,21 @@ static io::SolutionData CompileRowsWithRetimingPolicy(
         parallelClocks || RowClockEnabledFrom("OPUSOPTIMA_ROW_ASSEMBLY_CLOCKS");
     const bool rowPipelineRequested = rowPipelineFlag || assemblyClocksRequested;
     const bool bufferedSupply = !bufferSlots.empty();
+    // The emission schedule only *reads* the shared cursor (`beginCycle = time`,
+    // and every await above uses std::max so the cursor stays monotonic), it never
+    // participates in the hand-off protocol. Emitting that record therefore does
+    // not by itself make the assembly clocks unsafe, so allow the opt-in to keep
+    // the emission path on the fast row pipeline instead of excluding it.
+    const bool allowEmissionClocks = RowClockOptIn("OPUSOPTIMA_ROW_EMISSION_CLOCKS");
+    // A bounded run only changes how the tape terminates and how many repetitions
+    // are emitted; it does not alter the hand-off protocol the clocks rely on.
+    const bool allowFiniteClocks = RowClockOptIn("OPUSOPTIMA_ROW_FINITE_CLOCKS");
     const bool feedPrefetch =
         (feedPrefetchRequested || rowPipelineRequested) && !expandedFeeds && !completionTransfer &&
         !mixedInventory && !reactionAssembly && !animismus && !sharedOutputs && !labels &&
-        !productOrigins && !supplied && !validationPuzzle && !custody && !emissions && !owners &&
-        !singleProduct && !finiteProducts && !componentRows && !bufferedSupply;
+        !productOrigins && !supplied && !validationPuzzle && !custody &&
+        ((!emissions && !owners) || allowEmissionClocks) && !singleProduct &&
+        (!finiteProducts || allowFiniteClocks) && !componentRows && !bufferedSupply;
     const bool rowPipeline = rowPipelineRequested && feedPrefetch;
     const bool assemblyClocks = assemblyClocksRequested && rowPipeline;
     int feedReady = 0;
@@ -3211,6 +3235,12 @@ RowClockScope::RowClockScope(int mode) : previous_(g_rowClockMode) {
 
 RowClockScope::~RowClockScope() {
     g_rowClockMode = previous_;
+}
+FiniteClockScope::FiniteClockScope(int mode) : previous_(g_rowFiniteClockOptIn) {
+    g_rowFiniteClockOptIn = mode;
+}
+FiniteClockScope::~FiniteClockScope() {
+    g_rowFiniteClockOptIn = previous_;
 }
 
 io::SolutionData CompileScheduledRowClockAssembly(const io::PuzzleData& puzzle,

@@ -170,6 +170,21 @@ public:
 private:
     int previous_;
 };
+// Same idea, but it only flips the finite-family opt-in
+// (`OPUSOPTIMA_ROW_FINITE_CLOCKS`) and leaves every other row knob on the package
+// default. RowClockScope forces them all at once, which changes the emitted
+// machine on families that rely on the stock defaults; a caller that only wants
+// the bounded-run clocks must use this narrower scope.
+class FiniteClockScope {
+public:
+    explicit FiniteClockScope(int mode);
+    ~FiniteClockScope();
+    FiniteClockScope(const FiniteClockScope&) = delete;
+    FiniteClockScope& operator=(const FiniteClockScope&) = delete;
+
+private:
+    int previous_;
+};
 
 // Result of auditing an emitted machine against the upstream scheduling
 // contract (C3): every arm's tape must be strictly ordered in time, so the
