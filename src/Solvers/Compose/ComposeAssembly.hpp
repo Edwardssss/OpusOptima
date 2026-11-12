@@ -32,11 +32,18 @@ bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle);
 /// product's atoms: the machine needs no reagent stations at all.
 bool SupportsComposedMolecularAssembly(const io::PuzzleData& puzzle);
 
-/// Every composed variant, cheapest first: the shared-ring layout (one arm feeding
-/// several product cells), the per-atom layout (one arm per atom) and, for a single
-/// molecular input, the extraction layout (one unbonder per input bond plus one swing
-/// arm per atom). The portfolio verifies each and keeps the one that wins the most
-/// objective slots.
+/// `true` when every product atom has a reagent path (single-atom port, freed
+/// atom from a molecular input, or calcification) and the product is a
+/// single-colour bond frame. The cheap mirror of the ordered network's own
+/// eligibility test, used by the portfolio to decide whether to try it.
+bool SupportsOrderedNetwork(const io::PuzzleData& puzzle);
+
+/// Every composed variant, cheapest first: the inside-out arm network (one swing arm
+/// per atom, staggered inside a single period), the shared-ring layout (one arm
+/// feeding several product cells), the per-atom layout (one arm per atom) and, for a
+/// single molecular input, the extraction layout (one unbonder per input bond plus one
+/// swing arm per atom). The portfolio verifies each and keeps the one that wins the
+/// most objective slots.
 std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzzle);
 
 /// Emits the cheapest composed assembly machine. Throws `std::invalid_argument`

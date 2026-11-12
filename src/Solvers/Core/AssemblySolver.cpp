@@ -1444,22 +1444,43 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // disturbed the portfolio contract (`PortfolioArchivesDistinctRealStructures`,
     // `PortfolioSemanticTransformsAndPermissionBoundary`) because composition then
     // consumed a construction/submission slot.
+    if (std::getenv("OPUSOPTIMA_COMPOSE_DEBUG"))
+        GetLoggerOrFallback("solver")->info(
+            "Assembly branch=compose-assembly event=gate composeEnabled={} firstAccepted={} "
+            "supported={} molecular={} ordered={} atoms={} inplace={}",
+            composeEnabled, firstAccepted.has_value(), SupportsComposedAssembly(puzzle),
+            SupportsComposedMolecularAssembly(puzzle), SupportsOrderedNetwork(puzzle),
+            puzzle.outputs.empty() ? 0U : puzzle.outputs.front().atoms.size(),
+            ComposedAssemblyUsesInPlaceLayout(puzzle));
     const bool composeOnline =
         (SupportsComposedAssembly(puzzle) ||
          // Molecular extraction is a fallback generator: it only runs when the family
          // chain produced nothing, so it can never take a submission slot away from the
          // portfolio (`PortfolioArchivesDistinctRealStructures`).
-         (!firstAccepted && SupportsComposedMolecularAssembly(puzzle))) &&
+         (!firstAccepted && SupportsComposedMolecularAssembly(puzzle)) ||
+         // Inside-out arm network: same fallback shape, but it covers the sealed frames
+         // that the static layout cannot place at all.
+         (!firstAccepted && SupportsOrderedNetwork(puzzle))) &&
         (puzzle.outputs.front().atoms.size() <= 6 || ComposedAssemblyUsesInPlaceLayout(puzzle));
     if (composeEnabled && composeOnline && verify &&
         std::chrono::steady_clock::now() < Deadline()) {
         // Post stage: the composed variants are gated directly, so they never consume a
         // construction attempt or a submission slot and cannot starve the families.
+        const auto* composeDebug = std::getenv("OPUSOPTIMA_COMPOSE_DEBUG");
         try {
+            std::size_t variantIndex = 0;
             for (auto& variant : ComposeAssemblyVariants(puzzle)) {
                 if (std::chrono::steady_clock::now() >= Deadline()) break;
                 if (variant.objects.size() < 2) continue;
                 const auto report = (*verify)(variant);
+                if (composeDebug)
+                    GetLoggerOrFallback("solver")->info(
+                        "Assembly branch=compose-assembly event=probe variant={} objects={} "
+                        "passed={} cost={} cycles={} area={} detail={}",
+                        variantIndex, variant.objects.size(), report.Passed(),
+                        report.metrics.cost, report.metrics.cycles, report.metrics.area,
+                        report.Passed() ? std::string("ok") : report.detail);
+                ++variantIndex;
                 if (!report.Passed()) continue;
                 variant.metrics = report.metrics;
                 composedSolutions.push_back(std::move(variant));

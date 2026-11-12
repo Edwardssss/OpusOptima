@@ -855,6 +855,156 @@ void EmitStation(io::SolutionData& machine, const Station& station) {
     }
 }
 
+// ── Ordered arm network ─────────────────────────────────────────────────────
+// A static arm layout cannot place a product atom whose six neighbours are all
+// product atoms: a length-one swing needs one of those six cells as its pivot. The
+// frame does not have to be full while an atom is dropped, though -- only the atoms
+// dropped *earlier* in the period are standing. So the network assembles the product
+// from the inside out: the most enclosed atom goes first, while the frame is empty,
+// and every later swing may cross cells that are still empty air.
+//
+// Each arm owns its tape and the placements are staggered inside a single period, so
+// the product is assembled once per period instead of once per row pass. That is the
+// shape the reference machines use (12 arm1, 8 tracks, 7 pistons on fe57c5d3) and the
+// reason one of their periods carries a whole product.
+struct NetAtom {
+    Cell target{};
+    int port{-1};
+    bool calcify{false};
+    std::optional<Swing> swing{};
+};
+
+// Product atoms with more occupied neighbours are the ones a static arm layout cannot
+// reach, so they have to be dropped first.
+std::vector<std::size_t> InteriorFirst(const std::vector<Cell>& targets) {
+    const std::set<Cell> cells(targets.begin(), targets.end());
+    std::vector<std::pair<int, std::size_t>> ranked;
+    ranked.reserve(targets.size());
+    for (std::size_t i = 0; i < targets.size(); ++i) {
+        int neighbours = 0;
+        for (int direction = 0; direction < 6; ++direction)
+            if (cells.count(Add(targets[i], Step(direction)))) ++neighbours;
+        ranked.emplace_back(neighbours, i);
+    }
+    std::stable_sort(ranked.begin(), ranked.end(),
+                     [](const auto& left, const auto& right) { return left.first > right.first; });
+    std::vector<std::size_t> order;
+    order.reserve(ranked.size());
+    for (const auto& entry : ranked) order.push_back(entry.second);
+    return order;
+}
+
+// The port source of one product atom, or -1 when the atom has to come out of a
+// molecule, which needs a relay chain this builder does not emit.
+int ReagentPortFor(const io::PuzzleData& puzzle, core::AtomType type, bool& calcify) {
+    calcify = false;
+    if (const int port = SingleAtomSourceIndex(puzzle, type); port >= 0) return port;
+    if (type != core::AtomType::Salt) return -1;
+    if (!(puzzle.permissionBits & kCalcificationPermission)) return -1;
+    for (const core::AtomType elemental : {core::AtomType::Water, core::AtomType::Fire,
+                                           core::AtomType::Earth, core::AtomType::Air}) {
+        const int port = SingleAtomSourceIndex(puzzle, elemental);
+        if (port < 0) continue;
+        calcify = true;
+        return port;
+    }
+    return -1;
+}
+
+std::optional<io::SolutionData> BuildOrderedNetwork(const io::PuzzleData& puzzle,
+                                                    const std::vector<Cell>& targets,
+                                                    const std::vector<core::AtomType>& types) {
+    if (targets.size() != types.size() || targets.empty()) return std::nullopt;
+    if (puzzle.outputs.size() != 1) return std::nullopt;
+    const auto& output = puzzle.outputs.front();
+    // Ports only: a freed atom would need a relay chain, and those chains compete for
+    // exactly the rotary neighbours the stations use.
+    std::vector<NetAtom> atoms(targets.size());
+    for (std::size_t i = 0; i < types.size(); ++i) {
+        atoms[i].target = targets[i];
+        atoms[i].port = ReagentPortFor(puzzle, types[i], atoms[i].calcify);
+        if (atoms[i].port < 0) return std::nullopt;
+    }
+
+    // Placement, inside out. Only atoms already dropped and cells already taken
+    // constrain a swing; product cells that are still empty are free air.
+    const std::vector<std::size_t> order = InteriorFirst(targets);
+    const std::set<Cell> productCells(targets.begin(), targets.end());
+    std::set<Cell> placed;
+    std::set<Cell> stations;
+    std::set<Cell> pivots;
+    for (const std::size_t index : order) {
+        NetAtom& atom = atoms[index];
+        for (const auto& swing : SwingCandidates(atom.target)) {
+            if (pivots.count(swing.pivot) || productCells.count(swing.pivot)) continue;
+            if (stations.count(swing.station) || productCells.count(swing.station)) continue;
+            if (placed.count(swing.station) || placed.count(swing.pivot)) continue;
+            bool clash = false;
+            for (const Cell& cell : SweptCells(swing.pivot, swing.length, swing.grab, swing.drop))
+                if (pivots.count(cell) || stations.count(cell) || placed.count(cell)) {
+                    clash = true;
+                    break;
+                }
+            if (clash) continue;
+            atom.swing = swing;
+            break;
+        }
+        if (!atom.swing) return std::nullopt;
+        pivots.insert(atom.swing->pivot);
+        stations.insert(atom.swing->station);
+        placed.insert(atom.target);
+    }
+
+    // Emit balanced tapes: grab at the station face, swing to the target, drop, swing
+    // back to the same face. One period therefore carries the whole product.
+    io::SolutionData machine;
+    machine.puzzleName = puzzle.name;
+    machine.solutionName = "Composed ordered assembly";
+    struct Tape {
+        int object{-1};
+        std::vector<io::ArmInstruction> instructions;
+    };
+    std::vector<Tape> tapes;
+    int tick = 0;
+    for (const std::size_t index : order) {
+        const NetAtom& atom = atoms[index];
+        const Swing& swing = *atom.swing;
+        const int rotation = SwingRotation(swing.grab, swing.drop);
+        std::vector<io::ArmInstruction> tape;
+        int at = 0;
+        while (at < tick) tape.push_back({'O', at++});
+        tape.push_back({'G', at++});
+        for (int step = 0; step < (rotation > 0 ? rotation : -rotation); ++step)
+            tape.push_back({rotation > 0 ? 'r' : 'R', at++});
+        tape.push_back({'g', at++});
+        for (int step = 0; step < (rotation > 0 ? rotation : -rotation); ++step)
+            tape.push_back({rotation > 0 ? 'R' : 'r', at++});
+        tick = at;
+        PushObject(machine, "input", swing.station, {1, 0, atom.port, 0, 0});
+        if (atom.calcify) PushObject(machine, "glyph-calcification", swing.station, {1, 0, 0, 0, 0});
+        tapes.push_back({PushObject(machine, "arm1", swing.pivot,
+                                    {swing.length, swing.grab, 0, 0, 0}),
+                         std::move(tape)});
+    }
+    if (tick < 3) tick = 3;
+    for (auto& tape : tapes) {
+        int at = 0;
+        for (const auto& instruction : tape.instructions)
+            at = std::max(at, instruction.parameter + 1);
+        while (at < tick - 1) tape.instructions.push_back({'O', at++});
+        tape.instructions.push_back({'X', at++});
+        machine.objects[static_cast<std::size_t>(tape.object)].instructions =
+            std::move(tape.instructions);
+    }
+    PushObject(machine, "out-std", Cell{0, 0}, {1, 0, 0, 0, 0});
+    try {
+        AppendBonders(machine, output);
+    } catch (const std::invalid_argument&) {
+        return std::nullopt;
+    }
+    return machine;
+}
+
 } // namespace
 
 bool SupportsComposedAssembly(const io::PuzzleData& puzzle) {
@@ -881,6 +1031,20 @@ bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle) {
     return true;
 }
 
+// The ordered network is reachable when every product atom has its own reagent port
+// (a single-atom source, or a salt that can be calcified). That is exactly the
+// reagent-composition domain, so this is `SupportsComposedAssembly` without its
+// frame-density assumption; `BuildOrderedNetwork` still has the final say.
+bool SupportsOrderedNetwork(const io::PuzzleData& puzzle) {
+    if (puzzle.productionInfo || puzzle.outputs.size() != 1) return false;
+    if (puzzle.outputs.front().atoms.empty()) return false;
+    for (const auto& atom : puzzle.outputs.front().atoms) {
+        bool calcify = false;
+        if (ReagentPortFor(puzzle, atom.type, calcify) < 0) return false;
+    }
+    return true;
+}
+
 bool SupportsComposedMolecularAssembly(const io::PuzzleData& puzzle) {
     // Pure single-molecule rearrangement: the planner relays each freed atom with
     // swing arms instead of a per-atom piston row. The relay scheduler rejects any
@@ -892,7 +1056,8 @@ bool SupportsComposedMolecularAssembly(const io::PuzzleData& puzzle) {
 std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzzle) {
     const bool reagentComposition = SupportsComposedAssembly(puzzle);
     const bool molecularComposition = !reagentComposition && SupportsMolecularAssembly(puzzle);
-    if (!reagentComposition && !molecularComposition)
+    const bool orderedComposition = SupportsOrderedNetwork(puzzle);
+    if (!reagentComposition && !molecularComposition && !orderedComposition)
         throw std::invalid_argument("composed assembly needs a reagent path for every product atom");
 
     const auto& output = puzzle.outputs.front();
@@ -948,6 +1113,18 @@ std::vector<io::SolutionData> ComposeAssemblyVariants(const io::PuzzleData& puzz
         PushObject(machine, "out-std", Cell{0, 0}, {1, 0, 0, 0, 0});
         AppendBonders(machine, output);
         variants.push_back(std::move(machine));
+    }
+    // Inside-out arm network, last: the shape that can place a product atom whose six
+    // neighbours are all product atoms, which every layout above assumes away. Trying
+    // it last keeps the established variants in front of it, so it can only take over
+    // where they all fail to verify.
+    // `OPUSOPTIMA_ORDERED_NETWORK=off` pins the pre-network behaviour for A/B runs;
+    // every other value (unset included) keeps the shipped default.
+    const char* orderedMode = std::getenv("OPUSOPTIMA_ORDERED_NETWORK");
+    const bool orderedEnabled = !orderedMode || std::string_view(orderedMode) != "off";
+    if (variants.empty() && orderedEnabled) {
+        if (auto ordered = BuildOrderedNetwork(puzzle, targets, types))
+            variants.push_back(std::move(*ordered));
     }
     if (variants.empty())
         throw std::invalid_argument("composed assembly found no collision-free arm placement");
