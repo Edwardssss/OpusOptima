@@ -966,6 +966,12 @@ io::SolutionData CompileLifeDeathGeometry(
                 machine.objects[activeArm].instructions.push_back({action, cursor++});
                 *clockPtr = std::max(*clockPtr, cursor);
             };
+            // The transport rail is shared by every feed, so its occupancy has to be
+            // exclusive: a feed waits for the rail to fall idle, drives it, and leaves
+            // the rail's clock where it stopped. Without this a second feed interleaves
+            // its own extend/retract into the middle of a half-finished journey and the
+            // motion phase collides (`1dc60983` at (81,89)).
+            int transportLock = 2;
             std::size_t event = 0;
             for (int repeat = 0; repeat < repetitions; ++repeat) {
                 event = 0;
@@ -1032,6 +1038,7 @@ io::SolutionData CompileLifeDeathGeometry(
                                 const int destination = static_cast<int>(
                                     std::find(transportPath.begin(), transportPath.end(), target) -
                                     transportPath.begin());
+                                if (perFeedClocks) *clockPtr = std::max(*clockPtr, transportLock);
                                 activeArm = transport;
                                 while (transportPosition < destination) {
                                     emit('A');
@@ -1041,6 +1048,7 @@ io::SolutionData CompileLifeDeathGeometry(
                                     emit('a');
                                     --transportPosition;
                                 }
+                                if (perFeedClocks) transportLock = std::max(transportLock, *clockPtr);
                             };
                             if (compactRelay)
                                 activeArm = transport;
@@ -1077,6 +1085,13 @@ io::SolutionData CompileLifeDeathGeometry(
                                     [](core::HexCoord cell) { return cell.r == 87; }));
                             if (perFeedClocks) clockPtr = &globalShift;
                         }
+                        // Outlet and spare arms serve one factory, so they belong on
+                        // that factory's feed clock; leaving them on the shared clock
+                        // desynchronises them from the feed they are supposed to hand
+                        // over to (`1dc60983` collided at (81,89), a spare arm).
+                        if (perFeedClocks && f < static_cast<int>(factories.size()) &&
+                            factories[f].feed < feedShift.size())
+                            clockPtr = &feedShift[factories[f].feed];
                         if (std::any_of(spareOutlets.begin(), spareOutlets.end(),
                                         [&](const auto& outlet) { return outlet.factory == f; })) {
                             const int distance = 12 + 3 * (stored[f] + 1);
@@ -1104,7 +1119,10 @@ io::SolutionData CompileLifeDeathGeometry(
                             }
                             ++stored[f];
                         }
-                        if (spareArms[f] < 0) continue;
+                        if (spareArms[f] < 0) {
+                            if (perFeedClocks) clockPtr = &globalShift;
+                            continue;
+                        }
                         activeArm = spareArms[f];
                         emit('G');
                         const int distance = (compactSpare ? 2 : 3) * ++stored[f];
@@ -1115,6 +1133,7 @@ io::SolutionData CompileLifeDeathGeometry(
                         emit('r');
                         for (int i = 0; i < distance; ++i)
                             emit('A');
+                        if (perFeedClocks) clockPtr = &globalShift;
                     }
                     while (replayIndex < replay.size() &&
                            replay[replayIndex].instruction.parameter == t) {
