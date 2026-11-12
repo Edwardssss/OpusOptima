@@ -35,6 +35,7 @@
 #include "TracklessPairChemistry.hpp"
 #include "WheelAssembly.hpp"
 #include <cstdlib>
+#include <filesystem>
 
 #include <algorithm>
 #include <chrono>
@@ -1542,6 +1543,22 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                         variantIndex, variant.objects.size(), report.Passed(),
                         report.metrics.cost, report.metrics.cycles, report.metrics.area,
                         report.Passed() ? std::string("ok") : report.detail);
+                // `OPUSOPTIMA_COMPOSE_DUMP=1` writes every rejected variant so a
+                // convergence failure can be re-verified with a larger cycle limit
+                // without changing the gate the portfolio actually uses.
+                if (!report.Passed() && std::getenv("OPUSOPTIMA_COMPOSE_DUMP")) {
+                    try {
+                        const auto path = std::filesystem::path("result") /
+                                          ("compose-reject-" + std::to_string(variantIndex) +
+                                           ".solution");
+                        io::BinaryWriter::WriteSolutionFile(path, variant);
+                        GetLoggerOrFallback("solver")->info("compose-dump wrote {}",
+                                                            path.string());
+                    } catch (const std::exception& error) {
+                        GetLoggerOrFallback("solver")->info("compose-dump failed: {}",
+                                                            error.what());
+                    }
+                }
                 ++variantIndex;
                 if (!report.Passed()) continue;
                 variant.metrics = report.metrics;
