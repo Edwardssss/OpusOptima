@@ -1,5 +1,7 @@
 #include "PipelineCompiler.hpp"
 
+#include "MoleculePipeline.hpp"
+
 #include "LogManager.hpp"
 #include "ModuleLibrary.hpp"
 #include "SolutionPostProcess.hpp"
@@ -496,9 +498,13 @@ io::SolutionData CompilePipelineMachine(const io::PuzzleData& puzzle, SchedulePo
 std::vector<PipelineVariant> CompilePipelineVariants(const io::PuzzleData& puzzle,
                                                      bool postProcess) {
     std::vector<PipelineVariant> variants;
+    // Two emitters with disjoint domains: the single-atom pipeline, and the
+    // molecular settlement machine. A puzzle outside the first can still be inside
+    // the second, so the domain miss must not short-circuit the whole enumeration.
     if (const auto reason = PipelineDomainReason(puzzle); !reason.empty()) {
         GetLoggerOrFallback("solver")->info(
             "Assembly branch=pipeline-architecture event=unsupported detail=domain: {}", reason);
+        AppendMoleculeVariants(puzzle, postProcess, variants);
         return variants;
     }
     // M-D: the two knobs that change the machine. Only the pipelined schedule is
@@ -541,6 +547,7 @@ std::vector<PipelineVariant> CompilePipelineVariants(const io::PuzzleData& puzzl
         "Assembly branch=pipeline-architecture event=enumerated variants={} atoms={} depth={}",
         variants.size(), puzzle.outputs.front().atoms.size(),
         variants.empty() ? -1 : variants.front().depth);
+    AppendMoleculeVariants(puzzle, postProcess, variants);
     return variants;
 }
 
