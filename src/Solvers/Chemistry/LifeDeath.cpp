@@ -447,7 +447,12 @@ io::SolutionData CompileLifeDeathGeometry(
             std::size_t expectedRequests{}, consumedRequests{};
         };
         std::vector<MolecularFeed> molecularFeeds;
-        int nextFactoryRight = -200;
+        // First factory column. Every factory then steps left by its own width plus
+        // the clearance, so this starting point is added to the whole transport
+        // corridor: on `1dc60983` it puts the six extractors at -217..-517 while the
+        // assembly row sits at -24, which is the 500-cell haul the period pays for.
+        const char* factoryStartFlag = std::getenv("OPUSOPTIMA_LD_FACTORY_START");
+        int nextFactoryRight = factoryStartFlag ? std::atoi(factoryStartFlag) : -200;
         auto molecularInput = [&](int source, AtomType type) {
             return source < 0 || puzzle.inputs[source].atoms.size() != 1 ||
                    !puzzle.inputs[source].bonds.empty() ||
