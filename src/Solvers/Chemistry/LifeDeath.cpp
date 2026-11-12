@@ -90,6 +90,14 @@ thread_local bool g_perFeedClocks = false;
 // the tight layout try it first and fall back to the shipped value when the gate
 // rejects. -1 means "use the shipped default".
 thread_local int g_factoryClearance = -1;
+// First factory column. -100000 means "use the shipped anchor", which is the
+// tightest column the corpus tolerates (`a7d3c0bf` overlaps at -40). The column
+// only has to clear the assembly row; the shipped -200 left 160 cells of dead
+// transport corridor in front of every factory, and each of those cells is
+// walked twice per shuttle, so it is the largest cycle lever in the family
+// (eleven of thirteen sampled puzzles gain 1.25-1.44x, `fc6a70eb` 10547 -> 7327).
+thread_local int g_factoryStart = -100000;
+constexpr int kShippedFactoryStart = -60;
 io::SolutionData CompileLifeDeathGeometry(
     const io::PuzzleData& puzzle, bool singleProduct, bool compactRelay, bool relayBaseline = false,
     bool compactSpare = false, bool shareFeeds = false,
@@ -452,7 +460,9 @@ io::SolutionData CompileLifeDeathGeometry(
         // corridor: on `1dc60983` it puts the six extractors at -217..-517 while the
         // assembly row sits at -24, which is the 500-cell haul the period pays for.
         const char* factoryStartFlag = std::getenv("OPUSOPTIMA_LD_FACTORY_START");
-        int nextFactoryRight = factoryStartFlag ? std::atoi(factoryStartFlag) : -200;
+        int nextFactoryRight = factoryStartFlag   ? std::atoi(factoryStartFlag)
+                               : g_factoryStart > -100000 ? g_factoryStart
+                                                          : kShippedFactoryStart;
         auto molecularInput = [&](int source, AtomType type) {
             return source < 0 || puzzle.inputs[source].atoms.size() != 1 ||
                    !puzzle.inputs[source].bonds.empty() ||

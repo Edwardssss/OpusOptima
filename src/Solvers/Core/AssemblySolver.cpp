@@ -1371,6 +1371,9 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         }
         GetLoggerOrFallback("solver")->debug("Assembly stage {} compiled in {} ms", stage,
                                              elapsed());
+        if (std::getenv("OPUSOPTIMA_STAGE_DIAG"))
+            std::fprintf(stderr, "STAGEDIAG %s compiled_ms=%lld\n", stage,
+                         static_cast<long long>(elapsed()));
         if (verify) {
             const auto report = verifyAt(stage, *candidate);
             if (report.Passed()) {
@@ -1488,6 +1491,10 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     const bool composeEnabled = !composeMode || std::string_view(composeMode) != "off";
     std::vector<io::SolutionData> composedSolutions;
     const auto publish = [&]() -> io::SolutionData {
+        if (std::getenv("OPUSOPTIMA_DEFER_DIAG"))
+            std::fprintf(stderr, "PUBLISHDIAG first=%lld composed=%zu\n",
+                         static_cast<long long>(firstAccepted ? firstAccepted->metrics.cycles : -1),
+                         composedSolutions.size());
         if (!firstAccepted)
             return composedSolutions.empty() ? io::SolutionData{} : composedSolutions.front();
         if (!composedSolutions.empty()) {
@@ -2033,13 +2040,55 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // stationary by another arm"), so the fast machine only comes out of
     // `independent-outputs` below. Standing it down here is what lets the solve
     // reach that stage instead of publishing the 20014-cycle machine first.
+    //
+    // The gate rejects an arm whose instruction tape spans more than 100000 slots
+    // (`third_party/omsim/decode.c`). A life-death machine that already spends the
+    // bulk of that budget is a long-rail machine - one piston shuttling the whole
+    // transport corridor - and every other family beats it: `17a58334` reaches the
+    // gate with 90801 instructions here, where the material search answers 16486.
+    // Verifying it is what costs those families the 20 s solve budget, so a machine
+    // this long is held back until they have had their turn, and only offered if
+    // nothing else was admitted. Machines at 79400 (`89d6e08e`) and below stay in
+    // front: they still win by 1.30-1.34x, so the guard is a rail-length test, not a
+    // quality test.
+    constexpr std::int64_t kGateTapeLimit = 100000;
+    const auto instructionCount = [](const io::SolutionData& solution) {
+        std::int64_t count = 0;
+        for (const auto& object : solution.objects)
+            count += static_cast<std::int64_t>(object.instructions.size());
+        return count;
+    };
+    const char* tapeGuardFlag = std::getenv("OPUSOPTIMA_LD_TAPE_GUARD");
+    const std::int64_t tapeGuard =
+        tapeGuardFlag != nullptr && std::string_view(tapeGuardFlag) != "off"
+            ? std::atoll(tapeGuardFlag)
+            : kGateTapeLimit * 85 / 100;
+    std::optional<io::SolutionData> postponedLifeDeath;
     if (!finiteClockLead) {
-        if (auto result = attempt("life-death", [&] { return CompileLifeDeath(puzzle); })) {
+        if (auto result = attempt("life-death", [&] {
+                auto compiled = CompileLifeDeath(puzzle);
+                const auto count = instructionCount(compiled);
+                if (tapeGuard > 0 && count > tapeGuard) {
+                    // Held back, not rejected: the machine is legal, it is just the
+                    // wrong thing to spend the whole budget on.
+                    postponedLifeDeath = compiled;
+                    throw std::invalid_argument(
+                        "life-death tape of " + std::to_string(count) +
+                        " instructions exceeds the long-rail guard of " +
+                        std::to_string(tapeGuard) +
+                        "; deferred behind the shorter families");
+                }
+                return compiled;
+            })) {
             submitIntakeSibling(intakeTwin, true, "life-death-local-intake",
                                 [&] { return CompileLifeDeathLocalIntake(puzzle); });
             submitIntakeSibling(clockSibling, false, "life-death-feed-clocks",
                                 [&] { return CompileLifeDeathClocked(puzzle); });
-            if (keep(*result)) return publish();
+            // Opt-in: let the later families compete with an admitted life-death
+            // machine instead of publishing it on arrival.
+            const bool admitted = keep(*result);
+            if (admitted && std::getenv("OPUSOPTIMA_DEFER_LIFE_DEATH") == nullptr)
+                return publish();
         }
     }
     if (auto result = attempt("triplex", [&] { return CompileTriplex(puzzle); }))
@@ -2221,7 +2270,24 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                                     : precursor        ? "shared-plan-calcify-animismus"
                                                        : "shared-plan-serial-arms",
                                     candidate);
-                    if (accepted && !firstAccepted) {
+                    // `firstAccepted` normally wins by arriving first, which lets an
+                    // early family starve a faster one: `17a58334` publishes
+                    // life-death's 80397 while this stage would produce 28569. Under
+                    // the defer experiment a strictly better verified candidate wins.
+                    const bool allowReplace =
+                        std::getenv("OPUSOPTIMA_DEFER_LIFE_DEATH") != nullptr;
+                    const bool better =
+                        accepted && firstAccepted && acceptedReport &&
+                        acceptedReport->metrics.cycles > 0 && firstAccepted->metrics.cycles > 0 &&
+                        acceptedReport->metrics.cycles < firstAccepted->metrics.cycles;
+                    if (std::getenv("OPUSOPTIMA_DEFER_DIAG"))
+                        std::fprintf(stderr,
+                                     "DEFERDIAG accepted=%d allow=%d better=%d first=%lld rep=%lld\n",
+                                     static_cast<int>(accepted), static_cast<int>(allowReplace),
+                                     static_cast<int>(better),
+                                     static_cast<long long>(firstAccepted ? firstAccepted->metrics.cycles : -1),
+                                     static_cast<long long>(acceptedReport ? acceptedReport->metrics.cycles : -1));
+                    if (accepted && (!firstAccepted || (allowReplace && better))) {
                         firstAccepted = candidate;
                         if (acceptedReport) firstAccepted->metrics = acceptedReport->metrics;
                     }
@@ -2287,6 +2353,19 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                       ? AssemblyFailure::Category::BudgetExhausted
                       : AssemblyFailure::Category::SearchExhausted,
                   "mechanism-independent-material", materialDetail, std::nullopt, std::nullopt});
+    // Nothing else was admitted, so the deferred long-rail machine is still better
+    // than no answer at all.
+    if (!firstAccepted && postponedLifeDeath) {
+        try {
+            if (auto result = attempt("life-death-deferred", [&] {
+                    return std::move(*postponedLifeDeath);
+                }))
+                if (keep(*result)) return publish();
+        } catch (const std::exception& error) {
+            GetLoggerOrFallback("solver")->info(
+                "Assembly branch=life-death-deferred event=skipped detail={}", error.what());
+        }
+    }
     std::string message = "assembly strategies exhausted";
     for (const auto& rejection : rejections)
         message += "\n  " + rejection;
