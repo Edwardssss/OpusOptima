@@ -85,6 +85,11 @@ namespace {
 // schedule is a scheduling variant, so it is switched by scope like
 // `RowIntakeModeScope` rather than by environment.
 thread_local bool g_perFeedClocks = false;
+// Molecular factory horizontal clearance. Zero tightens the transport corridor a lot
+// (`1dc60983` 78166 -> 63966) but not every shape survives it, so callers that want
+// the tight layout try it first and fall back to the shipped value when the gate
+// rejects. -1 means "use the shipped default".
+thread_local int g_factoryClearance = -1;
 io::SolutionData CompileLifeDeathGeometry(
     const io::PuzzleData& puzzle, bool singleProduct, bool compactRelay, bool relayBaseline = false,
     bool compactSpare = false, bool shareFeeds = false,
@@ -134,6 +139,12 @@ io::SolutionData CompileLifeDeathGeometry(
                                std::vector<int>& productEnds) {
         checkDeadline();
         const BatchKey key{input, type, products};
+        // Note: the key already deduplicates identical compilations, and the
+        // factories stay 60 cells apart even when they share one. Measured with
+        // OPUSOPTIMA_LD_BATCH_DIAG on `1dc60983`: five of the six factories are the
+        // same Air extractor (minQ=-17 maxQ=3) yet still lay out at -217,-277,...,
+        // so the corridor length comes from giving every feed its own carrier and
+        // pickup, not from recompiling the machine.
         if (const auto cached = sourceBatches.find(key); cached != sourceBatches.end()) {
             auto batch = cached->second;
             checkDeadline();
@@ -516,6 +527,15 @@ io::SolutionData CompileLifeDeathGeometry(
                     feed.batch = CompilePurificationAssembly(extraction, false, deadline);
                 }
             int minimumQ = 0, maximumQ = 0;
+            if (std::getenv("OPUSOPTIMA_LD_BATCH_DIAG")) {
+                std::size_t batchInstr = 0;
+                for (const auto& part : feed.batch.objects)
+                    batchInstr += part.instructions.size();
+                std::fprintf(stderr,
+                             "BATCHDIAG input=%d type=%d objs=%zu instr=%zu cell=(%d,%d)\n",
+                             input, static_cast<int>(sourceType), feed.batch.objects.size(),
+                             batchInstr, cell.q, cell.r);
+            }
             for (const auto& part : feed.batch.objects) {
                 minimumQ = std::min(minimumQ, part.position.q);
                 maximumQ = std::max(maximumQ, part.position.q);
@@ -538,7 +558,15 @@ io::SolutionData CompileLifeDeathGeometry(
             // measurement and for whoever teaches the planner to stack the factories
             // vertically instead of spreading them along the corridor.
             const char* factoryClearFlag = std::getenv("OPUSOPTIMA_LD_FACTORY_CLEARANCE");
-            const int factoryClear = factoryClearFlag ? std::atoi(factoryClearFlag) : 40;
+            const int factoryClear =
+                factoryClearFlag ? std::atoi(factoryClearFlag)
+                                 : (g_factoryClearance >= 0 ? g_factoryClearance : 40);
+            if (std::getenv("OPUSOPTIMA_LD_CLEARANCE_DIAG"))
+                std::fprintf(stderr, "CLEARANCEDIAG value=%d tl=%d feeds=%zu\n", factoryClear,
+                             g_factoryClearance, molecularFeeds.size());
+            if (std::getenv("OPUSOPTIMA_LD_BATCH_DIAG"))
+                std::fprintf(stderr, "BATCHWIDTH input=%d type=%d minQ=%d maxQ=%d left=%d\n",
+                             input, static_cast<int>(sourceType), minimumQ, maximumQ, left);
             nextFactoryRight = left - maximumQ - factoryClear;
             feed.pickup = compactRelay ? cell.q - 4 : left - 2;
             core::HexCoord delivery{};
@@ -546,6 +574,10 @@ io::SolutionData CompileLifeDeathGeometry(
                 if (part.typeName == "out-std") delivery = part.position;
             // Nested extraction machines may extend well below their output after
             // rotation. Keep their rails above the shared transport corridor.
+            // Note: stacking the factories vertically does not shorten anything -
+            // measured identical cycles at OPUSOPTIMA_LD_HEIGHT_STRIDE=40 because
+            // `transportPath` is pinned to r=88 regardless of feed height, so the
+            // corridor length is decided purely by the q spread.
             feed.height = compactRelay ? assemblyTop + 16 : 100;
             for (const auto& part : feed.batch.objects) {
                 int extent = part.position.r;
@@ -1254,5 +1286,11 @@ io::SolutionData CompileCompactSpareChemistry(const io::PuzzleData& puzzle) {
 }
 io::SolutionData CompileCompactChemistryRelay(const io::PuzzleData& puzzle, bool compact) {
     return CompileLifeDeathGeometry(puzzle, false, compact, !compact);
+}
+FactoryClearanceScope::FactoryClearanceScope(int clearance) : previous_(g_factoryClearance) {
+    g_factoryClearance = clearance;
+}
+FactoryClearanceScope::~FactoryClearanceScope() {
+    g_factoryClearance = previous_;
 }
 } // namespace opusoptima::solvers

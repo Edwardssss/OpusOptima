@@ -25,6 +25,23 @@ namespace opusoptima::solvers {
 /// animismus product. Molecular extraction is left to the baseline compiler.
 [[nodiscard]] bool SupportsCompactSpareChemistry(const io::PuzzleData& puzzle);
 [[nodiscard]] io::SolutionData CompileCompactSpareChemistry(const io::PuzzleData& puzzle);
+/// Overrides the horizontal clearance the molecular factories leave for each
+/// other. The value is multiplied by the factory count and becomes the length of
+/// the shared transport corridor, which the period pays one instruction per cell
+/// for. Zero is much faster where it fits (`1dc60983` 78166 -> 63966) but some
+/// shapes lose their layout, so callers should try the tight value as a separate
+/// candidate and keep the shipped one if the gate rejects it. Restored on
+/// destruction; pass a negative value to fall back to the shipped default.
+class FactoryClearanceScope {
+public:
+    explicit FactoryClearanceScope(int clearance);
+    ~FactoryClearanceScope();
+    FactoryClearanceScope(const FactoryClearanceScope&) = delete;
+    FactoryClearanceScope& operator=(const FactoryClearanceScope&) = delete;
+
+private:
+    int previous_;
+};
 [[nodiscard]] io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle);
 /// Same finite-product geometry, but the narrow row feeds are compiled with the
 /// local source intake widened past the compact layout (`RowIntakeModeScope(2)`):
