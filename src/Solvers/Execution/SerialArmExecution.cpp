@@ -791,14 +791,31 @@ io::SolutionData Compile(
                 object("bonder-prisma", glyph.origin, glyph.turn);
         }
     const Cell metal{0, -6}, mercury{1, -6}, calcifier{0, -12}, purifier{0, 0}, purified{0, 1},
-        disposal{8, -6}, animismus{6, 0};
+        disposal{8, -6}, animismus{6, 0}, duplication{12, 4};
+    // Measurement knob: where the material duplication glyph sits.
+    auto duplicationCell = [&] {
+        const char* flag = std::getenv("OPUSOPTIMA_SERIAL_DUP_CELL");
+        if (!flag) return duplication;
+        const std::string text{flag};
+        const auto comma = text.find(',');
+        if (comma == std::string::npos) return duplication;
+        return Cell{std::atoi(text.substr(0, comma).c_str()),
+                    std::atoi(text.substr(comma + 1).c_str())};
+    }();
+    const Cell dup = duplicationCell;
     bool projects = false, calcifies = false, purifies = false, discards = false, animates = false;
+    bool duplicates = false;
     for (const auto& task : plan.tasks) {
         projects |= task.kind == K::Project;
         calcifies |= task.kind == K::Calcify;
         purifies |= task.kind == K::Purify;
         discards |= task.kind == K::Discard;
         animates |= task.kind == K::Animismus;
+        // Material-level duplication has no wheel catalyst; the wheel variant is laid
+        // out by the stage block below.
+        duplicates |= std::getenv("OPUSOPTIMA_SERIAL_LONG_ARMS") != nullptr &&
+                      task.kind == K::Duplicate &&
+                      !plan.material.steps.at(task.step).operation.wheelCatalyst.has_value();
     }
     if (animates) {
         const auto* enabled = std::getenv("OPUSOPTIMA_SERIAL_ANIMISMUS");
@@ -823,6 +840,11 @@ io::SolutionData Compile(
         for (auto offset : {Cell{0, 0}, Cell{1, 0}, Cell{0, 1}, Cell{1, -1}})
             reserve(Add(animismus, offset));
         object("glyph-life-and-death", animismus);
+    }
+    if (duplicates) {
+        for (auto offset : {Cell{0, 0}, Cell{1, 0}, Cell{0, 1}, Cell{1, -1}})
+            reserve(Add(dup, offset));
+        object("glyph-duplication", dup);
     }
     if (projects) {
         reserve(metal);
@@ -2127,6 +2149,21 @@ io::SolutionData Compile(
                     syncBonds();
                 }
                 syncBonds();
+            } else if (op.kind == K::Duplicate) {
+                // One atom goes onto the duplication glyph and the glyph emits an
+                // extra copy at the outlet just outside its reserved footprint.
+                const auto outlet = Add(dup, {0, 1});
+                std::vector<Id> stock;
+                for (const auto& [other, atom] : state.atoms)
+                    if (Hex(atom.position) == outlet) stock.push_back(other);
+                for (auto other : stock)
+                    park(other);
+                clearFeedCenter(op.atoms.at(0));
+                move(op.atoms.at(0), dup);
+                const auto product = state.nextId;
+                append(op);
+                append({K::Relocate, 0, {product}, 0, 0, Hex(outlet)});
+                tick += 2;
             } else if (op.kind == K::Output) {
                 syncBonds();
                 for (const auto& station : coloredStations)
