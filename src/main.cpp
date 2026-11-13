@@ -359,7 +359,11 @@ int main(int argc, char* argv[]) {
                                  .count());
             }
             if (!accepted.Passed()) {
-                logger->warn("Candidate not admitted: {}", accepted.detail);
+                // The reason code alone is not actionable for a physics rejection:
+                // the cycle and cell are what say which object or lane collided.
+                logger->warn("Candidate not admitted: {} (cycle={} at {},{})",
+                             accepted.detail, accepted.errorCycle, accepted.errorU,
+                             accepted.errorV);
                 if (accepted.status == opusoptima::io::VerificationStatus::Unavailable ||
                     accepted.status == opusoptima::io::VerificationStatus::Error)
                     throw std::runtime_error(accepted.detail);
