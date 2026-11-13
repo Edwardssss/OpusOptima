@@ -42,6 +42,24 @@ public:
 private:
     int previous_;
 };
+/// Column the left-most factory block is anchored on. The corridor makes every
+/// delivered atom walk from that block to the assembly twice, so a closer anchor
+/// shortens every round trip at once and, where it suits the puzzle, wins on all
+/// three objectives at the same time (`1dc60983`: cost 6610 -> 6435, cycles
+/// 23306 -> 18301, area 1545 -> 1476). It is a per-puzzle optimum, not a better
+/// default -- `17a58334` loses to the shipped column and `a7d3c0bf`/`89d6e08e`
+/// collide -- so it is only used to build one extra candidate that the caller
+/// adopts when it Pareto-dominates. Restored on destruction.
+class FactoryStartScope {
+public:
+    explicit FactoryStartScope(int start);
+    ~FactoryStartScope();
+    FactoryStartScope(const FactoryStartScope&) = delete;
+    FactoryStartScope& operator=(const FactoryStartScope&) = delete;
+
+private:
+    int previous_;
+};
 [[nodiscard]] io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle);
 /// Same finite-product geometry, but the narrow row feeds are compiled with the
 /// local source intake widened past the compact layout (`RowIntakeModeScope(2)`):

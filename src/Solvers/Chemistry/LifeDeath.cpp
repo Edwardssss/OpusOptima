@@ -1466,4 +1466,10 @@ FactoryClearanceScope::FactoryClearanceScope(int clearance) : previous_(g_factor
 FactoryClearanceScope::~FactoryClearanceScope() {
     g_factoryClearance = previous_;
 }
+FactoryStartScope::FactoryStartScope(int start) : previous_(g_factoryStart) {
+    g_factoryStart = start;
+}
+FactoryStartScope::~FactoryStartScope() {
+    g_factoryStart = previous_;
+}
 } // namespace opusoptima::solvers

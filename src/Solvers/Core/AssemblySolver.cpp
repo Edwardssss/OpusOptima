@@ -2068,6 +2068,9 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // largest winning life-death tape sits at 60.3% and the machine that must be
     // held back at 73.5%.
     constexpr std::int64_t kGateTapeLimit = 100000;
+    // Factory column start for the closer life-death variant (the shipped one is
+    // `kShippedFactoryStart = -60` in LifeDeath.cpp).
+    constexpr int kCloserFactoryStart = -25;
     const auto instructionCount = [](const io::SolutionData& solution) {
         std::int64_t count = 0;
         for (const auto& object : solution.objects)
@@ -2088,35 +2091,74 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     std::optional<io::SolutionData> postponedLifeDeath;
     const bool skipLifeDeath = std::getenv("OPUSOPTIMA_SKIP_LIFE_DEATH") != nullptr;
     if (!finiteClockLead && !skipLifeDeath) {
-        if (auto result = attempt("life-death", [&] {
-                const auto build = [&] {
-                    auto compiled = CompileLifeDeath(puzzle);
-                    const auto count = instructionCount(compiled);
-                    if (tapeGuard > 0 && count > tapeGuard) {
-                        // Held back, not rejected: the machine is legal, it is just
-                        // the wrong thing to spend the whole budget on.
-                        postponedLifeDeath = compiled;
-                        throw std::invalid_argument(
-                            "life-death tape of " + std::to_string(count) +
-                            " instructions exceeds the long-rail guard of " +
-                            std::to_string(tapeGuard) +
-                            "; deferred behind the shorter families");
-                    }
-                    return compiled;
-                };
-                // Packed factories: no air between adjacent envelopes instead of the
-                // shipped 40 cells. The corridor is feeds x (width + clearance) long
-                // and the piston walks every cell twice per round trip, so the spacing
-                // is a direct multiplier on the period (`1dc60983` 58148 -> 43948,
-                // `89d6e08e` 72850 -> 53850, `7b837aa2` 63018 -> 52980). Only at the
-                // top level: `independent-outputs` re-enters the solver once per
-                // output and those machines are later interleaved on one board, where
-                // the packed spacing collides (`deecf24d`, `collision during motion
-                // phase`).
-                if (g_compositionDepth > 0) return build();
-                FactoryClearanceScope spacing(0);
-                return build();
-            })) {
+        const auto compileMachine = [&](std::optional<int> factoryStart) {
+            const auto build = [&] {
+                auto compiled = CompileLifeDeath(puzzle);
+                const auto count = instructionCount(compiled);
+                if (tapeGuard > 0 && count > tapeGuard) {
+                    // Held back, not rejected: the machine is legal, it is just
+                    // the wrong thing to spend the whole budget on.
+                    postponedLifeDeath = compiled;
+                    throw std::invalid_argument(
+                        "life-death tape of " + std::to_string(count) +
+                        " instructions exceeds the long-rail guard of " +
+                        std::to_string(tapeGuard) +
+                        "; deferred behind the shorter families");
+                }
+                return compiled;
+            };
+            // Packed factories: no air between adjacent envelopes instead of the
+            // shipped 40 cells. The corridor is feeds x (width + clearance) long
+            // and the piston walks every cell twice per round trip, so the spacing
+            // is a direct multiplier on the period (`1dc60983` 58148 -> 43948,
+            // `89d6e08e` 72850 -> 53850, `7b837aa2` 63018 -> 52980). Only at the
+            // top level: `independent-outputs` re-enters the solver once per
+            // output and those machines are later interleaved on one board, where
+            // the packed spacing collides (`deecf24d`, `collision during motion
+            // phase`).
+            if (g_compositionDepth > 0) return build();
+            FactoryClearanceScope spacing(0);
+            if (!factoryStart) return build();
+            FactoryStartScope anchor(*factoryStart);
+            return build();
+        };
+        // Closer factory column: the shipped start leaves 35 rows of empty corridor
+        // above the factory band and the piston walks every one of them twice per
+        // round trip. Starting the column at -25 removes that from every pickup at
+        // once. It is a per-puzzle optimum rather than a better default, so it goes
+        // through the ordinary gate first and only the *failed* variant is replaced:
+        // `89d6e08e` and `a7d3c0bf` collide during motion and fall back to the
+        // shipped column, which keeps their coverage.
+        //
+        // The choice has to happen before the first submission. The CLI publishes
+        // `archive->First()` ("stable first-verified"), and the portfolio contract
+        // caps submissions at the caller's parent quota
+        // (`AssemblyDiagnostics.*RetainsFirstAndRejectsWithinParentCap`), so a
+        // better machine found *after* the first candidate is admitted only lands in
+        // the three-slot manifest and never in the delivered file. A second
+        // `verify` call is not free either: in the CLI it *is* `archive->Submit`.
+        const char* closerAnchorFlag = std::getenv("OPUSOPTIMA_LD_CLOSER_ANCHOR");
+        // Opt-in. Two contracts assume the *first* admitted life-death machine is the
+        // shipped-column one, and both break when the closer machine takes its place:
+        //   * `MaterialPlanning.ClosedCardinalLifeDefaultCollectionRequiresNativeAuthority`
+        //     -- the closer machine becomes admissible in the closed-cardinal-life
+        //     domain, which only admits shared-plan machines;
+        //   * `SharedMolecularFeed.NativePortfolioReusesStaticSlotAndRetainsFirst`
+        //     -- it requires `portfolio-shared-life-death` to undercut the first
+        //     candidate's cost, and the closer machine is already cheaper.
+        // Top level only, like the packed spacing: inside `independent-outputs` the
+        // solver re-enters once per output and a second compile+verify eats the
+        // nested budget (`e55f57a6a0` loses its solution at 6-way concurrency).
+        const bool closerAnchor =
+            closerAnchorFlag != nullptr && std::string_view(closerAnchorFlag) == "on" &&
+            g_compositionDepth == 0 && !SupportsClosedCardinalLife(puzzle);
+        std::optional<io::SolutionData> result;
+        if (closerAnchor)
+            result = attempt("life-death-closer-anchor",
+                             [&] { return compileMachine(kCloserFactoryStart); });
+        if (!result)
+            result = attempt("life-death", [&] { return compileMachine(std::nullopt); });
+        if (result) {
             submitIntakeSibling(intakeTwin, true, "life-death-local-intake",
                                 [&] { return CompileLifeDeathLocalIntake(puzzle); });
             submitIntakeSibling(clockSibling, false, "life-death-feed-clocks",
