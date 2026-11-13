@@ -1,4 +1,5 @@
 #include "SerialArmExecution.hpp"
+#include <cstdio>
 #include "CandidateIdentity.hpp"
 #include "FixedArmIntervals.hpp"
 #include "FragmentCustody.hpp"
@@ -1025,12 +1026,17 @@ io::SolutionData Compile(
     }
     std::map<Cell, std::size_t> arms;
     std::map<Cell, int> angles;
-    auto addArm = [&](Cell base) {
+    std::map<Cell, int> armReach;
+    // An arm of type armL reaches the ring at radius L, so a cell whose six
+    // neighbours are all reserved is still reachable from two or three cells away.
+    auto addArm = [&](Cell base, int reach = 1) {
         if (reserved.contains(base) || arms.contains(base)) return;
-        auto index = object("arm1", base);
+        const char* name = reach == 3 ? "arm3" : reach == 2 ? "arm2" : "arm1";
+        auto index = object(name, base);
         machine.objects[index].bodyData[4] = static_cast<int>(arms.size());
         arms.emplace(base, index);
         angles.emplace(base, 0);
+        armReach.emplace(base, reach);
     };
     for (int q = lowQ; q <= highQ; ++q)
         for (int r = lowR; r <= highR; ++r)
@@ -1210,18 +1216,36 @@ io::SolutionData Compile(
             ordinaryEndpoints[b].push_back(a);
         }
     }
+    // A product atom that is surrounded on all six sides by other product atoms is
+    // written before its neighbours arrive, so it never needs an arm that can reach
+    // it in the finished layout. Requiring static reachability there rules out every
+    // compact product.
+    const bool longArmsEnabled = std::getenv("OPUSOPTIMA_SERIAL_LONG_ARMS") != nullptr;
+    const bool interiorPortsAllowed = longArmsEnabled;
+    auto interiorProduct = [&](Cell cell) {
+        if (!interiorPortsAllowed || !outputCells.contains(cell)) return false;
+        for (const auto& direction : directions)
+            if (!reserved.contains(Add(cell, direction))) return false;
+        return true;
+    };
     auto accessible = [&](Cell cell) {
         if (carrierCells.contains(cell) || wheelCells.contains(cell) || stageCells.contains(cell))
             return true;
+        if (interiorProduct(cell)) return true;
         for (int grip = 0; grip < 6; ++grip) {
-            const auto base = Sub(cell, directions[grip]);
-            if (!arms.contains(base)) continue;
-            for (int turn : {1, 5}) {
-                const auto donor = Add(base, directions[(grip + turn) % 6]);
-                if (!arms.contains(donor) &&
-                    (!reserved.contains(donor) || feeds.contains(donor) ||
-                     !inheritedRoots.empty() || futureOutputCells.contains(donor)))
-                    return true;
+            const auto step = directions[grip];
+            for (int reach = 1; reach <= (longArmsEnabled ? 3 : 1); ++reach) {
+                const auto base =
+                    Sub(cell, {step.first * reach, step.second * reach});
+                const auto arm = arms.find(base);
+                if (arm == arms.end() || armReach.at(base) != reach) continue;
+                for (int turn : {1, 5}) {
+                    const auto donor = Add(base, directions[(grip + turn) % 6]);
+                    if (!arms.contains(donor) &&
+                        (!reserved.contains(donor) || feeds.contains(donor) ||
+                         !inheritedRoots.empty() || futureOutputCells.contains(donor)))
+                        return true;
+                }
             }
         }
         return false;
@@ -1244,22 +1268,25 @@ io::SolutionData Compile(
         std::vector<Cell> protectedPorts;
         for (const auto port : reserved)
             if (accessible(port)) protectedPorts.push_back(port);
-        for (int offset = 0; offset < 6; ++offset) {
-            const auto base = Add(cell, directions[(neighborChoice + offset) % 6]);
-            if (reserved.contains(base) || arms.contains(base)) continue;
-            const auto saved = machine.objects.size();
-            addArm(base);
-            bool safe = accessible(cell);
-            for (const auto port : protectedPorts)
-                safe &= accessible(port);
-            if (safe) {
-                placed = true;
-                break;
+        for (int reach = 1; reach <= (longArmsEnabled ? 3 : 1) && !placed; ++reach)
+            for (int offset = 0; offset < 6; ++offset) {
+                const auto step = directions[(neighborChoice + offset) % 6];
+                const auto base = Add(cell, {step.first * reach, step.second * reach});
+                if (reserved.contains(base) || arms.contains(base)) continue;
+                const auto saved = machine.objects.size();
+                addArm(base, reach);
+                bool safe = accessible(cell);
+                for (const auto port : protectedPorts)
+                    safe &= accessible(port);
+                if (safe) {
+                    placed = true;
+                    break;
+                }
+                arms.erase(base);
+                angles.erase(base);
+                armReach.erase(base);
+                machine.objects.resize(saved);
             }
-            arms.erase(base);
-            angles.erase(base);
-            machine.objects.resize(saved);
-        }
         if (!placed) {
             const auto* trace = std::getenv("OPUSOPTIMA_PRODUCT_PORT_TRACE");
             if (trace && std::string(trace) == "1" && evidence) {
@@ -2132,8 +2159,12 @@ io::SolutionData Compile(
                 }
                 append(op);
                 tick += 3;
-            } else
+            } else {
+                if (std::getenv("OPUSOPTIMA_TASK_DIAG"))
+                    std::fprintf(stderr, "TASKDIAG kind=%d catalysts=%d atoms=%zu\n",
+                                 static_cast<int>(op.kind), 0, op.atoms.size());
                 throw IR::Unsupported("serial arm material reaction not yet implemented");
+            }
             completed.push_back(task.step);
         }
         if (plan.finiteTerminal) {

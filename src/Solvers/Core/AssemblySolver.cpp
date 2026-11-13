@@ -2086,7 +2086,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             ? 0
             : std::atoll(tapeGuardFlag);
     std::optional<io::SolutionData> postponedLifeDeath;
-    if (!finiteClockLead) {
+    const bool skipLifeDeath = std::getenv("OPUSOPTIMA_SKIP_LIFE_DEATH") != nullptr;
+    if (!finiteClockLead && !skipLifeDeath) {
         if (auto result = attempt("life-death", [&] {
                 const auto build = [&] {
                     auto compiled = CompileLifeDeath(puzzle);
