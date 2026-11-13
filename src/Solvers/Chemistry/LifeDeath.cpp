@@ -467,6 +467,16 @@ io::SolutionData CompileLifeDeathGeometry(
         // same distance to the carriers and changes nothing (§42).
         const char* laneFlag = std::getenv("OPUSOPTIMA_LD_LANE_ROW");
         const int laneRow = laneFlag ? std::atoi(laneFlag) : 10;
+        // Head-room between the transport lane and the factory block. The atom climbs
+        // from the factory into the lane, so this is pure vertical distance that every
+        // atom pays (S42): shrinking the lift by one row removed exactly 2*72 cycles on
+        // `1dc60983`, i.e. one up and one down per atom. 22 was inherited from the old
+        // row-88 corridor and is mostly slack; 3 is the floor, because the per-feed
+        // carrier rail is built from `height-2` down to `laneRow` and needs at least two
+        // cells to exist (lift=2 leaves a single cell and the puzzle stops solving).
+        // Corpus A/B at 3: 16 faster, 0 slower, 0 lost, coverage 139/146 unchanged.
+        const char* liftFlag = std::getenv("OPUSOPTIMA_LD_FEED_LIFT");
+        const int feedLift = liftFlag ? std::atoi(liftFlag) : 3;
         int nextFactoryRight = factoryStartFlag   ? std::atoi(factoryStartFlag)
                                : g_factoryStart > -100000 ? g_factoryStart
                                                           : kShippedFactoryStart;
@@ -605,13 +615,13 @@ io::SolutionData CompileLifeDeathGeometry(
             // measured identical cycles at OPUSOPTIMA_LD_HEIGHT_STRIDE=40 because
             // `transportPath` is pinned to r=88 regardless of feed height, so the
             // corridor length is decided purely by the q spread.
-            feed.height = compactRelay ? assemblyTop + 16 : laneRow + 22;
+            feed.height = compactRelay ? assemblyTop + 16 : laneRow + feedLift;
             for (const auto& part : feed.batch.objects) {
                 int extent = part.position.r;
                 if (part.typeName == "track")
                     for (int j = 0; j < part.bodyData[4]; ++j)
                         extent = std::max(extent, part.position.r + part.bodyData[6 + 2 * j]);
-                feed.height = std::max(feed.height, (compactRelay ? assemblyTop + 16 : laneRow + 22) +
+                feed.height = std::max(feed.height, (compactRelay ? assemblyTop + 16 : laneRow + feedLift) +
                                                         extent - delivery.r);
             }
             const auto translation = core::Add({feed.pickup, feed.height + 1}, delivery);
@@ -635,6 +645,12 @@ io::SolutionData CompileLifeDeathGeometry(
                                   shared ? std::optional<std::size_t>(2 * feed.expectedRequests)
                                          : std::nullopt);
             checkDeadline();
+            if (std::getenv("OPUSOPTIMA_LD_FEED_DIAG"))
+                std::fprintf(stderr,
+                             "FEED idx=%zu type=%d requests=%zu pickup=%d cell=(%d,%d) height=%d\n",
+                             molecularFeeds.size(), static_cast<int>(sourceType),
+                             feed.expectedRequests, feed.pickup, feed.cell.q,
+                             feed.cell.r, feed.height);
             molecularFeeds.push_back(std::move(feed));
         };
         const auto originalCount = machine.objects.size();
