@@ -186,6 +186,9 @@ io::SolutionData CompileLifeDeathGeometry(
         puzzle.outputs[0].atoms.size() == 1 &&
         puzzle.outputs[0].atoms[0].type == core::AtomType::Quintessence)
         return CompileUnification(puzzle, deadline);
+    // Six repetitions is the verifier's demand, not slack: OPUSOPTIMA_LD_REPS at any
+    // lower value makes every strategy report "strategies exhausted" on `1dc60983`, so
+    // the 60 corridor deliveries are exactly 6 products of ten atoms.
     const int productCount = singleProduct ? 1 : 6 * puzzle.outputMultiplier;
     constexpr auto permissions = AssemblyPlanner::RequiredPermissions | (1ULL << 2) | (1ULL << 3);
     if (puzzle.version != 3 || puzzle.productionInfo || puzzle.outputs.empty() ||
@@ -1048,6 +1051,22 @@ io::SolutionData CompileLifeDeathGeometry(
                       [](const Event& a, const Event& b) { return a.time < b.time; });
             if (events.empty() || events.front().time < 0)
                 Reject("life/death pickup schedule unsupported");
+            if (std::getenv("OPUSOPTIMA_LD_EVENT_DIAG")) {
+                std::fprintf(stderr,
+                             "EVENTDIAG events=%zu factories=%zu productCount=%d multiplier=%d "
+                             "desired=%zu atoms=%zu feeds=%zu\n",
+                             events.size(), factories.size(), productCount,
+                             puzzle.outputMultiplier, desired.size(),
+                             single.outputs[0].atoms.size(), feeds.size());
+                for (std::size_t f = 0; f < factories.size(); ++f)
+                    std::fprintf(stderr, "  fac %zu q=%d dist=%d type=%d events=%zu\n", f,
+                                 factories[f].q, factories[f].distance,
+                                 static_cast<int>(factories[f].type),
+                                 static_cast<std::size_t>(std::count_if(
+                                     events.begin(), events.end(), [&](const auto& e) {
+                                         return e.factory == static_cast<int>(f);
+                                     })));
+            }
             const int repetitions = productCount;
             for (const auto& feed : molecularFeeds) {
                 if (!feed.expectedRequests) continue;
