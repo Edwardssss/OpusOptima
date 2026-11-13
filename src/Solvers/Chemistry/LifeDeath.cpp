@@ -1124,8 +1124,24 @@ io::SolutionData CompileLifeDeathGeometry(
             // reference machines do. Coordinates are untouched.
             int globalShift = 2;
             std::vector<int> feedShift(molecularFeeds.size(), 2);
+            // Each molecular factory only produces when its own event comes round, so
+            // it stands idle for a whole round-robin while the corridor serves the
+            // other feeds. The single-exit contract only forbids production starting
+            // before the receiver cleared the previous batch, so the factory can be
+            // restarted as soon as that happens and build while the corridor is
+            // carrying someone else's molecule.
+            std::vector<int> factoryReady(molecularFeeds.size(), 2);
             const bool perFeedClocks =
                 g_perFeedClocks || std::getenv("OPUSOPTIMA_LD_FEED_CLOCKS") != nullptr;
+            // Splitting the factory clock off the corridor cursor is independent of
+            // splitting the corridor's own object cursors, and it is the part that
+            // removes the idle: with one shared cursor every molecule carried its own
+            // batch's production time on the corridor's timeline, which is the 12.8k
+            // cycles of wait measured in S47. Shipped on; `...=off` restores the single
+            // cursor for measurement.
+            const char* splitFlag = std::getenv("OPUSOPTIMA_LD_SPLIT_FACTORY");
+            const bool splitFactory =
+                perFeedClocks || splitFlag == nullptr || std::string_view(splitFlag) != "off";
             int* clockPtr = &globalShift;
             int activeArm = 0;
             // A machine may be shared between feeds (the transport rail is), so the
@@ -1181,16 +1197,29 @@ io::SolutionData CompileLifeDeathGeometry(
                                                  : feed;
                             int& shift = perFeedClocks ? feedShift[feedIndex] : globalShift;
                             if (perFeedClocks) clockPtr = &shift;
-                            const auto slice = producer.resource->Reserve(shift);
+                            // With split clocks the factory keeps its own cursor, so it
+                            // can build batch k+1 while the corridor is still carrying
+                            // batch k. The contract still requires the start to be at or
+                            // after the cycle the receiver cleared the previous exit,
+                            // which is exactly the value handed to Release below.
+                            const std::size_t producerIndex =
+                                feed.sharedProducer ? *feed.sharedProducer : feedIndex;
+                            int& factory =
+                                splitFactory ? factoryReady.at(producerIndex) : shift;
+                            const auto slice = producer.resource->Reserve(factory);
                             const int end = slice.end;
                             for (int id : producer.objects)
                                 for (auto ins : molecularProgram[id].instructions) {
                                     if (ins.parameter < slice.begin || ins.parameter >= end)
                                         continue;
-                                    ins.parameter += shift - slice.begin;
+                                    ins.parameter += factory - slice.begin;
                                     machine.objects[id].instructions.push_back(ins);
                                 }
-                            shift += end - slice.begin + 1;
+                            factory += end - slice.begin + 1;
+                            // The corridor may not take the molecule before the batch
+                            // physically exists, but it must not wait for the factory's
+                            // turn either: only for the batch it actually needs.
+                            shift = std::max(shift, factory);
                             activeArm = producer.carrier;
                             for (int i = 0; i < CarrierIdleClearance; ++i)
                                 emit('a');
@@ -1202,6 +1231,10 @@ io::SolutionData CompileLifeDeathGeometry(
                             producer.resource->Release(
                                 ModulePort{{producer.pickup, producer.height + 1}, 0, false},
                                 pickupTime, shift);
+                            // The exit is only clear once the corridor has moved away,
+                            // so the next batch may not be scheduled before that cycle.
+                            if (splitFactory)
+                                factory = std::max(factory, shift);
                             if (feed.expectedRequests) ++feed.consumedRequests;
                             emit('e');
                             for (int i = 0; i < producer.distance; ++i)
