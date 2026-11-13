@@ -449,6 +449,8 @@ io::SolutionData CompileLifeDeathGeometry(
             io::SolutionData batch;
             std::vector<int> objects;
             int duration = 0, carrier = -1, pickup = 0, height = 0, distance = 0, factoryQ = 0;
+            int elevator = 0;
+            int elevatorTop = 88, elevatorDrop = 6, carrierEnd = 90;
             std::vector<int> productEnds;
             std::optional<FiniteFeedResource> resource;
             std::optional<std::size_t> sharedProducer;
@@ -787,55 +789,124 @@ io::SolutionData CompileLifeDeathGeometry(
         }
         checkDeadline();
         constexpr int transportRow = 6;
-        int transport = -1, transportPosition = 0;
-        std::vector<core::HexCoord> transportPath;
+        // One elevator carries every atom, so its tape sets the machine period.
+        // Splitting the feeds across K elevators divides that tape by K, and each
+        // elevator owns a contiguous block of factory columns so that no two top
+        // lanes, no two descents and no two bottom lanes share a cell.
+        const char* elevatorFlag = std::getenv("OPUSOPTIMA_LD_ELEVATORS");
+        const int elevatorLimit = elevatorFlag ? std::max(1, std::atoi(elevatorFlag)) : 1;
+        std::vector<int> transportArms, transportPositions, transportLocks;
+        std::vector<std::vector<core::HexCoord>> transportPaths;
         if (compactRelay && molecularFeeds.size() != 1)
             Reject("compact relay requires exactly one extracted molecular channel");
         if (compactRelay) {
             // A radius-two arm bridges the local carrier outlet to the real inlet.
             // Its base stays left of the moving assembly feed arm.
             // Factory placement uses its full rail envelope above the assembly.
-            transport = object("arm1", core::Add(molecularFeeds.front().cell, {-2, 0}), 2, 3);
+            transportArms.assign(1, -1);
+            transportPositions.assign(1, 0);
+            transportLocks.assign(1, 2);
+            transportPaths.assign(1, {});
+            transportArms[0] =
+                object("arm1", core::Add(molecularFeeds.front().cell, {-2, 0}), 2, 3);
         } else if (!molecularFeeds.empty()) {
-            int left = molecularFeeds.front().cell.q, right = left;
-            for (const auto& feed : molecularFeeds) {
-                left = std::min(left, feed.cell.q);
-                right = std::max(right, feed.cell.q);
+            std::vector<std::size_t> order(molecularFeeds.size());
+            for (std::size_t i = 0; i < order.size(); ++i) order[i] = i;
+            std::stable_sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+                return molecularFeeds[a].cell.q < molecularFeeds[b].cell.q;
+            });
+            const int groups =
+                compactRelay ? 1
+                             : std::min<int>(elevatorLimit, static_cast<int>(order.size()));
+            // Grouping follows the delivery columns so that a group's bottom lane
+            // never runs over another group's drop point, and each lane sits one
+            // row pair above it. The lane itself only spans its own factories.
+            for (std::size_t i = 0; i < order.size(); ++i) {
+                auto& member = molecularFeeds[order[i]];
+                member.elevator = static_cast<int>(i * groups / order.size());
+                member.elevatorDrop = transportRow + 2 * member.elevator;
+                member.elevatorTop = 88 - 2 * member.elevator;
+                member.carrierEnd = member.elevatorTop + 2;
             }
-            int bend = left - 20;
-            // Tracks share a global junction table in the simulator. Route the
-            // descent outside the assembly rails, not merely outside deliveries.
-            for (const auto& part : machine.objects) {
-                if (part.typeName != "track") continue;
-                for (int i = 0; i < part.bodyData[4]; ++i) {
-                    const int r = part.position.r + part.bodyData[6 + 2 * i];
-                    if (r <= transportRow)
-                        bend = std::min(bend, part.position.q + part.bodyData[5 + 2 * i] - 2);
+            transportArms.assign(groups, -1);
+            transportPositions.assign(groups, 0);
+            transportLocks.assign(groups, 2);
+            transportPaths.assign(groups, {});
+            for (int group = 0; group < groups; ++group) {
+                int left = 0, right = 0, pickup = 0;
+                bool empty = true;
+                for (const auto& feed : molecularFeeds) {
+                    if (feed.elevator != group) continue;
+                    if (empty) {
+                        left = right = feed.cell.q;
+                        pickup = feed.pickup;
+                        empty = false;
+                    }
+                    left = std::min(left, feed.cell.q);
+                    right = std::max(right, feed.cell.q);
+                    if (!feed.sharedProducer) pickup = std::min(pickup, feed.pickup);
                 }
+                if (empty) continue;
+                const int topRow = 88 - 2 * group;
+                const int dropRow = transportRow + 2 * group;
+                int pickupLeft = pickup, pickupRight = pickup;
+                for (const auto& feed : molecularFeeds) {
+                    if (feed.elevator != group) continue;
+                    pickupLeft = std::min(pickupLeft, feed.pickup);
+                    pickupRight = std::max(pickupRight, feed.pickup);
+                }
+                // Descend inside the gap that separates this group's factories from
+                // the next group's, so no lane ever crosses another group's carrier
+                // rail. The rightmost group keeps the assembly-side rule below.
+                int nextPickup = 0;
+                bool haveNext = false;
+                for (const auto& feed : molecularFeeds) {
+                    if (feed.elevator <= group) continue;
+                    nextPickup = haveNext ? std::min(nextPickup, feed.pickup) : feed.pickup;
+                    haveNext = true;
+                }
+                int bend = haveNext && nextPickup - pickupRight > 2
+                               ? (pickupRight + nextPickup) / 2
+                               : left - 20;
+                // Tracks share a global junction table in the simulator. Route the
+                // descent outside the assembly rails, not merely outside deliveries.
+                for (const auto& part : machine.objects) {
+                    if (part.typeName != "track") continue;
+                    for (int i = 0; i < part.bodyData[4]; ++i) {
+                        const int r = part.position.r + part.bodyData[6 + 2 * i];
+                        if (r <= dropRow)
+                            bend = std::min(bend, part.position.q + part.bodyData[5 + 2 * i] - 2);
+                    }
+                }
+                auto& path = transportPaths[group];
+                const int step = pickupLeft <= bend ? 1 : -1;
+                for (int q = pickupLeft;; q += step) {
+                    path.push_back({q, topRow});
+                    if (q == bend) break;
+                }
+                for (int r = topRow - 1; r >= dropRow; --r)
+                    path.push_back({bend, r});
+                for (int q = bend + 1; q <= right; ++q)
+                    path.push_back({q, dropRow});
             }
-            int pickup = molecularFeeds.front().pickup;
-            for (const auto& feed : molecularFeeds)
-                if (!feed.sharedProducer) pickup = std::min(pickup, feed.pickup);
-            const int step = pickup <= bend ? 1 : -1;
-            for (int q = pickup;; q += step) {
-                transportPath.push_back({q, 88});
-                if (q == bend) break;
+            // Objects are created only after every lane is placed. Creating them
+            // inside the loop let the track-dodging scan below see the previous
+            // group's own descent rail and drag this group's descent onto it.
+            for (int group = 0; group < groups; ++group) {
+                auto& path = transportPaths[group];
+                if (path.empty()) continue;
+                const int topRow = 88 - 2 * group;
+                transportArms[group] = object("piston", path.front(), 1, 1);
+                const int rail = object("track", path.front(), 1, 0);
+                if (std::getenv("OPUSOPTIMA_LD_TRANSPORT_DIAG"))
+                    std::fprintf(stderr, "TRANSPORT group=%d top=%d start=(%d,%d) path=%zu\n",
+                                 group, topRow, path.front().q, path.front().r, path.size());
+                auto& data = machine.objects[rail].bodyData;
+                data = {1, 0, 0, 0, static_cast<int>(path.size())};
+                for (auto cell : path)
+                    data.insert(data.end(), {cell.q - path.front().q, cell.r - topRow});
+                data.push_back(0);
             }
-            for (int r = 87; r >= transportRow; --r)
-                transportPath.push_back({bend, r});
-            for (int q = bend + 1; q <= right; ++q)
-                transportPath.push_back({q, transportRow});
-            transport = object("piston", transportPath.front(), 1, 1);
-            const int rail = object("track", transportPath.front(), 1, 0);
-            if (std::getenv("OPUSOPTIMA_LD_TRANSPORT_DIAG"))
-                std::fprintf(stderr,
-                             "TRANSPORT pickup=%d bend=%d right=%d feeds=%zu path=%zu\n",
-                             pickup, bend, right, molecularFeeds.size(), transportPath.size());
-            auto& data = machine.objects[rail].bodyData;
-            data = {1, 0, 0, 0, static_cast<int>(transportPath.size())};
-            for (auto cell : transportPath)
-                data.insert(data.end(), {cell.q - transportPath.front().q, cell.r - 88});
-            data.push_back(0);
         }
         for (auto& feed : molecularFeeds) {
             if (feed.sharedProducer) continue;
@@ -844,7 +915,8 @@ io::SolutionData CompileLifeDeathGeometry(
                 object("piston", {feed.pickup, feed.height - 2 - CarrierIdleClearance}, 1, 1);
             const int rail = object("track", {feed.pickup, feed.height - 2}, 1, 0);
             std::vector<core::HexCoord> path;
-            for (int r = feed.height - 2; r >= (compactRelay ? feed.cell.r + 1 : 90); --r)
+            for (int r = feed.height - 2;
+                 r >= (compactRelay ? feed.cell.r + 1 : feed.carrierEnd); --r)
                 path.push_back({feed.pickup, r});
             auto& data = machine.objects[rail].bodyData;
             data = {1, 0, 0, 0, static_cast<int>(path.size())};
@@ -1028,12 +1100,9 @@ io::SolutionData CompileLifeDeathGeometry(
                 machine.objects[activeArm].instructions.push_back({action, cursor++});
                 *clockPtr = std::max(*clockPtr, cursor);
             };
-            // The transport rail is shared by every feed, so its occupancy has to be
-            // exclusive: a feed waits for the rail to fall idle, drives it, and leaves
-            // the rail's clock where it stopped. Without this a second feed interleaves
-            // its own extend/retract into the middle of a half-finished journey and the
-            // motion phase collides (`1dc60983` at (81,89)).
-            int transportLock = 2;
+            // Each transport rail is owned by one feed group, so its occupancy still
+            // has to be exclusive within that group: a feed waits for its rail to fall
+            // idle, drives it, and leaves the rail's clock where it stopped.
             std::size_t event = 0;
             for (int repeat = 0; repeat < repetitions; ++repeat) {
                 event = 0;
@@ -1096,11 +1165,20 @@ io::SolutionData CompileLifeDeathGeometry(
                             emit('R');
                             emit('R');
                             emit('g');
+                            // Every elevator runs on its own lane and its own bottom
+                            // row, so the atom's journey is parameterised by its group.
+                            const int elevator = producer.elevator;
+                            const int elevTop = producer.elevatorTop;
+                            const int elevDrop = feed.elevatorDrop;
+                            const int transport = transportArms.at(elevator);
+                            int& transportPosition = transportPositions.at(elevator);
+                            const auto& transportPath = transportPaths.at(elevator);
                             auto moveTransport = [&](core::HexCoord target) {
                                 const int destination = static_cast<int>(
                                     std::find(transportPath.begin(), transportPath.end(), target) -
                                     transportPath.begin());
-                                if (perFeedClocks) *clockPtr = std::max(*clockPtr, transportLock);
+                                if (perFeedClocks)
+                                    *clockPtr = std::max(*clockPtr, transportLocks.at(elevator));
                                 activeArm = transport;
                                 while (transportPosition < destination) {
                                     emit('A');
@@ -1110,12 +1188,14 @@ io::SolutionData CompileLifeDeathGeometry(
                                     emit('a');
                                     --transportPosition;
                                 }
-                                if (perFeedClocks) transportLock = std::max(transportLock, *clockPtr);
+                                if (perFeedClocks)
+                                    transportLocks.at(elevator) =
+                                        std::max(transportLocks.at(elevator), *clockPtr);
                             };
                             if (compactRelay)
                                 activeArm = transport;
                             else
-                                moveTransport({producer.pickup, 88});
+                                moveTransport({producer.pickup, elevTop});
                             emit('G');
                             activeArm = producer.carrier;
                             emit('r');
@@ -1126,15 +1206,15 @@ io::SolutionData CompileLifeDeathGeometry(
                             if (compactRelay)
                                 activeArm = transport;
                             else
-                                moveTransport({feed.cell.q, transportRow});
+                                moveTransport({feed.cell.q, elevDrop});
                             emit('R');
                             emit('R');
                             emit('R');
-                            for (int i = 1; i < (compactRelay ? 1 : transportRow - feed.cell.r);
+                            for (int i = 1; i < (compactRelay ? 1 : elevDrop - feed.cell.r);
                                  ++i)
                                 emit('E');
                             emit('g');
-                            for (int i = 1; i < (compactRelay ? 1 : transportRow - feed.cell.r);
+                            for (int i = 1; i < (compactRelay ? 1 : elevDrop - feed.cell.r);
                                  ++i)
                                 emit('e');
                             emit('r');
@@ -1144,7 +1224,7 @@ io::SolutionData CompileLifeDeathGeometry(
                             if (!compactRelay)
                                 moveTransport(*std::find_if(
                                     transportPath.begin(), transportPath.end(),
-                                    [](core::HexCoord cell) { return cell.r == 87; }));
+                                    [&](core::HexCoord cell) { return cell.r == elevTop - 1; }));
                             if (perFeedClocks) clockPtr = &globalShift;
                         }
                         // Outlet and spare arms serve one factory, so they belong on
