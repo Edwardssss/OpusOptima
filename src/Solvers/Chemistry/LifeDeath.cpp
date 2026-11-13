@@ -481,6 +481,11 @@ io::SolutionData CompileLifeDeathGeometry(
             o.typeName = type;
             o.position = pos;
             o.bodyData = {length, rotation, index, 0, 0};
+            // Attribution for physics rejections: the gate reports a cell, never an
+            // object, so every layout change used to be a blind guess.
+            if (std::getenv("OPUSOPTIMA_LD_OBJECT_DIAG"))
+                std::fprintf(stderr, "OBJ index=%zu %s at (%d,%d)\n",
+                             machine.objects.size(), type, pos.q, pos.r);
             machine.objects.push_back(o);
             return static_cast<int>(machine.objects.size()) - 1;
         };
