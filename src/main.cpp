@@ -1,3 +1,4 @@
+#include "BinaryWriter.hpp"
 #include "CalcifyAnimismusAdmission.hpp"
 #include <charconv>
 #include <chrono>
@@ -343,6 +344,14 @@ int main(int argc, char* argv[]) {
                 rejected.status = opusoptima::io::VerificationStatus::Unavailable;
                 rejected.detail = "material stage requires LegacyGate or legacy-primary Shadow";
                 return rejected;
+            }
+            // A physics rejection is reported as a bare cell, so keeping the exact
+            // candidate is the only way to find out which objects were there.
+            if (const char* dump = std::getenv("OPUSOPTIMA_DUMP_REJECTED");
+                dump != nullptr && *dump != '\0' &&
+                opusoptima::io::CalcifyAnimismusModeAllowed(strategy, admissionOptions.mode)) {
+                opusoptima::io::BinaryWriter::WriteSolutionFile(
+                    std::string(dump) + ".rejected.solution", candidate);
             }
             const bool firstPending = !archive->First();
             auto accepted = archive->Submit(candidate, strategy, structuralDeadline);
