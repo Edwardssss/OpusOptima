@@ -462,6 +462,11 @@ io::SolutionData CompileLifeDeathGeometry(
         // corridor: on `1dc60983` it puts the six extractors at -217..-517 while the
         // assembly row sits at -24, which is the 500-cell haul the period pays for.
         const char* factoryStartFlag = std::getenv("OPUSOPTIMA_LD_FACTORY_START");
+        // The corridor's vertical span is distance every atom pays twice, and the
+        // factory block has to move with the lane: lowering only the lane hands the
+        // same distance to the carriers and changes nothing (§42).
+        const char* laneFlag = std::getenv("OPUSOPTIMA_LD_LANE_ROW");
+        const int laneRow = laneFlag ? std::atoi(laneFlag) : 10;
         int nextFactoryRight = factoryStartFlag   ? std::atoi(factoryStartFlag)
                                : g_factoryStart > -100000 ? g_factoryStart
                                                           : kShippedFactoryStart;
@@ -600,13 +605,13 @@ io::SolutionData CompileLifeDeathGeometry(
             // measured identical cycles at OPUSOPTIMA_LD_HEIGHT_STRIDE=40 because
             // `transportPath` is pinned to r=88 regardless of feed height, so the
             // corridor length is decided purely by the q spread.
-            feed.height = compactRelay ? assemblyTop + 16 : 100;
+            feed.height = compactRelay ? assemblyTop + 16 : laneRow + 22;
             for (const auto& part : feed.batch.objects) {
                 int extent = part.position.r;
                 if (part.typeName == "track")
                     for (int j = 0; j < part.bodyData[4]; ++j)
                         extent = std::max(extent, part.position.r + part.bodyData[6 + 2 * j]);
-                feed.height = std::max(feed.height, (compactRelay ? assemblyTop + 16 : 110) +
+                feed.height = std::max(feed.height, (compactRelay ? assemblyTop + 16 : laneRow + 22) +
                                                         extent - delivery.r);
             }
             const auto translation = core::Add({feed.pickup, feed.height + 1}, delivery);
@@ -830,7 +835,7 @@ io::SolutionData CompileLifeDeathGeometry(
                 auto& member = molecularFeeds[order[i]];
                 member.elevator = static_cast<int>(i * groups / order.size());
                 member.elevatorDrop = transportRow + 2 * member.elevator;
-                member.elevatorTop = 88 - 2 * member.elevator;
+                member.elevatorTop = laneRow - 2 * member.elevator;
                 member.carrierEnd = member.elevatorTop + 2;
             }
             transportArms.assign(groups, -1);
@@ -852,7 +857,7 @@ io::SolutionData CompileLifeDeathGeometry(
                     if (!feed.sharedProducer) pickup = std::min(pickup, feed.pickup);
                 }
                 if (empty) continue;
-                const int topRow = 88 - 2 * group;
+                const int topRow = laneRow - 2 * group;
                 const int dropRow = transportRow + 2 * group;
                 int pickupLeft = pickup, pickupRight = pickup;
                 for (const auto& feed : molecularFeeds) {
@@ -900,7 +905,7 @@ io::SolutionData CompileLifeDeathGeometry(
             for (int group = 0; group < groups; ++group) {
                 auto& path = transportPaths[group];
                 if (path.empty()) continue;
-                const int topRow = 88 - 2 * group;
+                const int topRow = laneRow - 2 * group;
                 transportArms[group] = object("piston", path.front(), 1, 1);
                 const int rail = object("track", path.front(), 1, 0);
                 if (std::getenv("OPUSOPTIMA_LD_TRANSPORT_DIAG"))

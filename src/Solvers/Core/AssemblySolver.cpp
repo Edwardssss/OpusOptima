@@ -2081,7 +2081,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // this family being archived, so they are left alone.
     const std::int64_t tapeGuard =
         puzzle.outputs.size() != 1 ? 0
-        : tapeGuardFlag == nullptr ? kGateTapeLimit * 2 / 3
+        : tapeGuardFlag == nullptr ? kGateTapeLimit / 2
         : std::string_view(tapeGuardFlag) == "off"
             ? 0
             : std::atoll(tapeGuardFlag);
