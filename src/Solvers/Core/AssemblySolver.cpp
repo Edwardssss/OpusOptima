@@ -2152,6 +2152,14 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         const bool closerAnchor =
             closerAnchorFlag != nullptr && std::string_view(closerAnchorFlag) == "on" &&
             g_compositionDepth == 0 && !SupportsClosedCardinalLife(puzzle);
+        // The closer column is offered as a *sibling* rather than as a replacement
+        // for the shipped column, so the first admitted life-death machine stays
+        // the shipped one (two contracts depend on it) while the archive still
+        // keeps the cheaper machine in every slot it wins. Off with `=off`.
+        const char* closerSiblingFlag = std::getenv("OPUSOPTIMA_LD_CLOSER_SIBLING");
+        const bool closerSibling =
+            (!closerSiblingFlag || std::string_view(closerSiblingFlag) != "off") &&
+            g_compositionDepth == 0 && !SupportsClosedCardinalLife(puzzle);
         std::optional<io::SolutionData> result;
         if (closerAnchor)
             result = attempt("life-death-closer-anchor",
@@ -2163,6 +2171,9 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                                 [&] { return CompileLifeDeathLocalIntake(puzzle); });
             submitIntakeSibling(clockSibling, false, "life-death-feed-clocks",
                                 [&] { return CompileLifeDeathClocked(puzzle); });
+            if (!closerAnchor)
+                submitIntakeSibling(closerSibling, false, "life-death-closer-sibling",
+                                    [&] { return compileMachine(kCloserFactoryStart); });
             // Opt-in: let the later families compete with an admitted life-death
             // machine instead of publishing it on arrival.
             const bool admitted = keep(*result);
