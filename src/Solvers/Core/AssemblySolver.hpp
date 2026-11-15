@@ -209,6 +209,15 @@ class AssemblySolver final : public BaseSolver {
     void EnableExperimentalCompactRelay(bool enabled) {
         compactRelayEnabled_ = enabled;
     }
+    /// CLI-only wider portfolio. After the first verified family, also offer the
+    /// deferred life-death alternatives and the compact composer, and let a
+    /// strictly faster verified life-death machine replace an earlier first pick.
+    /// The solver API keeps its strict first-result/submission contract unless the
+    /// caller opts in: the extra candidates spend the caller's bounded search
+    /// budget, so an unbounded library call must not take them.
+    void EnableExtraPortfolio(bool enabled) {
+        extraPortfolioEnabled_ = enabled;
+    }
     [[nodiscard]] std::int32_t EstimateCycles(const io::PuzzleData& puzzle) override;
     [[nodiscard]] static bool Supports(const io::PuzzleData& puzzle) noexcept;
     [[nodiscard]] static io::SolutionData Compile(const io::PuzzleData& puzzle,
@@ -216,6 +225,7 @@ class AssemblySolver final : public BaseSolver {
 
     private:
     bool compactRelayEnabled_{false};
+    bool extraPortfolioEnabled_{false};
     bool sharedAssemblyEnabled_{false};
     bool sharedSchedulingEnabled_{false};
     bool sharedBufferRelayEnabled_{false};

@@ -1,4 +1,6 @@
 #include "LifeDeath.hpp"
+#include "LifeDeathParking.hpp"
+#include "LifeDeathStorage.hpp"
 #include "AssemblySolver.hpp"
 #include "ChemistryPipeline.hpp"
 #include "FiniteFeedResource.hpp"
@@ -97,6 +99,7 @@ thread_local int g_factoryClearance = -1;
 // walked twice per shuttle, so it is the largest cycle lever in the family
 // (eleven of thirteen sampled puzzles gain 1.25-1.44x, `fc6a70eb` 10547 -> 7327).
 thread_local int g_factoryStart = -100000;
+thread_local bool g_factoryStagger = false;
 constexpr int kShippedFactoryStart = -60;
 io::SolutionData CompileLifeDeathGeometry(
     const io::PuzzleData& puzzle, bool singleProduct, bool compactRelay, bool relayBaseline = false,
@@ -108,6 +111,9 @@ io::SolutionData CompileLifeDeathGeometry(
     };
     checkDeadline();
     // These keys identify requests within this immutable puzzle and invocation.
+    if (g_factoryStagger && (singleProduct || compactRelay || relayBaseline || compactSpare ||
+                            shareFeeds || puzzle.outputs.size() != 1 || g_perFeedClocks))
+        Reject("stagger requires one ordinary output and independent real producers");
     // Real suppliers keep the original input index; synthetic suppliers bypass reuse.
     // Extraction always has one origin-centered atom, multiplier one, and the
     // original permissions. Planning adds disposal permission and uses false.
@@ -287,6 +293,7 @@ io::SolutionData CompileLifeDeathGeometry(
     io::SolutionData result;
     result.puzzleName = puzzle.name;
     result.solutionName = "Finite salt chemistry row assembly";
+    std::vector<std::size_t> storageRails;
     int offset = 0, armNumber = 0;
     for (std::size_t output = 0; output < puzzle.outputs.size(); ++output) {
         checkDeadline();
@@ -372,6 +379,15 @@ io::SolutionData CompileLifeDeathGeometry(
         for (auto& atom : single.outputs[0].atoms)
             atom.type = static_cast<AtomType>(std::find(desired.begin(), desired.end(), atom.type) -
                                               desired.begin() + 2);
+        if (g_factoryStagger && (triplex ||
+            std::any_of(actual.begin(), actual.end(), [](int input) { return input < 0; }) ||
+            std::any_of(feeds.begin(), feeds.end(), [](const auto& feed) {
+                return feed.kind == ChemistryFeedKind::Unify ||
+                       feed.kind == ChemistryFeedKind::Disperse;
+            }) || std::any_of(desired.begin(), desired.end(), [](auto type) {
+                return type == AtomType::Quintessence;
+            })))
+            Reject("stagger excludes synthetic, quintessence and coproduct dispersion routes");
         // Negative entries are planning placeholders; their bounded factories consume
         // original puzzle inputs through metal or whole-molecule cardinal lowering.
         const bool unsupportedSynthetic = [&] {
@@ -425,6 +441,7 @@ io::SolutionData CompileLifeDeathGeometry(
             GetLoggerOrFallback("solver")->info(
                 "Assembly branch=life-death event=emissions count={} atoms={} owners={}",
                 emissions.size(), single.outputs[0].atoms.size(), emissionOwners.size());
+        std::set<std::size_t> outputStorageRails;
         int feedArm = -1, feedOffset = 0;
         for (std::size_t i = 0; i < machine.objects.size(); ++i) {
             const auto& o = machine.objects[i];
@@ -508,6 +525,7 @@ io::SolutionData CompileLifeDeathGeometry(
             return static_cast<int>(machine.objects.size()) - 1;
         };
         int assemblyTop = 0;
+        int firstFactoryRight = 0, firstFactoryTop = 0;
         for (const auto& part : machine.objects) {
             assemblyTop = std::max(assemblyTop, part.position.r);
             if (part.typeName == "track")
@@ -627,6 +645,23 @@ io::SolutionData CompileLifeDeathGeometry(
                 feed.height = std::max(feed.height, (compactRelay ? assemblyTop + 16 : laneRow + feedLift) +
                                                         extent - delivery.r);
             }
+            if (g_factoryStagger) {
+                if (shared || input < 0 || puzzle.inputs[input].atoms.size() < 2 ||
+                    molecularFeeds.size() >= 2 || feed.productEnds.empty())
+                    Reject("stagger requires exactly two finite real molecular producers");
+                if (molecularFeeds.size() == 1) {
+                    // The full vertical pickup rail must lie RIGHT of the first
+                    // producer, not through its interior. Moving only upwards is
+                    // insufficient: it merely trades bus distance for lift distance.
+                    const int pickup = firstFactoryRight + 8;
+                    if (pickup > -25 || pickup <= feed.pickup)
+                        Reject("stagger has no assembly-side pickup corridor");
+                    feed.pickup = pickup;
+                    // Raise the entire second producer above the first, retaining
+                    // its original output-relative floor and finite batch tapes.
+                    feed.height += std::max(0, firstFactoryTop + 8 - (laneRow + feedLift));
+                }
+            }
             const auto translation = core::Add({feed.pickup, feed.height + 1}, delivery);
             for (auto part : feed.batch.objects) {
                 if (part.typeName == "out-std") continue;
@@ -642,6 +677,31 @@ io::SolutionData CompileLifeDeathGeometry(
                     feed.duration = std::max(feed.duration, ins.parameter + 1);
                 feed.objects.push_back(static_cast<int>(machine.objects.size()));
                 machine.objects.push_back(std::move(part));
+            }
+            if (g_factoryStagger && molecularFeeds.empty()) {
+                // Include real input atom footprints and every rail cell. Padding
+                // covers local arm reach only as a conservative prefilter; native
+                // motion-phase verification remains mandatory.
+                firstFactoryRight = feed.pickup;
+                firstFactoryTop = feed.height + 1;
+                auto include = [&](core::HexCoord p) {
+                    firstFactoryRight = std::max(firstFactoryRight, p.q);
+                    firstFactoryTop = std::max(firstFactoryTop, p.r);
+                };
+                for (int id : feed.objects) {
+                    const auto& part = machine.objects[id];
+                    include(part.position);
+                    if (part.typeName == "track")
+                        for (int j = 0; j < part.bodyData[4]; ++j)
+                            include(core::Add(part.position, {part.bodyData[5 + 2*j],
+                                                              part.bodyData[6 + 2*j]}));
+                    if (part.typeName == "input")
+                        for (const auto& atom : puzzle.inputs[input].atoms)
+                            include(core::Add(part.position,
+                                              {-atom.position.q, -atom.position.r}));
+                }
+                firstFactoryRight += 3;
+                firstFactoryTop += 3;
             }
             feed.resource.emplace(ModulePort{{feed.pickup, feed.height + 1}, 0, false},
                                   feed.productEnds, feed.duration,
@@ -715,6 +775,7 @@ io::SolutionData CompileLifeDeathGeometry(
                         const int arm =
                             object(delta.r > 0 ? "piston" : "arm1", base, 1, (9 - angle) % 6);
                         const int rail = object("track", base, 1, 0);
+                        outputStorageRails.insert(static_cast<std::size_t>(rail));
                         const int length =
                             6 * puzzle.outputMultiplier *
                                 static_cast<int>(puzzle.outputs[output].atoms.size()) * 3 +
@@ -818,6 +879,8 @@ io::SolutionData CompileLifeDeathGeometry(
         }
         checkDeadline();
         constexpr int transportRow = 6;
+        if (g_factoryStagger && molecularFeeds.size() != 2)
+            Reject("stagger requires exactly two real molecular producers");
         // One elevator carries every atom, so its tape sets the machine period.
         // Splitting the feeds across K elevators divides that tape by K, and each
         // elevator owns a contiguous block of factory columns so that no two top
@@ -1081,6 +1144,8 @@ io::SolutionData CompileLifeDeathGeometry(
             // Separate vertical lanes keep collectors clear of other factories.
             // Dropping sideways leaves every lane free for the return journey.
             std::vector<int> spareArms, stored(factories.size());
+            struct Parking { int rail, arm; std::int64_t demand; };
+            std::vector<Parking> parking;
             for (const auto& factory : factories) {
                 if (!factory.animismus) {
                     spareArms.push_back(-1);
@@ -1100,6 +1165,9 @@ io::SolutionData CompileLifeDeathGeometry(
                 for (int r = -length; r <= 0; ++r)
                     data.insert(data.end(), {0, r});
                 data.push_back(0);
+                if (!compactSpare)
+                    parking.push_back({rail, spareArms.back(),
+                                       static_cast<std::int64_t>(pickups) * repetitions});
             }
             struct ReplayInstruction {
                 std::size_t object;
@@ -1377,6 +1445,10 @@ io::SolutionData CompileLifeDeathGeometry(
                     for (const int value : feedShift) end = std::max(end, value);
                     o.instructions.push_back({'B', end});
                 }
+            // All rails, arms and finite tapes now exist: never trim through a
+            // junction or an arm that was serialized after the parking rail.
+            for (const auto& lane : parking)
+                detail::TrimLifeDeathParking(machine, lane.rail, lane.arm, lane.demand);
         }
         int low = 0, high = 0;
         for (const auto& o : machine.objects) {
@@ -1388,7 +1460,8 @@ io::SolutionData CompileLifeDeathGeometry(
                     high = std::max(high, o.position.q + o.bodyData[5 + 2 * i] + 20);
                 }
         }
-        for (auto& o : machine.objects) {
+        for (std::size_t id = 0; id < machine.objects.size(); ++id) {
+            auto& o = machine.objects[id];
             // Replaced virtual feeds are placeholders, not physical glyphs.
             if (o.typeName == "glyph-marker") continue;
             // Singleton feeds never use the three-row escape arm; remove its
@@ -1398,7 +1471,8 @@ io::SolutionData CompileLifeDeathGeometry(
             if (o.typeName == "out-std") o.bodyData[2] = static_cast<int>(output);
             if (o.typeName == "piston" || o.typeName.starts_with("arm"))
                 o.bodyData[4] = armNumber++;
-            result.objects.push_back(std::move(o));
+            detail::AppendLifeDeathObject(result, std::move(o),
+                                          outputStorageRails.contains(id), storageRails);
         }
         offset += high - low + 32;
     }
@@ -1407,6 +1481,8 @@ io::SolutionData CompileLifeDeathGeometry(
     if (compactRelay) result.solutionName = "Experimental compact molecular relay";
     if (!needed && !compactRelay && !relayBaseline)
         Reject("life/death target requires no chemistry conversion");
+    detail::TrimLifeDeathStorage(result, storageRails);
+    checkDeadline();
     if (const char* dump = std::getenv("OPUSOPTIMA_LD_DUMP"); dump != nullptr && *dump != '\0')
         io::BinaryWriter::WriteSolutionFile(dump, result);
     return result;
@@ -1471,5 +1547,32 @@ FactoryStartScope::FactoryStartScope(int start) : previous_(g_factoryStart) {
 }
 FactoryStartScope::~FactoryStartScope() {
     g_factoryStart = previous_;
+}
+FactoryStaggerScope::FactoryStaggerScope(bool enabled) : previous_(g_factoryStagger) {
+    g_factoryStagger = enabled;
+}
+FactoryStaggerScope::~FactoryStaggerScope() {
+    g_factoryStagger = previous_;
+}
+io::SolutionData CompileStaggeredLifeDeath(
+    const io::PuzzleData& puzzle, std::chrono::steady_clock::time_point deadline) {
+    const auto build = [&] {
+        return CompileLifeDeathGeometry(puzzle, false, false, false, false, false, deadline);
+    };
+    const auto baseline = [&] {
+        FactoryStaggerScope plain(false);
+        return build();
+    }();
+    FactoryStaggerScope stagger(true);
+    auto candidate = build();
+    const auto tracks = [](const auto& solution) {
+        std::int64_t count = 0;
+        for (const auto& part : solution.objects)
+            if (part.typeName == "track") count += part.bodyData.at(4);
+        return count;
+    };
+    if (tracks(candidate) >= tracks(baseline))
+        Reject("stagger does not strictly reduce complete serialized track cells");
+    return candidate;
 }
 } // namespace opusoptima::solvers

@@ -60,6 +60,24 @@ public:
 private:
     int previous_;
 };
+/// Experimental two-real-producer placement only. Static clearance is a routing
+/// precondition, NOT a physics proof; every returned machine needs native gating.
+/// Disabled by default; nested scopes restore their caller's setting.
+class FactoryStaggerScope {
+public:
+    explicit FactoryStaggerScope(bool enabled);
+    ~FactoryStaggerScope();
+    FactoryStaggerScope(const FactoryStaggerScope&) = delete;
+    FactoryStaggerScope& operator=(const FactoryStaggerScope&) = delete;
+private:
+    bool previous_;
+};
+/// Compile both complete machines under the same caller geometry settings and
+/// deadline. Reject unless the staggered machine strictly reduces the sum of ALL
+/// serialized track cells (including the added vertical pickup rail).
+[[nodiscard]] io::SolutionData CompileStaggeredLifeDeath(
+    const io::PuzzleData& puzzle,
+    std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::time_point::max());
 [[nodiscard]] io::SolutionData CompileLifeDeath(const io::PuzzleData& puzzle);
 /// Same finite-product geometry, but the narrow row feeds are compiled with the
 /// local source intake widened past the compact layout (`RowIntakeModeScope(2)`):

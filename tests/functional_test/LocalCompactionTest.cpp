@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -125,6 +126,180 @@ TEST(LocalCompaction, TrimsAndErasesRailsFromArmMovement) {
     const auto refused = opusoptima::solvers::LocalTrial(offRail, 8);
     EXPECT_EQ(refused.objects.size(), 3);
     EXPECT_EQ(BinaryWriter::WriteSolution(refused), BinaryWriter::WriteSolution(offRail));
+}
+
+TEST(LocalCompaction, RailEnvelopePoliciesKeepDistinctMechanicalAndUnusedRailDomains) {
+    FlagGuard compact("OPUSOPTIMA_COMPACT_TRANSPORT");
+    FlagGuard envelope("OPUSOPTIMA_TRACK_ENVELOPE");
+    FlagGuard compose("OPUSOPTIMA_IDLE_TRACK_ENVELOPE");
+    setenv("OPUSOPTIMA_COMPACT_TRANSPORT", "on", 1);
+    setenv("OPUSOPTIMA_TRACK_ENVELOPE", "on", 1);
+    unsetenv("OPUSOPTIMA_IDLE_TRACK_ENVELOPE");
+    for (const char* type : {"arm1", "piston", "arm2", "arm3", "arm6", "baron"}) {
+        SCOPED_TRACE(type);
+        SolutionData parent;
+        // Arm before rail also exercises the rails-first cell map.
+        parent.objects.push_back(
+            {type, {1, 0}, {{'G', 0}, {'A', 3}, {'a', 7}, {'g', 10}, {'B', 12}}, {}});
+        parent.objects.push_back(
+            {"track", {0, 0}, {}, {1, 0, 0, 0, 5, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 7}});
+        parent.objects.push_back({"track", {20, 0}, {}, parent.objects[1].bodyData});
+        parent.objects.push_back({"track", {30, 0}, {}, parent.objects[1].bodyData});
+        const auto v8 = opusoptima::solvers::LocalTrial(parent, 8);
+        ASSERT_EQ(v8.objects.size(), 2);
+        EXPECT_EQ(v8.objects[1].bodyData,
+                  (std::vector<int>{1, 0, 0, 0, 2, 1, 0, 2, 0, 7}));
+        EXPECT_EQ(Tape(v8.objects[0].instructions), Tape(parent.objects[0].instructions));
+        const auto v6 = opusoptima::solvers::LocalTrial(parent, 6);
+        if (std::string(type) == "arm1" || std::string(type) == "piston") {
+            ASSERT_EQ(v6.objects.size(), 4);
+            EXPECT_EQ(v6.objects[1].bodyData, v8.objects[1].bodyData);
+            EXPECT_EQ(v6.objects[2].bodyData, parent.objects[2].bodyData);
+            EXPECT_EQ(v6.objects[3].bodyData, parent.objects[3].bodyData);
+        } else {
+            setenv("OPUSOPTIMA_TRACK_ENVELOPE", "off", 1);
+            EXPECT_EQ(BinaryWriter::WriteSolution(v6), BinaryWriter::WriteSolution(
+                          opusoptima::solvers::LocalTrial(parent, 6)));
+            setenv("OPUSOPTIMA_TRACK_ENVELOPE", "on", 1);
+            // v6 also refuses unsupported mechanical arms with empty tapes.
+            parent.objects[0].instructions.clear();
+            const auto empty = opusoptima::solvers::LocalTrial(parent, 6);
+            setenv("OPUSOPTIMA_TRACK_ENVELOPE", "off", 1);
+            EXPECT_EQ(BinaryWriter::WriteSolution(empty), BinaryWriter::WriteSolution(
+                          opusoptima::solvers::LocalTrial(parent, 6)));
+            setenv("OPUSOPTIMA_TRACK_ENVELOPE", "on", 1);
+        }
+    }
+}
+
+TEST(LocalCompaction, RailEnvelopeSafetyGuardsRemainConservativeAndTransactional) {
+    FlagGuard compact("OPUSOPTIMA_COMPACT_TRANSPORT");
+    FlagGuard envelope("OPUSOPTIMA_TRACK_ENVELOPE");
+    setenv("OPUSOPTIMA_COMPACT_TRANSPORT", "on", 1);
+    SolutionData parent;
+    parent.objects.push_back(
+        {"track", {0, 0}, {}, {1, 0, 0, 0, 5, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 7}});
+    parent.objects.push_back(
+        {"arm1", {1, 0}, {{'G', 0}, {'A', 3}, {'a', 7}, {'g', 10}}, {}});
+    const auto refused = [&](const SolutionData& invalid) {
+        EXPECT_EQ(BinaryWriter::WriteSolution(opusoptima::solvers::LocalTrial(invalid, 8)),
+                  BinaryWriter::WriteSolution(invalid));
+        // v6 retains its legacy endpoint trial when the envelope helper refuses.
+        setenv("OPUSOPTIMA_TRACK_ENVELOPE", "off", 1);
+        const auto legacy = BinaryWriter::WriteSolution(
+            opusoptima::solvers::LocalTrial(invalid, 6));
+        setenv("OPUSOPTIMA_TRACK_ENVELOPE", "on", 1);
+        EXPECT_EQ(BinaryWriter::WriteSolution(opusoptima::solvers::LocalTrial(invalid, 6)),
+                  legacy);
+    };
+    for (int failure = 0; failure < 15; ++failure) {
+        SCOPED_TRACE(failure);
+        auto invalid = parent;
+        auto& track = invalid.objects[0];
+        auto& arm = invalid.objects[1];
+        if (failure == 0) track.bodyData[4] = std::numeric_limits<int>::max();
+        if (failure == 1) track.bodyData[4] = -1;
+        if (failure == 2) track.bodyData.pop_back();
+        if (failure == 3) invalid.objects.push_back(track); // Overlapping rails.
+        if (failure == 4) track.bodyData[9] = 1; // Duplicate cell within a rail.
+        if (failure == 5) track.bodyData[7] = std::numeric_limits<int>::min();
+        if (failure == 6) track.instructions = {{'G', 0}};
+        if (failure == 7) arm.instructions[2].action = 'A'; // Base does not close.
+        if (failure == 8) arm.instructions[0].action = 'X';
+        if (failure == 9) arm.instructions[1].parameter = 0;
+        if (failure == 10) arm.position = {9, 9};
+        if (failure == 11) {
+            arm.position = {0, 0};
+            arm.instructions = {{'G', 0}, {'a', 1}, {'A', 2}, {'g', 3}};
+        }
+        if (failure == 12) { // An originally wrapping rail.
+            track.bodyData = {1, 0, 0, 0, 4, 0, 0, 1, 0, 1, -1, 0, -1, 7};
+        }
+        if (failure == 13) { // Only the retained envelope would wrap.
+            track.bodyData = {1, 0, 0, 0, 7, 0, 0, 1, 0, 2, 0, 2, 1,
+                              1, 1, 0, 1, -1, 2, 7};
+            arm.instructions = {{'G', 0}, {'A', 1}, {'A', 2}, {'A', 3},
+                                {'a', 4}, {'a', 5}, {'a', 6}, {'g', 7}};
+            // This valid rail is trimmed first in the temporary copy; refusal
+            // of the second rail must not leak that partial edit.
+            invalid.objects.insert(invalid.objects.begin(), parent.objects[0]);
+            invalid.objects.front().position = {0, 20};
+            auto otherArm = parent.objects[1];
+            otherArm.position = {1, 20};
+            invalid.objects.push_back(otherArm);
+        }
+        if (failure == 14) { // A halt suffix must still have valid serialized time indices.
+            arm.instructions = {{'G', 0}, {'A', 1}, {'B', 2}, {'g', 2}};
+        }
+        refused(invalid);
+    }
+}
+
+TEST(LocalCompaction, RailEnvelopeRejectsWorldOverflowAndWalksOnlyHaltPrefix) {
+    FlagGuard compact("OPUSOPTIMA_COMPACT_TRANSPORT");
+    FlagGuard envelope("OPUSOPTIMA_TRACK_ENVELOPE");
+    FlagGuard compose("OPUSOPTIMA_IDLE_TRACK_ENVELOPE");
+    setenv("OPUSOPTIMA_COMPACT_TRANSPORT", "on", 1);
+    setenv("OPUSOPTIMA_TRACK_ENVELOPE", "on", 1);
+    unsetenv("OPUSOPTIMA_IDLE_TRACK_ENVELOPE");
+    for (int origin : {std::numeric_limits<int>::min(), std::numeric_limits<int>::max()}) {
+        SCOPED_TRACE(origin);
+        const int step = origin < 0 ? -1 : 1;
+        SolutionData parent;
+        parent.objects.push_back(
+            {"track", {origin, origin}, {},
+             {1, 0, 0, 0, 3, 0, 0, step, 0, 2 * step, 0, 7}});
+        parent.objects.push_back({"arm1", {origin, origin}, {{'G', 0}, {'g', 1}}, {}});
+        // World cells outside native's int coordinate domain are refused.
+        for (int variant : {6, 8}) {
+            setenv("OPUSOPTIMA_TRACK_ENVELOPE", "off", 1);
+            const auto legacy = opusoptima::solvers::LocalTrial(parent, variant);
+            setenv("OPUSOPTIMA_TRACK_ENVELOPE", "on", 1);
+            const auto trial = opusoptima::solvers::LocalTrial(parent, variant);
+            EXPECT_EQ(BinaryWriter::WriteSolution(trial), BinaryWriter::WriteSolution(legacy));
+            if (variant == 8) {
+                EXPECT_EQ(BinaryWriter::WriteSolution(trial), BinaryWriter::WriteSolution(parent));
+            }
+        }
+    }
+    SolutionData halted;
+    halted.objects.push_back(
+        {"track", {0, 0}, {}, {1, 0, 0, 0, 5, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 7}});
+    halted.objects.push_back(
+        {"arm1", {1, 0}, {{'G', 0}, {'A', 1}, {'B', 2}, {'a', 3}, {'g', 4}}, {}});
+    for (int rotation : {1, 3, -1, std::numeric_limits<int>::max()}) {
+        auto rotated = halted;
+        rotated.objects[0].bodyData[1] = rotation;
+        for (int variant : {6, 8}) {
+            const auto trial = opusoptima::solvers::LocalTrial(rotated, variant);
+            EXPECT_EQ(trial.objects[0].bodyData,
+                      (std::vector<int>{1, rotation, 0, 0, 2, 1, 0, 2, 0, 7}));
+        }
+    }
+    for (int variant : {6, 8}) {
+        const auto trial = opusoptima::solvers::LocalTrial(halted, variant);
+        EXPECT_EQ(trial.objects[0].bodyData,
+                  (std::vector<int>{1, 0, 0, 0, 2, 1, 0, 2, 0, 7}));
+        EXPECT_EQ(Tape(trial.objects[1].instructions), Tape(halted.objects[1].instructions));
+    }
+    // No return, a fake suffix return, and an out-of-bounds suffix all have the same prefix.
+    for (const auto& suffix : std::vector<std::vector<opusoptima::io::ArmInstruction>>{
+             {{'g', 3}}, {{'a', 3}, {'a', 4}, {'a', 5}}, {{'A', 3}, {'A', 4}, {'A', 5}}}) {
+        halted.objects[1].instructions = {{'G', 0}, {'A', 1}, {'B', 2}};
+        auto& tape = halted.objects[1].instructions;
+        tape.insert(tape.end(), suffix.begin(), suffix.end());
+        for (int variant : {6, 8}) {
+            const auto trial = opusoptima::solvers::LocalTrial(halted, variant);
+            EXPECT_EQ(trial.objects[0].bodyData,
+                      (std::vector<int>{1, 0, 0, 0, 2, 1, 0, 2, 0, 7}));
+            EXPECT_EQ(Tape(trial.objects[1].instructions), Tape(tape));
+        }
+    }
+    for (int time : {-1, 100000, std::numeric_limits<int>::max()}) {
+        halted.objects[1].instructions = {{'G', 0}, {'A', 1}, {'B', time}};
+        EXPECT_EQ(BinaryWriter::WriteSolution(opusoptima::solvers::LocalTrial(halted, 8)),
+                  BinaryWriter::WriteSolution(halted));
+    }
 }
 
 TEST(LocalCompaction, DefaultQueueReplacesV0WithV8AndOffRestoresLegacy) {

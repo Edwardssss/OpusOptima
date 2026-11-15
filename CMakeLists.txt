@@ -60,6 +60,7 @@ set(OPUSOPTIMA_INCLUDE_DIRS
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Optimization"
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Legacy"
     "${OPUSOPTIMA_SRC_DIR}/Solvers/Architecture"
+    "${OPUSOPTIMA_SRC_DIR}/Solvers/Standard"
 )
 
 # Third-party include dirs (warnings suppressed by SYSTEM)

@@ -74,8 +74,9 @@ bool RemoveIdleArms(io::SolutionData& candidate) {
 }
 bool NonLoopingTrack(const io::SolutionObject& track, int count) {
     if (count <= 2) return true;
-    const auto dq = static_cast<long long>(track.bodyData[5 + 2 * (count - 1)]) - track.bodyData[5];
-    const auto dr = static_cast<long long>(track.bodyData[6 + 2 * (count - 1)]) - track.bodyData[6];
+    const auto last = 5 + 2 * (static_cast<std::size_t>(count) - 1);
+    const auto dq = static_cast<long long>(track.bodyData[last]) - track.bodyData[5];
+    const auto dr = static_cast<long long>(track.bodyData[last + 1]) - track.bodyData[6];
     return std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1;
 }
 bool TrimUsedRail(io::SolutionData& candidate) {
@@ -131,7 +132,16 @@ bool TrimUsedRail(io::SolutionData& candidate) {
     body[4] = high - low + 1;
     return NonLoopingTrack(*track, body[4]);
 }
-bool TrimSharedTrackEnvelopes(io::SolutionData& candidate) {
+bool MechanicalArm(const io::SolutionObject& object) {
+    return object.typeName == "arm1" || object.typeName == "arm2" || object.typeName == "arm3" ||
+           object.typeName == "arm6" || object.typeName == "piston" || object.typeName == "baron";
+}
+enum class RailEnvelopePolicy { SharedArm1Piston, CompactMechanical };
+// The compact policy requires ExplicitTapes at its caller. The shared policy
+// validates its own narrower domain, including objects without instructions.
+// Neither policy models endpoint no-ops, wrapping rails, or reset/repeat expansion.
+bool ApplyTrackEnvelopes(io::SolutionData& candidate, RailEnvelopePolicy policy) {
+    const bool shared = policy == RailEnvelopePolicy::SharedArm1Piston;
     struct Rail {
         std::size_t object;
         int count, low, high;
@@ -143,15 +153,26 @@ bool TrimSharedTrackEnvelopes(io::SolutionData& candidate) {
         const auto& object = candidate.objects[i];
         if (object.typeName != "track") continue;
         const auto& body = object.bodyData;
-        if (!object.instructions.empty() || body.size() < 8 || body[1] != 0) return false;
+        // Native decode explicitly forces track rotation to zero; preserve the
+        // serialized field, but use the unrotated offsets just as native does.
+        if (!object.instructions.empty() || body.size() < 8) return false;
         const int count = body[4];
-        if (count < 1 || body.size() != 6 + 2 * static_cast<std::size_t>(count) ||
+        // Compare by division before any count-based multiplication or indexing.
+        if (count < 1 || (body.size() - 6) % 2 != 0 ||
+            (body.size() - 6) / 2 != static_cast<std::size_t>(count) ||
             !NonLoopingTrack(object, count))
             return false;
         for (int j = 0; j < count; ++j) {
-            const long long q = body[5 + 2 * j], r = body[6 + 2 * j];
+            const auto offset = 5 + 2 * static_cast<std::size_t>(j);
+            const long long q = body[offset], r = body[offset + 1];
+            const auto worldQ = q + object.position.q, worldR = r + object.position.r;
+            if (worldQ < std::numeric_limits<int>::min() ||
+                worldQ > std::numeric_limits<int>::max() ||
+                worldR < std::numeric_limits<int>::min() ||
+                worldR > std::numeric_limits<int>::max())
+                return false;
             if (j) {
-                const auto dq = q - body[3 + 2 * j], dr = r - body[4 + 2 * j];
+                const auto dq = q - body[offset - 2], dr = r - body[offset - 1];
                 if (std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1) return false;
             }
             if (!cells
@@ -164,11 +185,10 @@ bool TrimSharedTrackEnvelopes(io::SolutionData& candidate) {
     }
     if (rails.empty()) return false;
     for (const auto& object : candidate.objects) {
-        const bool arm = object.typeName == "arm1" || object.typeName == "piston";
+        const bool arm = shared ? object.typeName == "arm1" || object.typeName == "piston"
+                                : MechanicalArm(object);
         if (!arm) {
-            if (!object.instructions.empty() || object.typeName == "arm2" ||
-                object.typeName == "arm3" || object.typeName == "arm6" ||
-                object.typeName == "baron")
+            if (shared && (!object.instructions.empty() || MechanicalArm(object)))
                 return false;
             continue;
         }
@@ -184,37 +204,67 @@ bool TrimSharedTrackEnvelopes(io::SolutionData& candidate) {
             return true;
         };
         if (!visit()) return false;
+        if (!object.instructions.empty()) {
+            const long long first = object.instructions.front().parameter;
+            const long long last = object.instructions.back().parameter;
+            const auto length = last - first + 1;
+            // Match native decode's explicit-tape domain, including unreachable suffixes.
+            if (first < 0 || length < 1 || length > 100000 ||
+                first + 2 * length > std::numeric_limits<int>::max())
+                return false;
+        }
         int previous = -1;
+        bool halted = false;
         for (const auto& instruction : object.instructions) {
-            if (instruction.parameter <= previous ||
-                std::string_view("GgAaEeRrPpOB ").find(instruction.action) ==
-                    std::string_view::npos)
+            if (shared && (instruction.parameter <= previous ||
+                           std::string_view("GgAaEeRrPpOB ").find(instruction.action) ==
+                               std::string_view::npos))
                 return false;
             previous = instruction.parameter;
+            // Validate every serialized instruction, but never walk the unreachable suffix.
+            if (instruction.action == 'B') halted = true;
+            if (halted) continue;
             if (instruction.action == 'A' || instruction.action == 'a') {
                 if (found == cells.end()) return false;
+                // Bounds are checked on each visit; position is in [0, count)
+                // before this step, so even count == INT_MAX cannot overflow.
                 position += instruction.action == 'A' ? 1 : -1;
                 if (!visit()) return false;
             }
         }
-        // Explicit sparse tapes repeat without reset expansion; their rail positions must close.
-        if (position != start) return false;
+        // Native excludes halted tapes from the period and never executes their suffix.
+        // Only genuinely repeating tapes need a closed base walk; suffix returns prove nothing.
+        if (!halted && position != start) return false;
     }
     auto trimmed = candidate;
     bool changed = false;
+    std::vector<std::size_t> unused;
     for (const auto& rail : rails) {
-        if (rail.high < 0 || (rail.low == 0 && rail.high == rail.count - 1)) continue;
+        if (rail.high < 0) {
+            if (!shared) unused.push_back(rail.object);
+            continue;
+        }
+        if (rail.low == 0 && rail.high == rail.count - 1) continue;
         auto& track = trimmed.objects[rail.object];
         auto& body = track.bodyData;
-        body.erase(body.begin() + 5 + 2 * (rail.high + 1), body.end() - 1);
-        body.erase(body.begin() + 5, body.begin() + 5 + 2 * rail.low);
+        body.erase(body.begin() + 5 + 2 * (static_cast<std::size_t>(rail.high) + 1),
+                   body.end() - 1);
+        body.erase(body.begin() + 5, body.begin() + 5 + 2 * static_cast<std::size_t>(rail.low));
         body[4] = rail.high - rail.low + 1;
         // Removing endpoints must not turn the retained path into a wrapping track.
         if (!NonLoopingTrack(track, body[4])) return false;
         changed = true;
     }
+    // Erase backwards only after every retained rail has passed the loop recheck.
+    for (auto it = unused.rbegin(); it != unused.rend(); ++it) {
+        trimmed.objects.erase(trimmed.objects.begin() + *it);
+        changed = true;
+    }
     if (changed) candidate = std::move(trimmed);
     return changed;
+}
+bool TrimSharedTrackEnvelopes(io::SolutionData& candidate) {
+    return ApplyTrackEnvelopes(candidate, RailEnvelopePolicy::SharedArm1Piston);
 }
 bool ParallelReturns(io::SolutionData& candidate) {
     int boundary = -1, reset = -1, start = std::numeric_limits<int>::max();
@@ -402,10 +452,6 @@ bool CompactTransportEnabled() {
     const auto* value = std::getenv("OPUSOPTIMA_COMPACT_TRANSPORT");
     return !value || std::string_view(value) != "off";
 }
-bool MechanicalArm(const io::SolutionObject& object) {
-    return object.typeName == "arm1" || object.typeName == "arm2" || object.typeName == "arm3" ||
-           object.typeName == "arm6" || object.typeName == "piston" || object.typeName == "baron";
-}
 // A baron (wheel) grabs by rotating, so a tape without G/g never proves it idle.
 bool TapedArm(const io::SolutionObject& object) {
     return object.typeName == "arm1" || object.typeName == "arm2" || object.typeName == "arm3" ||
@@ -456,97 +502,9 @@ bool RemoveNoGrabArms(io::SolutionData& candidate) {
     return removed != 0;
 }
 // Trims both ends of every rail to the cells its own arms actually visit and erases
-// rails no arm is attached to. Cell and adjacency guards mirror TrimSharedTrackEnvelopes.
+// rails no arm is attached to. ExplicitTapes is enforced by CompactTransport.
 bool CompactTrackEnvelopes(io::SolutionData& candidate) {
-    struct Rail {
-        std::size_t object;
-        int count, low, high;
-    };
-    using Cell = std::pair<long long, long long>;
-    std::map<Cell, std::pair<std::size_t, int>> cells;
-    std::vector<Rail> rails;
-    // Rails first: an arm can precede its track in serialized order.
-    for (std::size_t i = 0; i < candidate.objects.size(); ++i) {
-        const auto& object = candidate.objects[i];
-        if (object.typeName != "track") continue;
-        const auto& body = object.bodyData;
-        if (!object.instructions.empty() || body.size() < 8 || body[1] != 0) return false;
-        const int count = body[4];
-        if (count < 1 || body.size() != 6 + 2 * static_cast<std::size_t>(count) ||
-            !NonLoopingTrack(object, count))
-            return false;
-        for (int j = 0; j < count; ++j) {
-            const long long q = body[5 + 2 * j], r = body[6 + 2 * j];
-            if (j) {
-                const auto dq = q - body[3 + 2 * j], dr = r - body[4 + 2 * j];
-                if (std::max({std::abs(dq), std::abs(dr), std::abs(dq + dr)}) != 1) return false;
-            }
-            if (!cells
-                     .emplace(Cell{object.position.q + q, object.position.r + r},
-                              std::pair{rails.size(), j})
-                     .second)
-                return false;
-        }
-        rails.push_back({i, count, count, -1});
-    }
-    if (rails.empty()) return false;
-    for (const auto& object : candidate.objects) {
-        if (!MechanicalArm(object)) continue;
-        const auto found = cells.find({object.position.q, object.position.r});
-        if (found == cells.end()) {
-            // An off-rail arm cannot walk a rail it is not attached to.
-            if (std::any_of(object.instructions.begin(), object.instructions.end(),
-                            [](const auto& instruction) {
-                                return instruction.action == 'A' || instruction.action == 'a';
-                            }))
-                return false;
-            continue;
-        }
-        auto& rail = rails[found->second.first];
-        int position = found->second.second;
-        const int start = position;
-        const auto visit = [&] {
-            if (position < 0 || position >= rail.count) return false;
-            rail.low = std::min(rail.low, position);
-            rail.high = std::max(rail.high, position);
-            return true;
-        };
-        if (!visit()) return false;
-        for (const auto& instruction : object.instructions) {
-            if (instruction.action != 'A' && instruction.action != 'a') continue;
-            position += instruction.action == 'A' ? 1 : -1;
-            if (!visit()) return false;
-        }
-        // Sparse tapes repeat without reset expansion; their rail positions must close.
-        if (position != start) return false;
-    }
-    if (rails.empty()) return false;
-    auto trimmed = candidate;
-    bool changed = false;
-    std::vector<std::size_t> unused;
-    for (const auto& rail : rails) {
-        if (rail.high < 0) {
-            unused.push_back(rail.object);
-            continue;
-        }
-        if (rail.low == 0 && rail.high == rail.count - 1) continue;
-        auto& track = trimmed.objects[rail.object];
-        auto& body = track.bodyData;
-        body.erase(body.begin() + 5 + 2 * (rail.high + 1), body.end() - 1);
-        body.erase(body.begin() + 5, body.begin() + 5 + 2 * rail.low);
-        body[4] = rail.high - rail.low + 1;
-        // Removing endpoints must not turn the retained path into a wrapping track.
-        if (!NonLoopingTrack(track, body[4])) return false;
-        changed = true;
-    }
-    if (!unused.empty()) {
-        std::sort(unused.rbegin(), unused.rend());
-        for (const auto index : unused)
-            trimmed.objects.erase(trimmed.objects.begin() + index);
-        changed = true;
-    }
-    if (changed) candidate = std::move(trimmed);
-    return changed;
+    return ApplyTrackEnvelopes(candidate, RailEnvelopePolicy::CompactMechanical);
 }
 bool CompactTransport(io::SolutionData& candidate) {
     if (!ExplicitTapes(candidate)) return false;
@@ -1043,13 +1001,6 @@ void OptimizeVerified(io::CandidateArchive& archive,
             trace << "{\"event\":\"" << (report.Passed() ? "accepted" : "rejected")
                   << "\",\"variant\":" << variant << ",\"parentSha256\":\"" << parent->solutionHash
                   << "\"}\n";
-            if (report.Passed()) {
-                auto publication = archive.Options();
-                publication.outerDeadline = deadline;
-                // Admission owns the authority; publish with that same scope.
-                auto snapshot = archive.Snapshot(publication);
-                if (!snapshot.Passed()) return;
-            }
             trace << "{\"parentSha256\":\"" << parent->solutionHash
                   << "\",\"candidateCanonicalSha256\":\"" << candidateHash
                   << "\",\"parentMetrics\":{\"cost\":" << parent->verification.metrics.cost
@@ -1059,6 +1010,17 @@ void OptimizeVerified(io::CandidateArchive& archive,
                   << (sharedBonder ? "remove-first-shared-bonder" : transformation)
                   << "\",\"verification\":" << io::VerificationReportJson(report) << "}\n";
             trace.flush();
+            if (report.Passed()) {
+                auto publication = archive.Options();
+                publication.outerDeadline = deadline;
+                // Persist admission evidence even if the snapshot fails or throws.
+                auto snapshot = archive.Snapshot(publication);
+                trace << "{\"event\":\"snapshot\",\"variant\":" << variant
+                    << ",\"parentSha256\":\"" << parent->solutionHash
+                    << "\",\"verification\":" << io::VerificationReportJson(snapshot) << "}\n";
+                trace.flush();
+                if (!snapshot.Passed()) return;
+            }
             if (report.status == io::VerificationStatus::Timeout ||
                 report.status == io::VerificationStatus::Unavailable ||
                 report.status == io::VerificationStatus::Error)

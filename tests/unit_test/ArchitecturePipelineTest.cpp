@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <set>
 #include <string>
 #include <utility>
@@ -277,6 +278,71 @@ TEST(ArchitecturePipelineTest, IdleArmsAndDuplicateObjectsArePruned) {
     EXPECT_EQ(pruned.objects.size(), 1U);
     EXPECT_EQ(report.Count(), 2U);
     EXPECT_EQ(Count(pruned, "input"), 1U);
+}
+
+TEST(ArchitecturePipelineTest, TrackPruningKeepsReferencesBeyondSixtyFourCells) {
+    io::SolutionData machine;
+    io::SolutionObject track;
+    track.typeName = "track";
+    track.position = {10, -3};
+    track.bodyData = {1, 0, 0, 0, 65};
+    for (int index = 0; index < 65; ++index) {
+        track.bodyData.push_back(index);
+        track.bodyData.push_back(0);
+    }
+    track.bodyData.push_back(0);
+    machine.objects.push_back(track);
+    io::SolutionObject arm;
+    arm.typeName = "arm1";
+    arm.position = {74, -3};
+    arm.instructions = {{'A', 0}};
+    machine.objects.push_back(arm);
+    EXPECT_EQ(Count(SolutionPostProcess::PruneUnusedParts(machine), "track"), 1U);
+}
+
+TEST(ArchitecturePipelineTest, TrackPruningDoesNotInventAnOriginCell) {
+    io::SolutionData machine;
+    io::SolutionObject track;
+    track.typeName = "track";
+    track.position = {10, -3};
+    track.bodyData = {1, 0, 0, 0, 2, 5, 0, 6, 0, 0};
+    machine.objects.push_back(track);
+    io::SolutionObject arm;
+    arm.typeName = "arm1";
+    arm.position = track.position;
+    arm.instructions = {{'G', 0}};
+    machine.objects.push_back(arm);
+    EXPECT_EQ(Count(SolutionPostProcess::PruneUnusedParts(machine), "track"), 0U);
+    machine.objects.back().position = {16, -3};
+    EXPECT_EQ(Count(SolutionPostProcess::PruneUnusedParts(machine), "track"), 1U);
+}
+
+TEST(ArchitecturePipelineTest, TrackPruningPreservesCoordinateOverflow) {
+    for (const int sign : {-1, 1}) {
+        io::SolutionData machine;
+        io::SolutionObject track;
+        track.typeName = "track";
+        track.position = {sign > 0 ? std::numeric_limits<int>::max()
+                                   : std::numeric_limits<int>::min(), 0};
+        track.bodyData = {1, 0, 0, 0, 1, sign, 0, 0};
+        machine.objects.push_back(track);
+        EXPECT_EQ(Count(SolutionPostProcess::PruneUnusedParts(machine), "track"), 1U);
+    }
+}
+
+TEST(ArchitecturePipelineTest, TrackPruningPreservesMalformedPaths) {
+    const std::vector<std::vector<int>> bodies{
+        {}, {1, 0, 0, 0, -1, 0}, {1, 0, 0, 0, 0, 0},
+        {1, 0, 0, 0, 2, 0, 0, 0}, {1, 0, 0, 0, 1, 0, 0},
+        {1, 0, 0, 0, 1, 0, 0, 0, 0}};
+    for (const auto& body : bodies) {
+        io::SolutionData machine;
+        io::SolutionObject track;
+        track.typeName = "track";
+        track.bodyData = body;
+        machine.objects.push_back(track);
+        EXPECT_EQ(Count(SolutionPostProcess::PruneUnusedParts(machine), "track"), 1U);
+    }
 }
 
 // ── end to end ──────────────────────────────────────────────────────────────

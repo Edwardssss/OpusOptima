@@ -1,6 +1,9 @@
 #include "SolutionPostProcess.hpp"
 
 #include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <optional>
 #include <tuple>
 #include <unordered_set>
 
@@ -20,17 +23,26 @@ namespace {
                       });
 }
 
-/// Cells a track's path occupies, including its origin.
-[[nodiscard]] std::unordered_set<core::HexCoord, core::HexCoordHash> TrackCells(
+/// Only explicit offsets occupy cells; an invalid path cannot prove a track unused.
+[[nodiscard]] std::optional<std::unordered_set<core::HexCoord, core::HexCoordHash>> TrackCells(
     const io::SolutionObject& track) {
-    std::unordered_set<core::HexCoord, core::HexCoordHash> cells{track.position};
-    if (track.bodyData.size() < 5) return cells;
-    const int count = std::clamp(track.bodyData[4], 0, 64);
-    for (int index = 0; index < count; ++index) {
-        const std::size_t offset = static_cast<std::size_t>(5 + 2 * index);
-        if (offset + 1 >= track.bodyData.size()) break;
-        cells.insert(core::Add(track.position,
-                               {track.bodyData[offset], track.bodyData[offset + 1]}));
+    constexpr std::size_t countIndex = 4;
+    constexpr std::size_t offsetsBegin = countIndex + 1;
+    constexpr std::size_t fixedWords = offsetsBegin + 1; // Header/count plus footer.
+    if (track.bodyData.size() < fixedWords || track.bodyData[countIndex] <= 0)
+        return std::nullopt;
+    const auto count = static_cast<std::size_t>(track.bodyData[countIndex]);
+    if (count > (track.bodyData.size() - fixedWords) / 2 ||
+        track.bodyData.size() != fixedWords + (2 * count)) return std::nullopt;
+    std::unordered_set<core::HexCoord, core::HexCoordHash> cells;
+    for (std::size_t index = 0; index < count; ++index) {
+        const std::size_t offset = offsetsBegin + (2 * index);
+        const auto absoluteQ = static_cast<std::int64_t>(track.position.q) + track.bodyData[offset];
+        const auto absoluteR = static_cast<std::int64_t>(track.position.r) + track.bodyData[offset + 1];
+        if (absoluteQ < std::numeric_limits<int>::min() || absoluteQ > std::numeric_limits<int>::max() ||
+            absoluteR < std::numeric_limits<int>::min() || absoluteR > std::numeric_limits<int>::max())
+            return std::nullopt;
+        cells.insert({static_cast<int>(absoluteQ), static_cast<int>(absoluteR)});
     }
     return cells;
 }
@@ -97,7 +109,7 @@ io::SolutionData SolutionPostProcess::PruneUnusedParts(const io::SolutionData& m
         if (object.typeName == "track") {
             const auto cells = TrackCells(object);
             const bool used =
-                std::any_of(cells.begin(), cells.end(),
+                !cells || std::any_of(cells->begin(), cells->end(),
                             [&](const core::HexCoord cell) { return referenced.count(cell) != 0; });
             if (!used) {
                 local.removed.push_back({object.typeName, object.position, "unreferenced track"});

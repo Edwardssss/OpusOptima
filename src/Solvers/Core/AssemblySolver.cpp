@@ -32,6 +32,7 @@
 #include "RowAssembly.hpp"
 #include "RowAssemblyInternal.hpp"
 #include "SerialArmExecution.hpp"
+#include "StandardSolver.hpp"
 #include "TracklessPairChemistry.hpp"
 #include "WheelAssembly.hpp"
 #include <cstdlib>
@@ -65,6 +66,19 @@ using Kind = AssemblyPlan::Kind;
 using Resource = AssemblyPlan::ResourceKind;
 [[noreturn]] void Reject(const char* message) {
     throw std::invalid_argument(message);
+}
+
+// Deferred life-death portfolio. When a life-death machine is admitted, keep
+// opening the remaining families so a strictly better verified machine can win.
+// Measured on the 146-puzzle corpus in an optimized build: `fc6a70eb` improves
+// on all three objectives (cost 2765 -> 630, cycles 2239 -> 1475, area
+// 706 -> 201) and no other puzzle changes. The old default stopped at the
+// first life-death success, which was a budget decision from the unoptimized
+// development build. This is only consulted when the caller enabled the extra
+// portfolio (the CLI does); `OPUSOPTIMA_DEFER_LIFE_DEATH=off` disables it.
+bool DeferLifeDeath() {
+    const char* flag = std::getenv("OPUSOPTIMA_DEFER_LIFE_DEATH");
+    return !flag || std::string_view(flag) != "off";
 }
 
 bool ValidAtom(const io::MoleculeAtom& atom) {
@@ -645,22 +659,16 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     std::optional<io::SolutionData> firstAccepted;
     std::string firstAcceptedStage;
     std::size_t submissions = 0, duplicates = 0, acceptedCount = 0;
-    // The local intake machine and the shared feeder machine are distinct tape
-    // sets, so one extra acceptance is allowed when both are in play; the three
-    // objective slots are then compared independently.
-    std::size_t acceptedCap = maxAccepted;
-    // Slot-aware admission (C5): a candidate that strictly improves one of the
-    // three objective slots may consume one of a small number of extra budget
-    // slots even after the archiving cap is reached. Measured neutral on the
-    // 146-puzzle corpus (55/53/43/51 either way), so it stays opt-in: the
-    // binding constraint is the machine quality, not the acceptance budget.
-    constexpr std::size_t kMaxExtraSlotAdmissions = 2;
-    const char* slotAdmissionFlag = std::getenv("OPUSOPTIMA_SLOT_ADMISSION");
-    const bool slotAdmission =
-        sink && slotAdmissionFlag && std::string_view(slotAdmissionFlag) == "on";
-    std::int64_t bestSlot[3] = {std::numeric_limits<std::int64_t>::max(),
-                                std::numeric_limits<std::int64_t>::max(),
-                                std::numeric_limits<std::int64_t>::max()};
+    // Accepted slots belong to the caller; siblings and objective improvements
+    // share them. Rejections consume only the independent submission budget.
+    // Extra candidates (deferred life-death, second opinions, the upstream port)
+    // are a bounded-budget CLI policy; the CLI also allows a few extra accepted
+    // candidates so the upstream machine and our cheaper local machines can both
+    // stay in the archive. The library API keeps the strict contract.
+    const bool extraPortfolio = extraPortfolioEnabled_ && sink != nullptr;
+    const std::size_t acceptedCap = maxAccepted + (extraPortfolio ? 4U : 0U);
+    struct CollectionStopped {};
+    struct CallbackFailed { std::exception_ptr error; };
     std::vector<std::pair<std::vector<std::byte>, io::VerificationReport>> seen;
     bool nativeAdmission = false;
     bool staticEmbeddingAttempted = false;
@@ -670,9 +678,6 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             return io::RequireCalcifyAnimismusAuthority(stage, std::move(report));
         };
         if (!sink) return requireNative((*verify)(candidate));
-        if (submissions >= MaxCandidateSubmissions || acceptedCount >= acceptedCap ||
-            std::chrono::steady_clock::now() >= Deadline())
-            throw std::runtime_error("bounded candidate collection stopped");
         auto canonical = candidate;
         canonical.solutionName.clear();
         canonical.metrics = {};
@@ -686,8 +691,16 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 return requireNative(prior.second);
             }
         }
+        if (submissions >= MaxCandidateSubmissions || acceptedCount >= acceptedCap ||
+            std::chrono::steady_clock::now() >= Deadline())
+            throw CollectionStopped{};
         ++submissions;
-        auto report = requireNative((*sink)(candidate, stage));
+        io::VerificationReport report;
+        try {
+            report = requireNative((*sink)(candidate, stage));
+        } catch (...) {
+            throw CallbackFailed{std::current_exception()};
+        }
         // Static layouts require native timing/spawn semantics. Derive admission
         // from the accepted parent's actual gate, not the compiled worker path.
         if (report.Passed() && acceptedCount == 0) {
@@ -695,18 +708,6 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             firstAcceptedStage = stage;
         }
         acceptedCount += report.Passed();
-        if (slotAdmission && report.Passed()) {
-            const std::int64_t slotMetrics[3] = {report.metrics.cost, report.metrics.cycles,
-                                                 report.metrics.area};
-            bool improves = false;
-            for (int slot = 0; slot < 3; ++slot) {
-                if (slotMetrics[slot] < bestSlot[slot]) {
-                    bestSlot[slot] = slotMetrics[slot];
-                    improves = true;
-                }
-            }
-            if (improves && acceptedCap < maxAccepted + kMaxExtraSlotAdmissions) ++acceptedCap;
-        }
         GetLoggerOrFallback("solver")->info(
             "Assembly branch={} event=gate accepted={} submission={} cycles={} detail={}", stage,
             report.Passed(), submissions, report.metrics.cycles, report.detail);
@@ -766,11 +767,18 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         }
         return std::nullopt;
     };
+    bool postFirstPortfolioRan = false;
+    bool secondOpinionsRan = false;
     auto keep = [&](const io::SolutionData& candidate) {
         if (!firstAccepted) firstAccepted = candidate;
         if (!sink) return true;
         // Baseline gets its original first-feasible route. Only then spend at most
         // three construction attempts; no late family can erase that first result.
+        // The structural portfolio runs once, immediately after the first accepted
+        // candidate (for the CLI that is the upstream port), while the budget is
+        // fresh; later family successes only add candidates.
+        if (!postFirstPortfolioRan) {
+        postFirstPortfolioRan = true;
         bool ordinaryPortfolio = maxAccepted > 1 && !puzzle.productionInfo &&
                                  puzzle.outputs.size() == 1 &&
                                  !HasRepeatingOutput(puzzle.outputs[0]);
@@ -779,6 +787,20 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                    submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted &&
                    std::chrono::steady_clock::now() < Deadline();
         };
+        // Keep the original first result. Submit the cheap static frame through
+        // the same bounded gate, never through the unbounded composition probe.
+        const auto* composeFlag = std::getenv("OPUSOPTIMA_COMPOSE");
+        if (nativeAdmission && canConstruct() &&
+            (!composeFlag || std::string_view(composeFlag) != "off") &&
+                    HasPriorityStaticCompositionOpportunity(puzzle)) {
+            ++constructionAttempts;
+            try {
+                if (auto variant = ComposeStaticAssemblyMachine(puzzle))
+                    (void)verifyAt("portfolio-static-composition", *variant);
+            } catch (const std::invalid_argument& error) {
+                planningFailure("portfolio-static-composition", error.what());
+            }
+        }
         if (nativeAdmission && wheelSecondSourceEligible && !wheelSecondSourceAttempted &&
             canConstruct()) {
             ++constructionAttempts;
@@ -1120,8 +1142,6 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     std::optional<io::SolutionData> clockedAlternative;
                     std::optional<io::SolutionData> clockedFallback;
                     std::optional<io::SolutionData> clockedFeeder;
-                    bool compactUsesIntake = false;
-                    bool clockedUsesIntake = false;
                     try {
                         if (variant == 1 &&
                             (std::any_of(
@@ -1149,8 +1169,6 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                         } else if (scheduled) {
                             if (clockPortfolioEnabled || gapPortfolioEnabled) {
                                 auto pair = CompileScheduledRowCandidates(puzzle, plan, Deadline());
-                                compactUsesIntake = pair.compactUsesIntake;
-                                clockedUsesIntake = pair.clockedUsesIntake;
                                 compactFeeder = std::move(pair.compactFeeder);
                                 clockedFeeder = std::move(pair.clockedFeeder);
                                 if (gapPortfolioEnabled && pair.compactGap0) {
@@ -1294,6 +1312,65 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 // No ordinary plan: retain the existing chemistry/material family.
             }
         }
+        }
+        // Second opinion after a different family answers first. `publish()`
+        // keeps the first verified family, so no later emitter gets a turn even
+        // when it is much faster on the same puzzle (`b2c42099`: automatic
+        // inventory 2669 cycles against life-death local-intake 2148). In an
+        // optimized build the compile is cheap, and the archive keeps the
+        // per-objective minimum, so this candidate can only add slots. The
+        // long-tape guard is the same rail test the life-death family uses.
+        const char* secondOpinionFlag = std::getenv("OPUSOPTIMA_LD_SECOND_OPINION");
+        if (extraPortfolio && !secondOpinionsRan && (!secondOpinionFlag ||
+                               std::string_view(secondOpinionFlag) != "off") &&
+            nativeAdmission && maxAccepted > 1 && !puzzle.productionInfo &&
+            puzzle.outputs.size() <= 4 && firstAcceptedStage.rfind("life-death", 0) != 0 &&
+            submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted &&
+            std::chrono::steady_clock::now() < Deadline()) {
+            const auto longTape = [](const io::SolutionData& machine) {
+                std::int64_t count = 0;
+                for (const auto& object : machine.objects)
+                    count += static_cast<std::int64_t>(object.instructions.size());
+                return count > 50000;
+            };
+            const auto submitSecondOpinion = [&](const char* stage, auto&& compile) {
+                if (submissions >= MaxCandidateSubmissions || acceptedCount >= maxAccepted ||
+                    std::chrono::steady_clock::now() >= Deadline())
+                    return;
+                try {
+                    auto candidate = compile();
+                    if (longTape(candidate) || std::chrono::steady_clock::now() >= Deadline())
+                        return;
+                    (void)verifyAt(stage, candidate);
+                } catch (const std::invalid_argument& error) {
+                    GetLoggerOrFallback("solver")->info(
+                        "Assembly branch={} event=unsupported detail={}", stage, error.what());
+                }
+            };
+            submitSecondOpinion("life-death-second-opinion",
+                                [&] { return CompileLifeDeath(puzzle); });
+            submitSecondOpinion("life-death-second-opinion-local-intake",
+                                [&] { return CompileLifeDeathLocalIntake(puzzle); });
+            submitSecondOpinion("life-death-second-opinion-feed-clocks",
+                                [&] { return CompileLifeDeathClocked(puzzle); });
+            // A closer factory column shortens every corridor round trip at once.
+            // It is a per-puzzle optimum, so it is offered as an extra candidate
+            // instead of replacing the shipped column. Nested `independent-outputs`
+            // runs keep the shipped column: their sub-machines are interleaved on
+            // one board, where the packed/closer geometry collides.
+            if (g_compositionDepth == 0)
+                submitSecondOpinion("life-death-second-opinion-closer", [&] {
+                    FactoryStartScope anchor(-25);
+                    return CompileLifeDeath(puzzle);
+                });
+            submitSecondOpinion("life-death-second-opinion-compact-relay",
+                                [&] { return CompileCompactChemistryRelay(puzzle); });
+            secondOpinionsRan = true;
+        }
+        // The compact component composer was tried here as a second opinion on
+        // 2026-11-15. It changed no objective slot on the 146-puzzle corpus
+        // (the archive already keeps the composer's fallback output), so it was
+        // removed instead of spending gate time on every solve.
         GetLoggerOrFallback("solver")->info(
             "Assembly portfolio: submitted={} accepted={} deduplicated={} constructions={} "
             "construction_limit={}",
@@ -1301,7 +1378,12 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             MaxPortfolioConstructions);
         // Other output modes have no post-first structural portfolio. Continuing
         // their fallback chain can compile expensive candidates after publication.
-        return true;
+        // When the CLI's upstream port answered first, keep walking the fixed
+        // families so their cheaper machines can still win a slot; the archive
+        // and the delivered first candidate are unaffected.
+        const bool continueChain =
+            extraPortfolio && firstAcceptedStage == "upstream-standard";
+        return !continueChain;
     };
     std::optional<io::VerificationReport> acceptedReport;
     auto acceptStage = [&](const char* stage, const io::SolutionData& candidate) {
@@ -1469,16 +1551,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         } catch (const std::exception&) {
             // Keep the raw widened machine when the local pass declines.
         }
-        try {
-            // The sibling is a distinct tape set, so it gets its own acceptance instead
-            // of taking one from the family chain (`journal8/P102` cost 17150 -> 17970
-            // when it did).
-            if (verifyAt(stage, *sibling).Passed()) ++acceptedCap;
-        } catch (const std::exception& error) {
-            // The bounded collection budget ran out; the admitted candidate stands.
-            GetLoggerOrFallback("solver")->info("Assembly branch={} event=skipped detail={}",
-                                                stage, error.what());
-        }
+        // Do not swallow exceptions raised by the caller's verification callback.
+        (void)verifyAt(stage, *sibling);
     };
     auto attemptAccepted = [&](const char* stage,
                                auto compiler) -> std::optional<io::SolutionData> {
@@ -1540,6 +1614,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         }
         return *firstAccepted;
     };
+    try {
     // Component-graph composition: one transfer arm per product atom plus one bonding
     // station per bond, placed from the product frame. Verified up front (one
     // submission) and published only when it wins more objective slots than the family
@@ -1568,7 +1643,9 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
          // that the static layout cannot place at all.
          (!firstAccepted && SupportsOrderedNetwork(puzzle))) &&
         (puzzle.outputs.front().atoms.size() <= 6 || ComposedAssemblyUsesInPlaceLayout(puzzle));
-    if (composeEnabled && composeOnline && verify &&
+    // Direct composition probes are for single-solution verification only: they
+    // bypass verifyAt and cannot participate in bounded archive collection.
+    if (!sink && composeEnabled && composeOnline && verify &&
         std::chrono::steady_clock::now() < Deadline()) {
         // Post stage: the composed variants are gated directly, so they never consume a
         // construction attempt or a submission slot and cannot starve the families.
@@ -1620,7 +1697,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         using IR = ExecutionIR;
         IR material;
         auto state = IR::Initial(puzzle);
-        material.AppendFromTail(puzzle, state, {IR::Kind::Acquire, 0});
+        material.AppendFromTail(puzzle, state, {IR::Kind::Acquire, 0, {}});
         const auto bonds = state.bonds;
         for (const auto& [edge, bits] : bonds)
             material.AppendFromTail(puzzle, state, {IR::Kind::Unbond, 0, {edge.a, edge.b}, bits});
@@ -1884,6 +1961,28 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // it is cheap and wins the cycle slot by a wide margin on its domain, but it is only
     // *published* when no family emitter produces a machine: publishing it eagerly
     // displaced cheaper family machines (measured: INFINITE THROUGHPUT cost 495->780).
+    // Upstream OpusSolver Standard is now a first-class CLI family: a faithful port
+    // of its ElementPipeline/module library (see src/Solvers/Standard). It answers
+    // 146/146 corpus puzzles natively and lands within ~1.07-1.11x of the oracle
+    // on every metric. It is submitted and then the fixed-family chain continues,
+    // so our own emitters and local cost passes can still win a slot where they
+    // are cheaper (`fe57c5d3` 925 -> 335). Only offered through
+    // `EnableExtraPortfolio` (the CLI enables it), keeping the library API and its
+    // first-result/submission contracts unchanged.
+    if (extraPortfolio) {
+        if (auto result = attempt("upstream-standard", [&]() -> io::SolutionData {
+                auto solution = standard::CompileUpstreamStandard(puzzle);
+                if (!solution) throw std::invalid_argument("upstream standard unsupported");
+                return std::move(*solution);
+            })) {
+            // The candidate is already verified and archived by `attempt`; record it
+            // as the first result and run the once-only structural portfolio and
+            // second opinions while the budget is fresh. `keep` returns false for the
+            // upstream first stage, so the fixed-family chain still runs afterwards.
+            if (!firstAccepted) firstAccepted = std::move(*result);
+            (void)keep(*firstAccepted);
+        }
+    }
     if (auto result = attempt("intact-feed", [&] { return CompileIntactFeed(puzzle); }))
         if (keep(*result)) return publish();
     std::exception_ptr supplyAcceptanceError;
@@ -2171,14 +2270,17 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                                 [&] { return CompileLifeDeathLocalIntake(puzzle); });
             submitIntakeSibling(clockSibling, false, "life-death-feed-clocks",
                                 [&] { return CompileLifeDeathClocked(puzzle); });
-            if (!closerAnchor)
+            // Deferred by default: let the later families compete with an
+            // admitted life-death machine instead of publishing it on arrival.
+            const bool admitted = keep(*result);
+            // Geometry variants use only the parent's remaining submission quota.
+            // Offer them after the established structural families: preserving the
+            // first machine alone is insufficient if a sibling steals the radial,
+            // batch-consumer or near-cache family's opportunity to be verified.
+            if (!closerAnchor && submissions < maxAccepted)
                 submitIntakeSibling(closerSibling, false, "life-death-closer-sibling",
                                     [&] { return compileMachine(kCloserFactoryStart); });
-            // Opt-in: let the later families compete with an admitted life-death
-            // machine instead of publishing it on arrival.
-            const bool admitted = keep(*result);
-            if (admitted && std::getenv("OPUSOPTIMA_DEFER_LIFE_DEATH") == nullptr)
-                return publish();
+            if (admitted && !(extraPortfolio && DeferLifeDeath())) return publish();
         }
     }
     if (auto result = attempt("triplex", [&] { return CompileTriplex(puzzle); }))
@@ -2208,74 +2310,102 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         if (auto result = attempt("shared-ordinary-outputs",
                                   [&] { return CompileSharedOrdinaryOutputs(puzzle); }))
             if (keep(*result)) return publish();
-        if (auto result = attempt("independent-outputs", [&]() -> io::SolutionData {
-                // The bounded-run row clocks are what make this stage competitive:
-                // `cd9b4ea9` drops from 20014 to 3033 and `b4769272` from 22544 to
-                // 8465, and both come from here rather than from `life-death` (which
-                // rejects the clocks machine outright). Scoped to the shape that
-                // survives the gate so the other families keep their tape exactly.
-                std::optional<FiniteClockScope> clockScope;
-                if (finiteClockLead) clockScope.emplace(1);
-                if (puzzle.productionInfo) Reject("multiple production outputs are unsupported");
-                io::SolutionData result;
-                result.puzzleName = puzzle.name;
-                result.solutionName = "Independent output assembly";
-                int nextQ = 0, armNumber = 0;
-                for (std::size_t output = 0; output < puzzle.outputs.size(); ++output) {
-                    auto single = puzzle;
-                    single.outputs = {puzzle.outputs[output]};
-                    auto machine = [&] {
-                        CompositionDepthScope nested;
-                        try {
-                            return Solve(single);
-                        } catch (const std::invalid_argument& error) {
-                            throw std::invalid_argument("output[" + std::to_string(output) +
-                                                        "]: " + error.what());
-                        }
-                    }();
-                    int low = 0, high = 0;
-                    auto include = [&](core::HexCoord cell, int radius = 0) {
-                        low = std::min(low, cell.q - radius);
-                        high = std::max(high, cell.q + radius);
-                    };
-                    for (const auto& obj : machine.objects) {
-                        include(obj.position, 8);
-                        if (obj.typeName == "track") {
-                            const auto count = obj.bodyData.at(4);
-                            for (int i = 0; i < count; ++i)
-                                include(core::Add(obj.position, {obj.bodyData.at(5 + 2 * i),
-                                                                 obj.bodyData.at(6 + 2 * i)}),
-                                        8);
-                        } else if (obj.typeName == "input" || obj.typeName == "out-std" ||
-                                   obj.typeName == "out-rep") {
-                            const auto molecule =
-                                obj.typeName == "input"
-                                    ? single.inputs.at(obj.bodyData.at(2))
-                                    : (HasRepeatingOutput(single.outputs[0])
-                                           ? ExpandRepeatingOutput(single.outputs[0])
-                                           : single.outputs[0]);
-                            for (const auto& atom : molecule.atoms) {
-                                auto cell = atom.position;
-                                for (int i = 0; i < obj.bodyData.at(1); ++i)
-                                    cell = core::RotateClockwise(cell);
-                                include(core::Add(obj.position, cell), 8);
-                            }
+        // Per-output sub-machines normally use the shipped factory column. A closer
+        // column shortens each life-death corridor by 1.2-1.3x, and the composed
+        // period is the slowest sub-machine, so a second composition with the closer
+        // anchor is offered as a sibling. The baseline is verified first; a colliding
+        // closer composition is rejected by the same gate and cannot replace it.
+        const char* independentCloserFlag = std::getenv("OPUSOPTIMA_INDEPENDENT_CLOSER");
+        const bool independentCloserEnabled =
+            extraPortfolio && (!independentCloserFlag ||
+                               std::string_view(independentCloserFlag) != "off");
+        std::optional<io::SolutionData> independentCloser;
+        auto composeIndependent = [&](bool closer) -> io::SolutionData {
+            // The bounded-run row clocks are what make this stage competitive:
+            // `cd9b4ea9` drops from 20014 to 3033 and `b4769272` from 22544 to
+            // 8465, and both come from here rather than from `life-death` (which
+            // rejects the clocks machine outright). Scoped to the shape that
+            // survives the gate so the other families keep their tape exactly.
+            std::optional<FiniteClockScope> clockScope;
+            if (finiteClockLead) clockScope.emplace(1);
+            if (puzzle.productionInfo) Reject("multiple production outputs are unsupported");
+            io::SolutionData result;
+            result.puzzleName = puzzle.name;
+            result.solutionName = "Independent output assembly";
+            int nextQ = 0, armNumber = 0;
+            for (std::size_t output = 0; output < puzzle.outputs.size(); ++output) {
+                auto single = puzzle;
+                single.outputs = {puzzle.outputs[output]};
+                auto machine = [&] {
+                    std::optional<FactoryStartScope> anchor;
+                    if (closer) anchor.emplace(-25);
+                    CompositionDepthScope nested;
+                    try {
+                        return Solve(single);
+                    } catch (const std::invalid_argument& error) {
+                        throw std::invalid_argument("output[" + std::to_string(output) +
+                                                    "]: " + error.what());
+                    }
+                }();
+                int low = 0, high = 0;
+                auto include = [&](core::HexCoord cell, int radius = 0) {
+                    low = std::min(low, cell.q - radius);
+                    high = std::max(high, cell.q + radius);
+                };
+                for (const auto& obj : machine.objects) {
+                    include(obj.position, 8);
+                    if (obj.typeName == "track") {
+                        const auto count = obj.bodyData.at(4);
+                        for (int i = 0; i < count; ++i)
+                            include(core::Add(obj.position, {obj.bodyData.at(5 + 2 * i),
+                                                             obj.bodyData.at(6 + 2 * i)}),
+                                    8);
+                    } else if (obj.typeName == "input" || obj.typeName == "out-std" ||
+                               obj.typeName == "out-rep") {
+                        const auto molecule =
+                            obj.typeName == "input"
+                                ? single.inputs.at(obj.bodyData.at(2))
+                                : (HasRepeatingOutput(single.outputs[0])
+                                       ? ExpandRepeatingOutput(single.outputs[0])
+                                       : single.outputs[0]);
+                        for (const auto& atom : molecule.atoms) {
+                            auto cell = atom.position;
+                            for (int i = 0; i < obj.bodyData.at(1); ++i)
+                                cell = core::RotateClockwise(cell);
+                            include(core::Add(obj.position, cell), 8);
                         }
                     }
-                    const int offset = nextQ - low;
-                    for (auto& obj : machine.objects) {
-                        obj.position.q += offset;
-                        if (obj.typeName == "out-std" || obj.typeName == "out-rep")
-                            obj.bodyData.at(2) = static_cast<int>(output);
-                        if (obj.typeName == "piston" || obj.typeName.starts_with("arm"))
-                            obj.bodyData.at(4) = armNumber++;
-                        result.objects.push_back(std::move(obj));
-                    }
-                    nextQ = high + offset + 32;
                 }
-                return result;
-            }))
+                const int offset = nextQ - low;
+                for (auto& obj : machine.objects) {
+                    obj.position.q += offset;
+                    if (obj.typeName == "out-std" || obj.typeName == "out-rep")
+                        obj.bodyData.at(2) = static_cast<int>(output);
+                    if (obj.typeName == "piston" || obj.typeName.starts_with("arm"))
+                        obj.bodyData.at(4) = armNumber++;
+                    result.objects.push_back(std::move(obj));
+                }
+                nextQ = high + offset + 32;
+            }
+            return result;
+        };
+        if (auto result = attempt("independent-outputs",
+                                  [&] { return composeIndependent(false); })) {
+            if (independentCloserEnabled && std::chrono::steady_clock::now() < Deadline() &&
+                submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted) {
+                try {
+                    independentCloser = composeIndependent(true);
+                } catch (const std::invalid_argument& error) {
+                    GetLoggerOrFallback("solver")->info(
+                        "Assembly branch=independent-outputs-closer event=unsupported detail={}",
+                        error.what());
+                }
+                if (independentCloser && std::chrono::steady_clock::now() < Deadline() &&
+                    submissions < MaxCandidateSubmissions && acceptedCount < maxAccepted)
+                    (void)verifyAt("independent-outputs-closer", *independentCloser);
+            }
             if (keep(*result)) return publish();
+        }
     }
     if (auto result = attempt("finite-molecular-purification",
                               [&] { return CompilePurificationAssembly(puzzle, true); }))
@@ -2365,8 +2495,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                     // early family starve a faster one: `17a58334` publishes
                     // life-death's 80397 while this stage would produce 28569. Under
                     // the defer experiment a strictly better verified candidate wins.
-                    const bool allowReplace =
-                        std::getenv("OPUSOPTIMA_DEFER_LIFE_DEATH") != nullptr;
+                    const bool allowReplace = extraPortfolio && DeferLifeDeath();
                     const bool better =
                         accepted && firstAccepted && acceptedReport &&
                         acceptedReport->metrics.cycles > 0 && firstAccepted->metrics.cycles > 0 &&
@@ -2457,6 +2586,13 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 "Assembly branch=life-death-deferred event=skipped detail={}", error.what());
         }
     }
+    } catch (const CallbackFailed& failure) {
+        std::rethrow_exception(failure.error);
+    } catch (const CollectionStopped&) {
+        // Quota/deadline exhaustion is normal collection control flow, not a
+        // verifier failure. Never catch caller exceptions at this boundary.
+    }
+    if (firstAccepted) return *firstAccepted;
     std::string message = "assembly strategies exhausted";
     for (const auto& rejection : rejections)
         message += "\n  " + rejection;

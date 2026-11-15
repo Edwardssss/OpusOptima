@@ -31,14 +31,23 @@ def run_one(entry: dict, out_dir: Path) -> dict:
     return row
 
 
-def ratio_row(row: dict) -> dict | None:
-    """Per-slot ours/oracle ratios for one puzzle."""
+def objective_values(row: dict) -> dict:
+    """Comparable (ours, oracle) pairs, using each objective's own slot."""
+    slots = row.get("slots") or {}
+    best = row.get("best") or {}
     out = {}
     for key in opsol.SLOT_KEYS:
-        mine = row["slots"][key][key]
-        oracle = row["best"][key][key]
-        if oracle and mine is not None:
-            out[key] = mine / oracle
+        mine = (slots.get(key) or {}).get(key)
+        oracle = (best.get(key) or {}).get(key)
+        if mine is not None and oracle is not None:
+            out[key] = (mine, oracle)
+    return out
+
+
+def ratio_row(row: dict) -> dict | None:
+    """Per-slot ratios; zero oracle values have no defined ratio."""
+    out = {key: mine / oracle
+           for key, (mine, oracle) in objective_values(row).items() if oracle != 0}
     return out or None
 
 
@@ -71,35 +80,30 @@ def main() -> int:
     ratios: dict[str, list[float]] = {k: [] for k in opsol.SLOT_KEYS}
     worst = []
     for row in ok:
-        per = ratio_row(row)
-        if not per:
-            continue
-        every_win = True
-        every_lose = False
-        for key, value in per.items():
-            ratios[key].append(value)
-            if value < 1:
+        values = objective_values(row)
+        for key, (mine, oracle) in values.items():
+            if mine < oracle:
                 wins[key] += 1
-                every_lose = False
-            elif value == 1:
+            elif mine == oracle:
                 ties[key] += 1
-                every_win = False
             else:
                 loses[key] += 1
-                every_win = False
-                every_lose = True
-        allwin += int(every_win)
-        alllose += int(every_lose)
-        worst.append((per.get("cycles", 0.0), row["sha"], row["class"]))
+        # Partial/empty rows must not count as winning or losing all three slots.
+        complete = len(values) == len(opsol.SLOT_KEYS)
+        allwin += int(complete and all(mine < oracle for mine, oracle in values.values()))
+        alllose += int(complete and all(mine > oracle for mine, oracle in values.values()))
+        per = ratio_row(row) or {}
+        for key, value in per.items():
+            ratios[key].append(value)
+        if "cycles" in per:
+            worst.append((per["cycles"], row["sha"], row["class"]))
 
     print(f"\nper-slot (ours vs oracle) over {len(ok)} puzzles")
     for key in opsol.SLOT_KEYS:
         r = sorted(ratios[key])
-        if not r:
-            continue
         print(f"  {key:7s} win {wins[key]:3d}  tie {ties[key]:3d}  lose {loses[key]:3d}"
-              f"   ratio p50 {statistics.median(r):5.2f}  p90 {r[int(0.9*(len(r)-1))]:6.2f}"
-              f"  max {r[-1]:7.2f}")
+              + (f"   ratio p50 {statistics.median(r):5.2f}  p90 {r[int(0.9*(len(r)-1))]:6.2f}"
+                 f"  max {r[-1]:7.2f}" if r else "   ratio n/a"))
     print(f"\n  puzzles winning every slot: {allwin}")
     print(f"  puzzles losing every slot:  {alllose}")
 

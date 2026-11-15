@@ -86,6 +86,63 @@ void WritePuzzle(const std::filesystem::path& path, const io::PuzzleData& p) {
 }
 } // namespace
 
+TEST(ComposeGlyphStation, PriorityPreflightRejectsOverlapAndImpossibleStations) {
+    const auto root = opusoptima::test::RepoRoot(__FILE__);
+    const auto courage = io::BinaryParser::ParsePuzzleFile(
+        root / "asset/puzzle/campaign/ch2/P021.puzzle");
+    EXPECT_FALSE(HasPriorityStaticCompositionOpportunity(courage));
+    auto p = SaltLattice();
+    EXPECT_TRUE(HasPriorityStaticCompositionOpportunity(p));
+    p.outputs.front().bonds.front().to = {50, 50};
+    EXPECT_FALSE(HasPriorityStaticCompositionOpportunity(p));
+    p = SaltLattice();
+    p.permissionBits |= 1ULL << 14;
+    p.inputs = {{{{core::AtomType::Lead, {0, 0}}}, {}},
+                {{{core::AtomType::Quicksilver, {0, 0}}}, {}}};
+    for (auto& atom : p.outputs.front().atoms) atom.type = core::AtomType::Gold;
+    // Projection footprints overlap neighbouring product cells: no build attempt.
+    EXPECT_FALSE(HasPriorityStaticCompositionOpportunity(p));
+}
+
+TEST(ComposeGlyphStation, BoundedStaticPortfolioPreservesFirstAndAcceptedCap) {
+    const auto root = opusoptima::test::RepoRoot(__FILE__);
+    const auto puzzlePath = root / "build/bounded-static-portfolio.puzzle";
+    const auto solutionPath = root / "build/bounded-static-portfolio.solution";
+    auto p = SaltLattice();
+    p.permissionBits = (1ULL << 29) - 1;
+    WritePuzzle(puzzlePath, p);
+    std::vector<std::byte> baseline;
+    for (std::size_t cap : {1U, 2U, 3U}) {
+        std::size_t submissions = 0, accepted = 0;
+        bool staticAccepted = false;
+        AssemblySolver solver;
+        solver.SetDeadline(std::chrono::steady_clock::now() + std::chrono::seconds(10));
+        auto first = solver.CollectVerified(p, [&](const auto& candidate, const auto& stage) {
+            ++submissions;
+            io::BinaryWriter::WriteSolutionFile(solutionPath, candidate);
+            auto report = io::VerifySolutionFiles(puzzlePath, solutionPath, 30000, 2000);
+            if (report.Passed()) ++accepted;
+            if (stage == "portfolio-static-composition") {
+                EXPECT_TRUE(report.Passed()) << report.detail;
+                EXPECT_EQ(report.authority, io::VerificationAuthority::LegacyGate);
+                EXPECT_EQ(report.metrics.instructionCount, 0);
+                staticAccepted = report.Passed();
+            }
+            return report;
+        }, cap);
+        EXPECT_LE(accepted, cap);
+        EXPECT_LE(submissions, 12U);
+        EXPECT_EQ(staticAccepted, cap > 1);
+        first.solutionName.clear();
+        first.metrics = {};
+        const auto bytes = io::BinaryWriter::WriteSolution(first);
+        if (cap == 1) baseline = bytes;
+        else EXPECT_EQ(bytes, baseline);
+    }
+    std::filesystem::remove(puzzlePath);
+    std::filesystem::remove(solutionPath);
+}
+
 // One molecular input consumed by one product: the machine cuts every input bond
 // and carries each atom onto its product cell with swing arms instead of a feeder.
 io::PuzzleData MolecularRearrangement() {

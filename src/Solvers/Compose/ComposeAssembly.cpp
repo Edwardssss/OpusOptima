@@ -604,7 +604,7 @@ std::optional<io::SolutionData> BuildMolecularExtraction(const io::PuzzleData& p
 // it is only possible when no glyph covers another product atom.
 void EmitStation(io::SolutionData& machine, const Station& station);
 
-std::optional<io::SolutionData> BuildStatic(const io::PuzzleData& puzzle,
+std::optional<std::vector<Station>> PlanStatic(const io::PuzzleData& puzzle,
                                             const std::vector<Cell>& targets,
                                             const std::vector<core::AtomType>& types) {
     std::vector<Station> stations;
@@ -621,10 +621,21 @@ std::optional<io::SolutionData> BuildStatic(const io::PuzzleData& puzzle,
         }
         stations.push_back(*station);
     }
+    for (const auto& bond : puzzle.outputs.front().bonds)
+        if (DirectionOf(Subtract({bond.to.q, bond.to.r}, {bond.from.q, bond.from.r})) < 0)
+            return std::nullopt;
+    return stations;
+}
+
+std::optional<io::SolutionData> BuildStatic(const io::PuzzleData& puzzle,
+                                          const std::vector<Cell>& targets,
+                                          const std::vector<core::AtomType>& types) {
+    auto stations = PlanStatic(puzzle, targets, types);
+    if (!stations) return std::nullopt;
     io::SolutionData machine;
     machine.puzzleName = puzzle.name;
     machine.solutionName = "Static composed assembly";
-    for (const auto& station : stations) EmitStation(machine, station);
+    for (const auto& station : *stations) EmitStation(machine, station);
     PushObject(machine, "out-std", Cell{0, 0}, {1, 0, 0, 0, 0});
     AppendBonders(machine, puzzle.outputs.front());
     return machine;
@@ -1031,10 +1042,44 @@ bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle) {
     return true;
 }
 
+bool HasPriorityStaticCompositionOpportunity(const io::PuzzleData& puzzle) {
+    if (!SupportsComposedAssembly(puzzle) || !ComposedAssemblyUsesInPlaceLayout(puzzle))
+        return false;
+    std::vector<Cell> targets;
+    std::vector<core::AtomType> types;
+    for (const auto& atom : puzzle.outputs.front().atoms) {
+        targets.push_back({atom.position.q, atom.position.r});
+        types.push_back(atom.type);
+    }
+    const auto stations = PlanStatic(puzzle, targets, types);
+    if (!stations) return false;
+    // Supplement, rather than preempt, the existing bounded static embedding:
+    // its graph budget is 16 atoms and its projection supply is adjacent-rank.
+    // Planning stations emits no SolutionData or tape. Any subsequent machine
+    // construction is still charged before it starts, including a failed build.
+        return (!ComposedAssemblyRequiresChemistry(puzzle) && targets.size() > kMaxComposedAtoms) ||
+            targets.size() > 16 ||
+           std::any_of(stations->begin(), stations->end(), [](const Station& station) {
+               return station.kind == StationKind::Project && station.steps > 1;
+           });
+}
+
 // The ordered network is reachable when every product atom has its own reagent port
 // (a single-atom source, or a salt that can be calcified). That is exactly the
 // reagent-composition domain, so this is `SupportsComposedAssembly` without its
 // frame-density assumption; `BuildOrderedNetwork` still has the final say.
+std::optional<io::SolutionData> ComposeStaticAssemblyMachine(const io::PuzzleData& puzzle) {
+    if (!SupportsComposedAssembly(puzzle) || !ComposedAssemblyUsesInPlaceLayout(puzzle))
+        return std::nullopt;
+    std::vector<Cell> targets;
+    std::vector<core::AtomType> types;
+    for (const auto& atom : puzzle.outputs.front().atoms) {
+        targets.push_back({atom.position.q, atom.position.r});
+        types.push_back(atom.type);
+    }
+    return BuildStatic(puzzle, targets, types);
+}
+
 bool SupportsOrderedNetwork(const io::PuzzleData& puzzle) {
     if (puzzle.productionInfo || puzzle.outputs.size() != 1) return false;
     if (puzzle.outputs.front().atoms.empty()) return false;

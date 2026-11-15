@@ -17,6 +17,19 @@ with no failures or skips; the passing corpus is unchanged from the B3–B6 base
 These are measurements on the current local corpus, not a guarantee for arbitrary
 new puzzles, globally optimal scores or complete equivalence with the original game.
 
+### Upstream Standard port (2026-11-15)
+
+The default `assembly` CLI now includes a faithful C++ port of
+`gtw123/OpusSolver@fdedd3f`'s Standard solver under
+[`src/Solvers/Standard/`](src/Solvers/Standard/) (MIT; see
+[the port report](docs/analysis/UPSTREAM_STANDARD_PORT_20261115.md)). It is enabled
+through the CLI's extra-portfolio path only, so the library API keeps its original
+first-result and quota contracts. It solves **146/146** corpus puzzles and, after
+the one-shot structural portfolio and local passes, the `jobs=2` audit totals are
+cost **0.916×**, cycles **0.779×** and area **0.863×** of the OpusSolver oracle
+(two runs identical). The standalone port is within 1.06–1.09× of the oracle on
+every objective; mechanical-only (`instructions>0`) totals are within 2.4–3.9%.
+
 - [Full coverage report](result/verifier-m2-m6-certified-legacy-fresh-20261029/coverage.json)
 - [Baseline comparison](result/verifier-m2-m6-certified-legacy-fresh-20261029/comparison.json)
 - [Independent verifier profiles, commands and limitations](docs/IndependentVerifier.md)

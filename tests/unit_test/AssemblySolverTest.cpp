@@ -637,6 +637,55 @@ TEST(AssemblyDiagnostics, PortfolioRetainsFirstWhenAlternativesRejectOrBudgetExp
         }
     }
 }
+TEST(AssemblyDiagnostics, RejectionDoesNotConsumeCallerAcceptedSlot) {
+    auto puzzle = Pair();
+    puzzle.permissionBits = (1ULL << 29) - 1;
+    AssemblySolver solver;
+    std::size_t submissions = 0, accepted = 0;
+    std::vector<std::byte> acceptedBytes;
+    const auto first = solver.CollectVerified(
+        puzzle,
+        [&](const auto& candidate, const auto&) {
+            io::VerificationReport report;
+            report.status = ++submissions == 1 ? io::VerificationStatus::Rejected
+                                               : io::VerificationStatus::Passed;
+            if (report.Passed()) {
+                ++accepted;
+                acceptedBytes = io::BinaryWriter::WriteSolution(candidate);
+            }
+            return report;
+        },
+        1);
+    EXPECT_EQ(submissions, 2U);
+    EXPECT_EQ(accepted, 1U);
+    EXPECT_EQ(io::BinaryWriter::WriteSolution(first), acceptedBytes);
+}
+
+TEST(AssemblyDiagnostics, CandidateSinkExceptionIsNotNormalCollectionStop) {
+    for (const std::size_t failAt : {1U, 2U}) {
+        auto puzzle = Pair();
+        puzzle.permissionBits = (1ULL << 29) - 1;
+        AssemblySolver solver;
+        std::size_t submissions = 0;
+        try {
+            (void)solver.CollectVerified(
+                puzzle,
+                [&](const auto&, const auto&) -> io::VerificationReport {
+                    if (++submissions == failAt)
+                        throw std::runtime_error("caller verification failed");
+                    io::VerificationReport report;
+                    report.status = io::VerificationStatus::Passed;
+                    return report;
+                },
+                4);
+            FAIL() << "Expected original callback failure";
+        } catch (const std::runtime_error& error) {
+            EXPECT_STREQ(error.what(), "caller verification failed");
+        }
+        EXPECT_EQ(submissions, failAt);
+    }
+}
+
 TEST(AssemblyDiagnostics, CompactRelayPreservesParentCapsAndDeadline) {
     auto puzzle = Pair();
     puzzle.permissionBits = (1ULL << 32) - 1;
@@ -758,6 +807,124 @@ TEST(AssemblyDiagnostics, NearCacheRetainsFirstAndRejectsWithinParentCap) {
     }
 }
 
+TEST(AssemblyDiagnostics, ExtraPortfolioSecondOpinionIsOptInAndBounded) {
+    const auto root = opusoptima::test::RepoRoot(__FILE__);
+    const auto puzzle = io::BinaryParser::ParsePuzzleFile(
+        root / "result/solver-generalization-track-envelope-default-integrated-20261109/inputs/"
+               "b2c4209920e6ddd1f986de6a82afc677ad11e01112bfec98ef15a66d00191cb3.puzzle");
+    // Skip the life-death family so the first verified candidate always comes from
+    // another emitter; the optional second opinion is then the only life-death
+    // compile and its stage is unambiguous in both build modes.
+    const char* prior = std::getenv("OPUSOPTIMA_SKIP_LIFE_DEATH");
+    struct Restore {
+        std::optional<std::string> prior;
+        ~Restore() {
+            if (prior)
+                setenv("OPUSOPTIMA_SKIP_LIFE_DEATH", prior->c_str(), 1);
+            else
+                unsetenv("OPUSOPTIMA_SKIP_LIFE_DEATH");
+        }
+    } restore{prior ? std::optional<std::string>(prior) : std::nullopt};
+    setenv("OPUSOPTIMA_SKIP_LIFE_DEATH", "1", 1);
+    for (bool extra : {false, true}) {
+        SCOPED_TRACE(extra);
+        AssemblySolver solver;
+        solver.EnableExtraPortfolio(extra);
+        std::vector<std::string> stages;
+        const auto first = solver.CollectVerified(
+            puzzle,
+            [&](const auto&, const auto& stage) {
+                stages.push_back(stage);
+                io::VerificationReport report;
+                // Keep exactly one accepted candidate so the remaining bounded
+                // construction attempts and the optional second opinion still run.
+                if (stages.size() == 1) {
+                    report.status = io::VerificationStatus::Passed;
+                    report.authority = io::VerificationAuthority::LegacyGate;
+                } else {
+                    report.status = io::VerificationStatus::Rejected;
+                }
+                return report;
+            },
+            3);
+        EXPECT_FALSE(first.objects.empty());
+        EXPECT_LE(stages.size(), AssemblySolver::MaxCandidateSubmissions);
+        const bool secondOpinion =
+            std::any_of(stages.begin(), stages.end(), [](const std::string& stage) {
+                return stage.starts_with("life-death-second-opinion");
+            });
+        // The library default keeps its strict first/cap contract; only the CLI
+        // opt-in spends leftover budget on the extra families.
+        EXPECT_EQ(secondOpinion, extra);
+    }
+}
+
+TEST(AssemblyDiagnostics, IndependentOutputsCloserIsOptInAndBounded) {
+    const auto root = opusoptima::test::RepoRoot(__FILE__);
+    const auto puzzle = io::BinaryParser::ParsePuzzleFile(
+        root / "result/solver-generalization-track-envelope-default-integrated-20261109/inputs/"
+               "e42f1f113019034aba06b478045e7bfb4da560026acc4eb3349cb5da6d221098.puzzle");
+    for (bool extra : {false, true}) {
+        SCOPED_TRACE(extra);
+        AssemblySolver solver;
+        solver.EnableExtraPortfolio(extra);
+        std::vector<std::string> stages;
+        const auto first = solver.CollectVerified(
+            puzzle,
+            [&](const auto&, const auto& stage) {
+                stages.push_back(stage);
+                io::VerificationReport report;
+                // Admit only the composed output machine so the closer sibling has
+                // a verified baseline to improve; everything else is rejected.
+                const bool accept = stage.rfind("independent-outputs", 0) == 0;
+                report.status =
+                    accept ? io::VerificationStatus::Passed : io::VerificationStatus::Rejected;
+                if (accept) report.authority = io::VerificationAuthority::LegacyGate;
+                return report;
+            },
+            3);
+        EXPECT_FALSE(first.objects.empty());
+        EXPECT_LE(stages.size(), AssemblySolver::MaxCandidateSubmissions);
+        const bool closer = std::any_of(stages.begin(), stages.end(), [](const std::string& stage) {
+            return stage == "independent-outputs-closer";
+        });
+        EXPECT_EQ(closer, extra);
+    }
+}
+
+TEST(AssemblyDiagnostics, UpstreamStandardFamilyIsCliOptIn) {
+    const auto root = opusoptima::test::RepoRoot(__FILE__);
+    const auto puzzle =
+        io::BinaryParser::ParsePuzzleFile(root / "asset/puzzle/easy/just-salt.puzzle");
+    for (bool extra : {false, true}) {
+        SCOPED_TRACE(extra);
+        AssemblySolver solver;
+        solver.EnableExtraPortfolio(extra);
+        std::vector<std::string> stages;
+        const auto first = solver.CollectVerified(
+            puzzle,
+            [&](const auto&, const auto& stage) {
+                stages.push_back(stage);
+                io::VerificationReport report;
+                if (stages.size() == 1) {
+                    report.status = io::VerificationStatus::Passed;
+                    report.authority = io::VerificationAuthority::LegacyGate;
+                } else {
+                    report.status = io::VerificationStatus::Rejected;
+                }
+                return report;
+            },
+            3);
+        EXPECT_FALSE(first.objects.empty());
+        EXPECT_LE(stages.size(), AssemblySolver::MaxCandidateSubmissions);
+        const bool upstream = std::any_of(stages.begin(), stages.end(),
+                                          [](const std::string& stage) {
+                                              return stage == "upstream-standard";
+                                          });
+        EXPECT_EQ(upstream, extra);
+    }
+}
+
 TEST(AssemblyDiagnostics, PortfolioNeverExpandsCallerAcceptedCap) {
     for (std::size_t cap : {1U, 2U, 3U}) {
         auto p = Pair();
@@ -774,6 +941,39 @@ TEST(AssemblyDiagnostics, PortfolioNeverExpandsCallerAcceptedCap) {
             },
             cap);
         EXPECT_FALSE(first.objects.empty());
+        EXPECT_LE(submissions, cap);
+    }
+}
+
+TEST(AssemblyDiagnostics, SlotAdmissionOptInNeverExpandsCallerAcceptedCap) {
+    struct SlotAdmissionEnvironment {
+        std::optional<std::string> prior;
+        SlotAdmissionEnvironment() {
+            if (const char* value = std::getenv("OPUSOPTIMA_SLOT_ADMISSION")) prior = value;
+            setenv("OPUSOPTIMA_SLOT_ADMISSION", "on", 1);
+        }
+        ~SlotAdmissionEnvironment() {
+            if (prior) setenv("OPUSOPTIMA_SLOT_ADMISSION", prior->c_str(), 1);
+            else unsetenv("OPUSOPTIMA_SLOT_ADMISSION");
+        }
+    } environment;
+    for (std::size_t cap : {1U, 2U, 3U}) {
+        SCOPED_TRACE(cap);
+        auto puzzle = Pair();
+        puzzle.permissionBits = (1ULL << 29) - 1;
+        std::size_t submissions = 0;
+        const auto first = AssemblySolver{}.CollectVerified(
+            puzzle,
+            [&](const auto&, const auto&) {
+                ++submissions;
+                io::VerificationReport report;
+                report.status = io::VerificationStatus::Passed;
+                report.metrics = {100 - static_cast<int>(submissions), 30, 3, 3};
+                return report;
+            },
+            cap);
+        EXPECT_FALSE(first.objects.empty());
+        EXPECT_GE(submissions, 1U);
         EXPECT_LE(submissions, cap);
     }
 }

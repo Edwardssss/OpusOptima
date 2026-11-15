@@ -312,6 +312,7 @@ int main(int argc, char* argv[]) {
     const auto searchDeadline = cliDeadline - std::chrono::seconds(5);
     solver->SetDeadline(searchDeadline);
     if (auto* assembly = dynamic_cast<opusoptima::solvers::AssemblySolver*>(solver.get())) {
+        assembly->EnableExtraPortfolio(true);
         assembly->EnableExperimentalCompactRelay(options.experimentalCompactRelay);
         assembly->EnableExperimentalSharedAssembly(options.experimentalSharedAssembly);
         assembly->EnableExperimentalSharedScheduling(options.experimentalSharedScheduling);

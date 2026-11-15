@@ -12,7 +12,7 @@ inline bool RequiresCalcifyAnimismusNativeGate(std::string_view stage) {
            stage == "finite-wheel-second-source" || stage == "whole-feed-singleton-receivers" ||
            stage == "wheel-assembly-calcified-salt" || stage == "portfolio-static-embedding" ||
            stage == "portfolio-static-molecule-partition" ||
-           stage == "portfolio-static-input-copy" ||
+           stage == "portfolio-static-input-copy" || stage == "portfolio-static-composition" ||
            stage == "portfolio-static-reaction-purification" ||
            stage == "portfolio-static-reaction-ordinary-pair" ||
            stage == "portfolio-singleton-purification-chain" || stage == "portfolio-radial-wheel" ||

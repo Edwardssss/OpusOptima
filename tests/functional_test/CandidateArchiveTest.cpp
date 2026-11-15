@@ -167,15 +167,25 @@ TEST(CandidateArchive, SharedTrackEnvelopesDefaultToSparseClosedTapes) {
     auto stationary = parent;
     stationary.objects.push_back({"arm1", {0, 0}, {}, {}});
     EXPECT_EQ(opusoptima::solvers::LocalTrial(stationary, 6).objects[0].bodyData[4], 4);
+    // A halted prefix need not return; serialized track rotation is ignored by native.
+    auto halted = parent;
+    halted.objects[2].instructions[2].action = 'A';
+    EXPECT_EQ(opusoptima::solvers::LocalTrial(halted, 6).objects[0].bodyData[4], 3);
+    auto rotated = parent;
+    rotated.objects[0].bodyData[1] = 1;
+    auto rotatedExpected = trimmed;
+    rotatedExpected.objects[0].bodyData[1] = 1;
+    EXPECT_EQ(BinaryWriter::WriteSolution(opusoptima::solvers::LocalTrial(rotated, 6)),
+              BinaryWriter::WriteSolution(rotatedExpected));
     for (int failure = 0; failure < 11; ++failure) {
         SCOPED_TRACE(failure);
         auto invalid = parent;
         if (failure == 0) invalid.objects[2].instructions[0].action = 'X';
         if (failure == 1) invalid.objects[2].instructions[0].action = 'C';
-        if (failure == 2) invalid.objects[2].instructions[2].action = 'A';
+        if (failure == 2) invalid.objects[3].instructions[2].action = 'a';
         if (failure == 3) invalid.objects[2].instructions[1].parameter = 0;
         if (failure == 4) invalid.objects[1].position = {0, 0};
-        if (failure == 5) invalid.objects[0].bodyData[1] = 1;
+        if (failure == 5) invalid.objects[0].bodyData[4] = -1;
         if (failure == 6) invalid.objects[0].bodyData[7] = 4;
         if (failure == 7) invalid.objects[2].position = {9, 9};
         if (failure == 8) invalid.objects[2].typeName = "arm2";

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <limits>
@@ -312,7 +313,21 @@ VerificationReport VerifySolutionFiles(const std::filesystem::path& puzzle,
                        "worker-path-invalid");
 #if defined(__linux__)
     try {
-        return RunWorker(executable, puzzle, solution, options, deadline);
+        const char* diagnostic = std::getenv("OPUSOPTIMA_CANDIDATE_DIAG");
+        const bool trace = diagnostic != nullptr && std::strcmp(diagnostic, "1") == 0;
+        const auto workerStart = trace ? Clock::now() : start;
+        if (trace)
+            std::fprintf(stderr, "WORKERDIAG begin remaining_us=%lld timeout_ms=%d\n",
+                         static_cast<long long>(std::chrono::duration_cast<
+                             std::chrono::microseconds>(deadline - workerStart).count()),
+                         options.timeoutMilliseconds);
+        auto report = RunWorker(executable, puzzle, solution, options, deadline);
+        if (trace)
+            std::fprintf(stderr, "WORKERDIAG end elapsed_us=%lld status=%d reason=%s\n",
+                         static_cast<long long>(std::chrono::duration_cast<
+                             std::chrono::microseconds>(Clock::now() - workerStart).count()),
+                         static_cast<int>(report.status), report.reasonCode.c_str());
+        return report;
     } catch (const std::exception& failure) {
         return Failure(VerificationStatus::Error,
                        std::string("Verifier supervision failed: ") + failure.what(),

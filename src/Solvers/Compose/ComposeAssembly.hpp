@@ -28,6 +28,13 @@ bool ComposedAssemblyRequiresChemistry(const io::PuzzleData& puzzle);
 /// bounded arm search (dense lattices).
 bool ComposedAssemblyUsesInPlaceLayout(const io::PuzzleData& puzzle);
 
+/// Machine-free supply/geometry preflight for opportunities beyond the existing
+/// bounded static embedding; false probes must not consume construction budget.
+bool HasPriorityStaticCompositionOpportunity(const io::PuzzleData& puzzle);
+
+/// Only the armless in-place candidate, without constructing arm-layout siblings.
+std::optional<io::SolutionData> ComposeStaticAssemblyMachine(const io::PuzzleData& puzzle);
+
 /// `true` when the puzzle is one molecular input whose atoms are exactly the
 /// product's atoms: the machine needs no reagent stations at all.
 bool SupportsComposedMolecularAssembly(const io::PuzzleData& puzzle);
