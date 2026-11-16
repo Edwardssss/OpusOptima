@@ -1,6 +1,6 @@
 # OpusOptima
 
-> **Current direction:** items 1–6 are complete. On the 146 byte-distinct reference puzzles the shipped solver totals cost **0.857×**, cycles **0.742×** and area **0.821×** of the OpusSolver oracle; 55 puzzles win all three slots and none loses all three. Item 7 external validation is in progress: the previous 300-file sample passed 299, and the sole timeout (`GEN737`) is now fixed; it completes in about 14 seconds. A fresh external-corpus rerun remains. The independent-certification roadmap is paused; pinned omsim, legacy protection, explicit backends and 2/10/20 defaults remain. Historical seen puzzles are not unseen evaluation. The retained omsim binary is hash-locked, not source-reproducible; do not replace it from a mutable release URL.
+> **Current direction:** items 1–6 are complete. On the 146 byte-distinct reference puzzles the shipped solver totals cost **0.857×**, cycles **0.742×** and area **0.821×** of the OpusSolver oracle; 55 puzzles win all three slots and none loses all three. Item 7 external validation: a fresh 300-file sample of the upstream 2401-puzzle corpus now passes **300/300**; the previously timing-out `GEN737` completes in about 12-14 seconds. A full 2401-file run is tracked separately. The independent-certification roadmap is paused; pinned omsim, legacy protection, explicit backends and 2/10/20 defaults remain. Historical seen puzzles are not unseen evaluation. The retained omsim binary is hash-locked, not source-reproducible; do not replace it from a mutable release URL.
 
 A C++20 toolkit for parsing, rendering and solving Opus Magnum puzzle files.
 
@@ -43,8 +43,9 @@ family is 0.8794× / 0.7007× / 0.8438×. For item 6, 71/146 puzzles have at lea
 one single solution that is no worse than the oracle on all three objectives and
 strictly better on one. Two `final3`/`final4` audits are slot-identical
 (0/438 differences). The external 2401 corpus is tracked separately: a 300-file
-sample passed 299 with one timeout (`GEN737`); that route search now honors the
-shared deadline and the puzzle completes in about 14 seconds.
+sample passes **300/300** ([results](result/external-300-20261116/results.json));
+the `GEN737` route search now honors the shared deadline and completes in about
+12-14 seconds.
 
 - [Full coverage report](result/verifier-m2-m6-certified-legacy-fresh-20261029/coverage.json)
 - [Baseline comparison](result/verifier-m2-m6-certified-legacy-fresh-20261029/comparison.json)
@@ -439,7 +440,7 @@ native CLI, `posix_spawn` verifier or `libverify.so`; for those, keep the fronte
 on Pages and put solving/verification on a self-hosted/container backend. The
 first target is in `wasm/` with the static page in `web/`. It builds one
 single-threaded module containing the upstream Standard port, the binary codecs
-and omsim, exposes `opusoptima_solve` / `opusoptima_verify` through a byte C ABI,
+and omsim, exposes `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` through a byte C ABI,
 and deploys `web/dist` with `.github/workflows/pages.yml`. Local build:
 
 ```sh

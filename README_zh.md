@@ -1,6 +1,6 @@
 # OpusOptima
 
-> **当前方向**：第 1–6 项已完成。146 道字节去重参考题上，当前求解器总量为 OpusSolver oracle 的 cost **0.857×**、cycles **0.742×**、area **0.821×**；55 题三项全胜，0 题三项全负。第 7 项外部验证进行中：此前 300 题抽样通过 299 题，唯一超时的 `GEN737` 已修复，约 14 秒完成；外部题库全量重跑仍待执行。独立认证路线继续暂停；固定 omsim、legacy 保护、显式旧后端和 2/10/20 默认预算保留。旧已见题不称 unseen。现有 omsim binary 仅锁 hash，不声称源码可重现，勿从移动 release URL 替换。
+> **当前方向**：第 1–6 项已完成。146 道字节去重参考题上，当前求解器总量为 OpusSolver oracle 的 cost **0.857×**、cycles **0.742×**、area **0.821×**；55 题三项全胜，0 题三项全负。第 7 项外部验证：全新 300 题抽样已 **300/300** 通过；此前超时的 `GEN737` 约 12–14 秒完成。2401 题全量扫描单独记录。独立认证路线继续暂停；固定 omsim、legacy 保护、显式旧后端和 2/10/20 默认预算保留。旧已见题不称 unseen。现有 omsim binary 仅锁 hash，不声称源码可重现，勿从移动 release URL 替换。
 
 用于解析、渲染和求解 Opus Magnum 谜题文件的 C++20 工具包。
 
@@ -26,8 +26,9 @@ cost 75/70/1、cycles 66/76/4、area 70/73/3；55 题三项全胜，0 题三项�
 pipeline/cheap-arms 为 0.9283× / 0.9624× / 0.9320×；universal 为
 0.8794× / 0.7007× / 0.8438×。第 6 项中，71/146 题存在至少一个单解在三项上
 都不劣于 oracle 且至少一项严格更好。两次 `final3`/`final4` 审计槽位完全一致
-（0/438 差异）。外部 2401 题库单独统计：300 题抽样中 299 题通过，唯一超时的 `GEN737`
-原因是空臂路线搜索耗时；该搜索现已受共享 deadline 限制，约 14 秒完成。
+（0/438 差异）。外部 2401 题库单独统计：300 题抽样已 **300/300** 通过（[结果](result/external-300-20261116/results.json)）；
+此前超时的 `GEN737` 原因是空臂路线搜索耗时，该搜索现已受共享 deadline 限制，
+约 12–14 秒完成。
 
 - [B3–B6 实现、证据与能力边界](tests/functional_test/ProductionB3B6Progress.md)
 
@@ -318,7 +319,7 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 （静态文件、单线程 Web Worker、无自定义 COOP/COEP 头）；但 Pages 不能运行 native CLI、
 `posix_spawn` 验证器或 `libverify.so`，需要这些时让 Pages 只做前端，求解/验证放到
 自建容器或服务器后端。首个目标已经放在 `wasm/`，静态页面在 `web/`：单线程模块包含上游 Standard、
-二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify`，
+二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe`，
 由 `.github/workflows/pages.yml` 发布 `web/dist`。本地构建：
 
 ```sh
@@ -332,8 +333,9 @@ cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 首次使用请在 **Settings → Pages → Build and deployment → Source** 选择
 **GitHub Actions**，然后推送到 `main` 或手动运行
 `Deploy browser solver to GitHub Pages` workflow。页面使用进程内 omsim 检查，
-而不是 native 隔离的 `legacy-gate` 发布事务。puzzle 编辑器、solution 渲染器
-和带 native 权威的后端仍属后续工作。
+而不是 native 隔离的 `legacy-gate` 发布事务，并显示机器布局与逐臂 tape 时间线
+回放；这是静态布局/时间线，不是碰撞模拟。puzzle 编辑器和带 native 权威的
+后端仍属后续工作。
 
 ## 开发约定
 

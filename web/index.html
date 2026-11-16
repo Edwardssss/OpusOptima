@@ -38,6 +38,26 @@
       </div>
     </section>
 
+    <section id="viewer" class="panel viewer" hidden>
+      <div class="viewer-head">
+        <div>
+          <p class="eyebrow">Solution view</p>
+          <h2>Machine layout and tape timeline</h2>
+        </div>
+        <div class="transport">
+          <button id="play" type="button">Play</button>
+          <input id="scrub" type="range" min="0" max="0" value="0" step="1">
+          <span id="clock">0</span>
+        </div>
+      </div>
+      <svg id="scene" role="img" aria-label="Solution machine layout"></svg>
+      <div id="tapes" class="tapes"></div>
+      <p class="fineprint">
+        This is a static layout plus the instruction timeline, not a collision
+        simulation. The in-process omsim result above is the verification record.
+      </p>
+    </section>
+
     <section class="notes">
       <h2>What runs here</h2>
       <p>

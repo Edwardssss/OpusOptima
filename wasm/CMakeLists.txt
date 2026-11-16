@@ -89,7 +89,7 @@ target_link_options(opusoptima PRIVATE
     "-sINITIAL_MEMORY=67108864"
     "-sSTACK_SIZE=8388608"
     "-sFILESYSTEM=1"
-    "-sEXPORTED_FUNCTIONS=_malloc,_free,_opusoptima_solve,_opusoptima_verify,_opusoptima_free"
+    "-sEXPORTED_FUNCTIONS=_malloc,_free,_opusoptima_solve,_opusoptima_verify,_opusoptima_describe,_opusoptima_free"
     "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap,UTF8ToString,HEAPU8,HEAPU32"
     "-sASSERTIONS=0"
     "-fexceptions"

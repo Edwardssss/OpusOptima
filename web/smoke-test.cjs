@@ -32,9 +32,17 @@ const fs = require('fs');
     if (!jsonPtr) throw new Error('verifier returned no result');
     const report = JSON.parse(module.UTF8ToString(jsonPtr));
     module.ccall('opusoptima_free', null, ['number'], [jsonPtr]);
+    const describePtr = module.ccall('opusoptima_describe', 'number',
+      ['number', 'number', 'number', 'number'],
+      [puzzlePtr, puzzle.length, solutionCopy, solution.length]);
+    if (!describePtr) throw new Error('solution description returned no result');
+    const description = JSON.parse(module.UTF8ToString(describePtr));
+    module.ccall('opusoptima_free', null, ['number'], [describePtr]);
     module._free(solutionCopy);
     if (report.status !== 'passed') throw new Error(`verification failed: ${JSON.stringify(report)}`);
-    console.log(`${puzzlePath}: ${length} bytes, ${JSON.stringify(report)}`);
+    if (description.error || !description.objects?.length)
+      throw new Error(`description failed: ${JSON.stringify(description)}`);
+    console.log(`${puzzlePath}: ${length} bytes, ${JSON.stringify(report)}, ${description.objects.length} objects`);
   } finally {
     module._free(puzzlePtr);
     module._free(solutionPtrPtr);

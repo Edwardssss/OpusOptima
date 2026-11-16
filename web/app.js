@@ -5,6 +5,12 @@
   const download = document.getElementById('download');
   const status = document.getElementById('status');
   const metrics = document.getElementById('metrics');
+  const viewer = document.getElementById('viewer');
+  const sceneSvg = document.getElementById('scene');
+  const tapes = document.getElementById('tapes');
+  const scrub = document.getElementById('scrub');
+  const playButton = document.getElementById('play');
+  const clock = document.getElementById('clock');
   const metricNodes = {
     cycles: document.getElementById('m-cycles'),
     cost: document.getElementById('m-cost'),
@@ -15,6 +21,16 @@
   let modulePromise;
   let selectedFile = null;
   let puzzleBytes = null;
+  let scene = null;
+  let maxCycle = 0;
+  let playTimer = null;
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const UNIT = 24;
+  const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+  const DIRECTIONS = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
 
   const setStatus = (text, kind = '') => {
     status.textContent = text;
@@ -33,6 +49,9 @@
     download.classList.add('disabled');
     download.removeAttribute('href');
     metrics.hidden = true;
+    viewer.hidden = true;
+    scene = null;
+    stopPlayback();
     setStatus(`${file.name} loaded (${puzzleBytes.length} bytes).`);
   };
 
@@ -84,6 +103,199 @@
     }
   };
 
+
+  const callDescribe = (module, solution) => {
+    const puzzlePtr = module._malloc(puzzleBytes.length);
+    const solutionPtr = module._malloc(solution.length);
+    try {
+      module.HEAPU8.set(puzzleBytes, puzzlePtr);
+      module.HEAPU8.set(solution, solutionPtr);
+      const jsonPtr = module.ccall(
+        'opusoptima_describe', 'number',
+        ['number', 'number', 'number', 'number'],
+        [puzzlePtr, puzzleBytes.length, solutionPtr, solution.length]);
+      if (!jsonPtr) throw new Error('The solution description was empty.');
+      const json = module.UTF8ToString(jsonPtr);
+      module.ccall('opusoptima_free', null, ['number'], [jsonPtr]);
+      const parsed = JSON.parse(json);
+      if (parsed.error) throw new Error(parsed.error);
+      return parsed;
+    } finally {
+      module._free(puzzlePtr);
+      module._free(solutionPtr);
+    }
+  };
+
+  const pixel = (q, r) => ({
+    x: (q + r / 2) * Math.sqrt(3) * UNIT,
+    y: r * 1.5 * UNIT,
+  });
+
+  const hexPoints = (x, y, radius) => {
+    const points = [];
+    for (let i = 0; i < 6; ++i) {
+      const angle = Math.PI / 180 * (60 * i - 30);
+      points.push(`${(x + radius * Math.cos(angle)).toFixed(2)},${(y + radius * Math.sin(angle)).toFixed(2)}`);
+    }
+    return points.join(' ');
+  };
+
+  const objectLabel = (type) => {
+    if (type.startsWith('glyph-')) return type.slice(6, 7).toUpperCase();
+    if (type === 'out-std') return 'OUT';
+    if (type === 'input') return 'IN';
+    if (type === 'bonder') return 'B';
+    if (type === 'unbonder') return 'U';
+    if (type === 'bonder-prisma') return 'P';
+    return type.replace('arm', 'A').slice(0, 4);
+  };
+
+  const objectColor = (type) => {
+    if (type === 'input') return '#75d69c';
+    if (type === 'out-std') return '#8cb8ff';
+    if (type.startsWith('glyph-')) return '#f2b84b';
+    if (type === 'bonder' || type === 'bonder-prisma') return '#d58cff';
+    if (type === 'unbonder') return '#ff9f7a';
+    if (type === 'track') return '#586579';
+    return '#c4cedd';
+  };
+
+  const trackCells = (object) => {
+    const cells = [];
+    const segments = object.body?.[4] ?? 0;
+    let q = object.q;
+    let r = object.r;
+    cells.push([q, r]);
+    for (let i = 0; i < segments; ++i) {
+      const direction = ((object.body[5 + i * 2] ?? 0) % 6 + 6) % 6;
+      const length = object.body[6 + i * 2] ?? 1;
+      const [dq, dr] = DIRECTIONS[direction];
+      for (let step = 0; step < length; ++step) {
+        q += dq;
+        r += dr;
+        cells.push([q, r]);
+      }
+    }
+    return cells;
+  };
+
+  const activeInstruction = (object, time) => {
+    let active = null;
+    for (const [action, at] of object.tape || []) {
+      if (at <= time) active = { action, at };
+      else break;
+    }
+    return active;
+  };
+
+  const activeIndex = (tape, time) => {
+    let index = -1;
+    for (let i = 0; i < tape.length; ++i) {
+      if (tape[i][1] <= time) index = i;
+      else break;
+    }
+    return index;
+  };
+
+  const drawScene = (time) => {
+    if (!scene) return;
+    const points = [];
+    const collect = (q, r) => points.push(pixel(q, r));
+    for (const molecule of [...scene.puzzle.inputs, ...scene.puzzle.outputs]) {
+      for (const atom of molecule.atoms) collect(atom.q, atom.r);
+    }
+    for (const object of scene.objects) {
+      if (object.type === 'track') {
+        for (const [q, r] of trackCells(object)) collect(q, r);
+      } else {
+        collect(object.q, object.r);
+      }
+    }
+    if (!points.length) return;
+    const minX = Math.min(...points.map((p) => p.x)) - UNIT * 2;
+    const maxX = Math.max(...points.map((p) => p.x)) + UNIT * 2;
+    const minY = Math.min(...points.map((p) => p.y)) - UNIT * 2;
+    const maxY = Math.max(...points.map((p) => p.y)) + UNIT * 2;
+    const width = maxX - minX;
+    const height = maxY - minY;
+    sceneSvg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
+    const parts = [];
+    parts.push(`<rect x="${minX}" y="${minY}" width="${width}" height="${height}" fill="#0d1117"/>`);
+    const bondLine = (a, b, color = '#526078') => {
+      const pa = pixel(a[0], a[1]), pb = pixel(b[0], b[1]);
+      parts.push(`<line x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${color}" stroke-width="3"/>`);
+    };
+    for (const molecule of [...scene.puzzle.inputs, ...scene.puzzle.outputs]) {
+      for (const bond of molecule.bonds) bondLine(bond.a, bond.b);
+    }
+    for (const object of scene.objects) {
+      if (object.type !== 'track') continue;
+      const cells = trackCells(object);
+      for (let i = 1; i < cells.length; ++i) bondLine(cells[i - 1], cells[i], '#586579');
+    }
+    const atomColor = (symbol) => ({
+      S: '#e8e8e8', A: '#b8d8ff', E: '#c8a46b', F: '#ff8f6b', W: '#6bb8ff',
+      Q: '#b9b9d8', G: '#f2c94c', V: '#c9d0da', C: '#d58c6b', I: '#9aa8b8',
+      T: '#9aa8b8', L: '#828b9a', [String.fromCharCode(0xb7)]: '#e0a0ff',
+    }[symbol] || '#d5dae3');
+    const atom = (q, r, symbol, outline = '#111827') => {
+      const p = pixel(q, r);
+      parts.push(`<circle cx="${p.x}" cy="${p.y}" r="${UNIT * 0.52}" fill="${atomColor(symbol)}" stroke="${outline}" stroke-width="1.5"/>`);
+      if (symbol) parts.push(`<text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-family="monospace" fill="#111827">${symbol}</text>`);
+    };
+    for (const molecule of scene.puzzle.inputs) for (const a of molecule.atoms) atom(a.q, a.r, a.symbol, '#75d69c');
+    for (const molecule of scene.puzzle.outputs) for (const a of molecule.atoms) atom(a.q, a.r, a.symbol, '#8cb8ff');
+    for (const object of scene.objects) {
+      if (object.type === 'track') continue;
+      const p = pixel(object.q, object.r);
+      const color = objectColor(object.type);
+      if (object.type.startsWith('glyph-')) {
+        parts.push(`<polygon points="${hexPoints(p.x, p.y, UNIT * 0.82)}" fill="#2b2415" stroke="${color}" stroke-width="2"/>`);
+        parts.push(`<text x="${p.x}" y="${p.y + 5}" text-anchor="middle" font-size="13" font-weight="700" font-family="monospace" fill="${color}">${escapeHtml(objectLabel(object.type))}</text>`);
+      } else if (object.type === 'bonder' || object.type === 'bonder-prisma' || object.type === 'unbonder') {
+        parts.push(`<rect x="${p.x - UNIT * 0.55}" y="${p.y - UNIT * 0.55}" width="${UNIT * 1.1}" height="${UNIT * 1.1}" rx="4" fill="#171d28" stroke="${color}" stroke-width="2"/>`);
+        parts.push(`<text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-family="monospace" fill="${color}">${escapeHtml(objectLabel(object.type))}</text>`);
+      } else {
+        parts.push(`<circle cx="${p.x}" cy="${p.y}" r="${UNIT * 0.68}" fill="#171d28" stroke="${color}" stroke-width="2"/>`);
+        parts.push(`<text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="9" font-family="monospace" fill="${color}">${escapeHtml(objectLabel(object.type))}</text>`);
+      }
+      const active = activeInstruction(object, time);
+      if (active) parts.push(`<text x="${p.x}" y="${p.y - UNIT * 0.95}" text-anchor="middle" font-size="12" font-weight="700" font-family="monospace" fill="#f2b84b">${escapeHtml(active.action)}</text>`);
+    }
+    sceneSvg.innerHTML = parts.join('');
+  };
+
+  const drawTapes = (time) => {
+    if (!scene) return;
+    const rows = [];
+    for (const object of scene.objects) {
+      if (!object.tape?.length) continue;
+      const name = escapeHtml(`${object.type} @ ${object.q},${object.r}`);
+      let code = '';
+      const current = activeIndex(object.tape, time);
+      object.tape.forEach(([action], index) => {
+        const safe = escapeHtml(action);
+        code += index === current ? `<b>${safe}</b>` : safe;
+      });
+      rows.push(`<div class="tape-row"><span class="tape-name">${name}</span><span class="tape-code">${code}</span></div>`);
+    }
+    tapes.innerHTML = rows.join('');
+  };
+
+  const renderAt = (time) => {
+    const t = Math.max(0, Math.min(maxCycle, Number(time) || 0));
+    scrub.value = String(t);
+    clock.textContent = String(t);
+    drawScene(t);
+    drawTapes(t);
+  };
+
+  const stopPlayback = () => {
+    if (playTimer) clearInterval(playTimer);
+    playTimer = null;
+    playButton.textContent = 'Play';
+  };
+
   solveButton.addEventListener('click', async () => {
     if (!puzzleBytes) return;
     solveButton.disabled = true;
@@ -105,6 +317,12 @@
       }
       for (const key of Object.keys(metricNodes)) metricNodes[key].textContent = report[key] ?? '—';
       metrics.hidden = false;
+      scene = callDescribe(module, solution);
+      maxCycle = Math.max(0, ...scene.objects.flatMap((object) => (object.tape || []).map(([, at]) => at)));
+      viewer.hidden = false;
+      scrub.max = String(maxCycle);
+      stopPlayback();
+      renderAt(0);
       const base = (selectedFile?.name || 'puzzle').replace(/\.puzzle$/i, '');
       const blob = new Blob([solution], { type: 'application/octet-stream' });
       download.href = URL.createObjectURL(blob);
@@ -116,6 +334,19 @@
     } finally {
       solveButton.disabled = false;
     }
+  });
+
+  scrub.addEventListener('input', () => renderAt(scrub.value));
+  playButton.addEventListener('click', () => {
+    if (!scene) return;
+    if (playTimer) { stopPlayback(); return; }
+    playButton.textContent = 'Pause';
+    let t = Number(scrub.value);
+    playTimer = setInterval(() => {
+      t += 1;
+      if (t > maxCycle) t = 0;
+      renderAt(t);
+    }, 110);
   });
 
   fileInput.addEventListener('change', () => {

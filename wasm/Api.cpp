@@ -11,6 +11,7 @@
 
 #include "BinaryParser.hpp"
 #include "BinaryWriter.hpp"
+#include "PuzzleSpecs.hpp"
 #include "StandardSolver.hpp"
 
 extern "C" {
@@ -83,6 +84,71 @@ std::string VerifyJson(const std::uint8_t* puzzle, int puzzleLength, const std::
 }
 } // namespace
 
+
+namespace {
+void AppendMolecule(std::string& out, const opusoptima::io::Molecule& molecule) {
+    out += "{\"atoms\":[";
+    for (std::size_t i = 0; i < molecule.atoms.size(); ++i) {
+        if (i) out += ',';
+        const auto& atom = molecule.atoms[i];
+        out += "{\"q\":" + std::to_string(atom.position.q) +
+               ",\"r\":" + std::to_string(atom.position.r) + ",\"type\":" +
+               std::to_string(static_cast<int>(atom.type)) + ",\"symbol\":" +
+               Quote(std::string(1, opusoptima::core::AtomTypeSymbol(atom.type))) + "}";
+    }
+    out += "],\"bonds\":[";
+    for (std::size_t i = 0; i < molecule.bonds.size(); ++i) {
+        if (i) out += ',';
+        const auto& bond = molecule.bonds[i];
+        out += "{\"a\":[" + std::to_string(bond.from.q) + ',' + std::to_string(bond.from.r) +
+               "],\"b\":[" + std::to_string(bond.to.q) + ',' + std::to_string(bond.to.r) +
+               "],\"bits\":" + std::to_string(bond.bits) + "}";
+    }
+    out += "]}";
+}
+
+std::string DescribeJson(const std::uint8_t* puzzleBytes, int puzzleLength,
+                         const std::uint8_t* solutionBytes, int solutionLength) {
+    const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzle(
+        std::span<const std::byte>(reinterpret_cast<const std::byte*>(puzzleBytes),
+                                   static_cast<std::size_t>(puzzleLength)));
+    const auto solution = opusoptima::io::BinaryParser::ParseSolution(
+        std::span<const std::byte>(reinterpret_cast<const std::byte*>(solutionBytes),
+                                   static_cast<std::size_t>(solutionLength)));
+    std::string out = "{\"puzzle\":{\"name\":" + Quote(puzzle.name) + ",\"inputs\":[";
+    for (std::size_t i = 0; i < puzzle.inputs.size(); ++i) {
+        if (i) out += ',';
+        AppendMolecule(out, puzzle.inputs[i]);
+    }
+    out += "],\"outputs\":[";
+    for (std::size_t i = 0; i < puzzle.outputs.size(); ++i) {
+        if (i) out += ',';
+        AppendMolecule(out, puzzle.outputs[i]);
+    }
+    out += "]},\"objects\":[";
+    for (std::size_t i = 0; i < solution.objects.size(); ++i) {
+        if (i) out += ',';
+        const auto& object = solution.objects[i];
+        out += "{\"type\":" + Quote(object.typeName) + ",\"q\":" +
+               std::to_string(object.position.q) + ",\"r\":" +
+               std::to_string(object.position.r) + ",\"body\":[";
+        for (std::size_t j = 0; j < object.bodyData.size(); ++j) {
+            if (j) out += ',';
+            out += std::to_string(object.bodyData[j]);
+        }
+        out += "],\"tape\":[";
+        for (std::size_t j = 0; j < object.instructions.size(); ++j) {
+            if (j) out += ',';
+            out += "[" + Quote(std::string(1, object.instructions[j].action)) + "," +
+                   std::to_string(object.instructions[j].parameter) + "]";
+        }
+        out += "]}";
+    }
+    out += "]}";
+    return out;
+}
+} // namespace
+
 extern "C" {
 // Returns 1 on success. On success *solution is a malloc'd byte buffer and
 // *error is null; on failure *solution is null and *error is a malloc'd string.
@@ -132,6 +198,20 @@ EMSCRIPTEN_KEEPALIVE char* opusoptima_verify(const std::uint8_t* puzzleBytes, in
     if (!puzzleBytes || puzzleLength <= 0 || !solutionBytes || solutionLength <= 0)
         return Duplicate("{\"status\":\"failed\",\"detail\":\"invalid verifier input\"}");
     return Duplicate(VerifyJson(puzzleBytes, puzzleLength, solutionBytes, solutionLength));
+}
+
+EMSCRIPTEN_KEEPALIVE char* opusoptima_describe(const std::uint8_t* puzzleBytes, int puzzleLength,
+                                                const std::uint8_t* solutionBytes,
+                                                int solutionLength) {
+    if (!puzzleBytes || puzzleLength <= 0 || !solutionBytes || solutionLength <= 0)
+        return Duplicate("{\"error\":\"invalid describe input\"}");
+    try {
+        return Duplicate(DescribeJson(puzzleBytes, puzzleLength, solutionBytes, solutionLength));
+    } catch (const std::exception& exception) {
+        return Duplicate(std::string("{\"error\":") + Quote(exception.what()) + "}");
+    } catch (...) {
+        return Duplicate("{\"error\":\"unknown describe failure\"}");
+    }
 }
 
 EMSCRIPTEN_KEEPALIVE void opusoptima_free(void* pointer) { std::free(pointer); }
