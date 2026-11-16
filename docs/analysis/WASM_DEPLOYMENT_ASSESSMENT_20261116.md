@@ -86,6 +86,27 @@ Standalone Standard 的质量是 1.089× / 1.063× / 1.058×；完整 portfolio 
 3. 最后做 solution 播放器和自定义 puzzle 编辑器。
 预计第 1 步是几天量级，完整链路是 1–2 周量级的工程，不是算法问题。
 
+
+## GitHub Pages 可行性
+
+**纯 WASM 方案可以只用 GitHub Pages**：它是静态文件托管，正好承载
+`index.html + JS + .wasm + assets`；WASM 求解、omsim 字节验证和前端渲染都在
+浏览器里完成，不需要服务器进程。
+
+限制：
+
+- Pages **不能**运行当前的 native CLI、`OpusOptimaVerifyWorker`、
+  `posix_spawn` 或 Linux `libverify.so`；这些必须换成 WASM/进程内实现，或者把
+  验证放到外部后端。
+- Pages 不提供自定义 HTTP 响应头，因此不要依赖 `SharedArrayBuffer`/pthreads/
+  COOP-COEP；第一版保持单线程 Web Worker。
+- 站点有约 1 GB 的发布上限（WASM + HiGHS + assets 通常远低于此）；带宽是软限制。
+- 公有仓库可直接用 Pages；私有仓库的 Pages 取决于账户计划。
+- 自定义域名和 HTTPS 支持；用 GitHub Actions 的
+  `configure-pages/upload-pages-artifact/deploy-pages` 发布 `dist/`。
+
+如果保留 native `legacy-gate` 作为权威验证，Pages 只能放前端，求解/验证要放到
+自建服务器或容器/Serverless 后端（CORS 配置好），这就不是“只用 Pages”了。
 ## 验收建议
 
 - 同一批 146 题在 WASM 与原生 CLI 上逐槽指标一致（至少 standalone 模式）；
