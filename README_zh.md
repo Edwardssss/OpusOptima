@@ -337,8 +337,10 @@ cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 逐周期物理轨迹（原子、键、机械臂和碰撞驱动的运动）及逐臂 tape 时间线。
 基础编辑器通过 `opusoptima_make_puzzle` 支持原子和键；高级 JSON 编辑器通过
 `opusoptima_make_puzzle_json` 支持多个输入/输出端口和 production metadata
-（chambers、conduits、vials、shrink/isolation）。puzzle 文件本身没有更多自由
-棋盘布局，机械布局仍由求解器生成。带 native 权威的后端仍属后续工作。
+（chambers、conduits、vials、shrink/isolation）。另有独立的机器布局编辑器，
+可在六边形网格上摆放 arm1/piston/baron/track 和 glyph，并保存为 `.layout.json`；
+它是规划/预览格式，不是 `.puzzle` 字段，因为游戏 puzzle 格式本身不存储机械布局。
+带 native 权威的后端仍属后续工作。
 
 ## 开发约定
 

@@ -41,6 +41,7 @@ jobs:
           node web/smoke-test.cjs build-wasm/opusoptima.js asset/puzzle/easy/just-salt.puzzle
           node web/editor-smoke.cjs build-wasm/opusoptima.js
           node web/json-smoke.cjs build-wasm/opusoptima.js
+          node web/layout-smoke.cjs
       - name: Assemble static site
         run: |
           mkdir -p web/dist

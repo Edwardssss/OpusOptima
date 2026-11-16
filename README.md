@@ -459,9 +459,11 @@ omsim's per-cycle physics trace (atoms, bonds, arms and collision-driven
 movement) beside the tape timeline. The basic editor supports atoms and bonds;
 the advanced JSON editor supports multiple input/output ports and production
 metadata (chambers, conduits, vials, shrink/isolation flags) through
-`opusoptima_make_puzzle_json`. The puzzle file itself has no free-form board
-layout beyond this metadata, so mechanism placement remains solver-derived. A
-server-backed native authority remains future work.
+`opusoptima_make_puzzle_json`. An independent machine-layout editor places
+arm1/piston/baron/track and glyph objects on a hex grid and saves
+`.layout.json`; it is a planning/preview format, not a `.puzzle` field, because
+the game puzzle format does not store mechanism placement. A server-backed
+native authority remains future work.
 
 ## Development
 

@@ -117,6 +117,44 @@
       </details>
     </section>
 
+    <section id="layout-editor" class="panel layout-editor">
+      <p class="eyebrow">Machine layout</p>
+      <h2>Place mechanisms and glyphs</h2>
+      <p class="fineprint">
+        The puzzle format stores molecules and production metadata, not free-form
+        mechanisms. This independent <code>.layout.json</code> editor places
+        arms, pistons, barons, tracks and glyphs for planning and preview; it does
+        not alter the puzzle file or the solver's emitted machine.
+      </p>
+      <div class="layout-toolbar">
+        <label>Tool<select id="layout-tool">
+          <option value="arm1">arm1</option><option value="piston">piston</option>
+          <option value="baron">baron</option><option value="track">track</option>
+          <option value="glyph-calcification">glyph-calcification</option>
+          <option value="glyph-duplication">glyph-duplication</option>
+          <option value="glyph-bond">glyph-bond</option><option value="glyph-unbond">glyph-unbond</option>
+          <option value="glyph-projection">glyph-projection</option>
+          <option value="glyph-purification">glyph-purification</option>
+          <option value="glyph-animismus">glyph-animismus</option>
+          <option value="glyph-unification">glyph-unification</option>
+          <option value="glyph-dispersion">glyph-dispersion</option>
+          <option value="erase">erase</option>
+        </select></label>
+        <label>Rotation<select id="layout-rotation">
+          <option>0</option><option>1</option><option>2</option>
+          <option>3</option><option>4</option><option>5</option>
+        </select></label>
+        <button id="layout-delete" type="button">Delete selected</button>
+        <button id="layout-clear" type="button">Clear</button>
+        <a id="layout-save" class="secondary" download>Save .layout.json</a>
+        <label class="file-button">Load layout<input id="layout-load" type="file" accept=".json,application/json"></label>
+      </div>
+      <div class="layout-grid"><svg id="layout-svg" role="img" aria-label="Machine layout editor"></svg></div>
+      <textarea id="layout-json" rows="5" spellcheck="false" placeholder="Optional layout JSON; Apply replaces the editor contents."></textarea>
+      <div class="row"><button id="layout-apply" type="button">Apply JSON</button></div>
+      <p id="layout-status" class="status" role="status">Click a cell to place the selected tool.</p>
+    </section>
+
     <section class="notes">
       <h2>What runs here</h2>
       <p>
@@ -134,5 +172,6 @@
   </main>
   <script src="opusoptima.js"></script>
   <script src="app.js"></script>
+  <script src="layout.js"></script>
 </body>
 </html>
