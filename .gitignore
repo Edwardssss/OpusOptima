@@ -15,6 +15,7 @@
 
 # ── Artifact roots (symlinks to ../artifacts, plus non-linked fallbacks) ──────
 /build
+/build-wasm
 /log
 /result
 build/

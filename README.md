@@ -1,6 +1,6 @@
 # OpusOptima
 
-> **Current direction:** items 1–6 are complete. On the 146 byte-distinct reference puzzles the shipped solver totals cost **0.857×**, cycles **0.742×** and area **0.821×** of the OpusSolver oracle; 55 puzzles win all three slots and none loses all three. Item 7 external validation is in progress: 299/300 sampled files pass, with one held-arm route-search timeout (`GEN737`) still to fix. The independent-certification roadmap is paused; pinned omsim, legacy protection, explicit backends and 2/10/20 defaults remain. Historical seen puzzles are not unseen evaluation. The retained omsim binary is hash-locked, not source-reproducible; do not replace it from a mutable release URL.
+> **Current direction:** items 1–6 are complete. On the 146 byte-distinct reference puzzles the shipped solver totals cost **0.857×**, cycles **0.742×** and area **0.821×** of the OpusSolver oracle; 55 puzzles win all three slots and none loses all three. Item 7 external validation is in progress: the previous 300-file sample passed 299, and the sole timeout (`GEN737`) is now fixed; it completes in about 14 seconds. A fresh external-corpus rerun remains. The independent-certification roadmap is paused; pinned omsim, legacy protection, explicit backends and 2/10/20 defaults remain. Historical seen puzzles are not unseen evaluation. The retained omsim binary is hash-locked, not source-reproducible; do not replace it from a mutable release URL.
 
 A C++20 toolkit for parsing, rendering and solving Opus Magnum puzzle files.
 
@@ -43,8 +43,8 @@ family is 0.8794× / 0.7007× / 0.8438×. For item 6, 71/146 puzzles have at lea
 one single solution that is no worse than the oracle on all three objectives and
 strictly better on one. Two `final3`/`final4` audits are slot-identical
 (0/438 differences). The external 2401 corpus is tracked separately: a 300-file
-sample passes 299, with one timeout (`GEN737`) caused by an expensive held-arm
-route search, not by a wrong candidate.
+sample passed 299 with one timeout (`GEN737`); that route search now honors the
+shared deadline and the puzzle completes in about 14 seconds.
 
 - [Full coverage report](result/verifier-m2-m6-certified-legacy-fresh-20261029/coverage.json)
 - [Baseline comparison](result/verifier-m2-m6-certified-legacy-fresh-20261029/comparison.json)
@@ -401,6 +401,9 @@ The table below is the code map. The solver flow is `main` → puzzle parser →
 | [src/Engine/](src/Engine/), [src/Render/](src/Render/) | Internal simulation and rendering utilities |
 | [tests/unit_test/](tests/unit_test/) | Contracts, transformations, negative cases and machine fixtures |
 | [tests/functional_test/](tests/functional_test/) | Original CLI regressions, corpus scripts and rule evidence |
+| [wasm/](wasm/) | Emscripten target and the byte C ABI for the browser solver |
+| [web/](web/) | Static GitHub Pages UI and the module bootstrap |
+| [.github/workflows/](.github/workflows/) | Pages build and deployment workflow |
 | [result/](result/) | Generated solutions, immutable run reports and logs |
 | [third_party/](third_party/) | Dependencies and upstream license notices; not project formatting scope |
 
@@ -434,9 +437,24 @@ or the native worker path. Pure WASM can be hosted on GitHub Pages (static files
 single-thread Web Worker, no custom COOP/COEP headers). Pages cannot run the
 native CLI, `posix_spawn` verifier or `libverify.so`; for those, keep the frontend
 on Pages and put solving/verification on a self-hosted/container backend. The
-remaining web work is an Emscripten target, a byte C ABI/embind, an in-process
-`verifier_create_from_bytes` wrapper, an in-memory candidate sink, a puzzle
-encoder/editor and a solution renderer.
+first target is in `wasm/` with the static page in `web/`. It builds one
+single-threaded module containing the upstream Standard port, the binary codecs
+and omsim, exposes `opusoptima_solve` / `opusoptima_verify` through a byte C ABI,
+and deploys `web/dist` with `.github/workflows/pages.yml`. Local build:
+
+```sh
+emcmake cmake -S wasm -B build-wasm -DCMAKE_BUILD_TYPE=Release
+emmake cmake --build build-wasm --parallel 2
+mkdir -p web/dist
+cp web/index.html web/app.js web/style.css web/dist/
+cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
+```
+
+Enable **Settings → Pages → Build and deployment → Source: GitHub Actions** once;
+then push to `main` or run the `Deploy browser solver to GitHub Pages` workflow
+manually. The page verifies candidates with the in-process omsim check, not the
+native isolated `legacy-gate` transaction. A puzzle editor/solution renderer and
+a server-backed native authority remain future work.
 
 ## Development
 
