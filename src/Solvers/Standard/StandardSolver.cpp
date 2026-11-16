@@ -354,7 +354,9 @@ struct RecipeSet {
     return false;
 }
 
-[[nodiscard]] RecipeSet GenerateAllRecipes(const Puzzle& model) {
+[[nodiscard]] RecipeSet GenerateAllRecipes(
+    const Puzzle& model,
+    std::optional<std::chrono::steady_clock::time_point> deadline = std::nullopt) {
     RecipeSet set;
     auto recipes = RecipeGenerator(model, false).GenerateRecipes(true);
     auto extra = RecipeGenerator(model, true).GenerateRecipes(true);
@@ -376,6 +378,7 @@ struct RecipeSet {
         std::vector<std::size_t> positions(size);
         for (std::size_t i = 0; i < size; ++i) positions[i] = i;
         while (added < 8) {
+            if (deadline && std::chrono::steady_clock::now() >= *deadline) return set;
             std::vector<int> subset;
             for (std::size_t position : positions) subset.push_back(ids[position]);
             try {
@@ -404,7 +407,7 @@ std::vector<io::SolutionData> CompileUpstreamStandardVariants(
     std::vector<io::SolutionData> variants;
     try {
         Puzzle model = BuildPuzzle(puzzle);
-        const auto recipeSet = GenerateAllRecipes(model);
+        const auto recipeSet = GenerateAllRecipes(model, deadline);
         const auto& recipes = recipeSet.recipes;
 
         // `Standard.SolutionBuilder.GetAvailableParameters`: the only Standard
@@ -418,20 +421,42 @@ std::vector<io::SolutionData> CompileUpstreamStandardVariants(
                 std::find(selected.begin(), selected.end(), index) == selected.end())
                 selected.push_back(index);
         };
-        addSelected(0);
-        const bool multi = model.products.size() > 1;
-        if (multi) {
-            addSelected(1);
-            addSelected(2);
+        if (std::getenv("OPUSOPTIMA_STANDARD_DUMP_ALL") != nullptr) {
+            for (std::size_t index = 0; index < recipes.size(); ++index) addSelected(index);
         } else {
-            for (std::size_t index : {std::size_t{1}, std::size_t{2}, std::size_t{7}})
-                if (index < recipeSet.subsetBegin) addSelected(index);
+            addSelected(0);
+            const bool multi = model.products.size() > 1;
+            if (!multi) {
+                // Subset recipes are the ones that usually remove a redundant
+                // input, so compile them before the normal alternatives. This
+                // keeps the best cycles candidate inside the solver budget when
+                // two audits run concurrently (e.g. 5911f6b1 993 vs 1183).
+                std::size_t subsets = 0;
+                for (std::size_t index = recipeSet.subsetBegin;
+                     index < recipes.size() && subsets < 2; ++index, ++subsets)
+                    addSelected(index);
+                for (std::size_t index : {std::size_t{1}, std::size_t{2}, std::size_t{7}})
+                    if (index < recipeSet.subsetBegin) addSelected(index);
+            } else {
+                // As for single-output puzzles, compile the subset recipes
+                // before the normal alternatives: they carry the changes that
+                // remove a redundant input and would otherwise fall outside the
+                // solver budget (5911f6b1 cycles 993 vs 1183).
+                std::size_t subsets = 0;
+                for (std::size_t index = recipeSet.subsetBegin;
+                     index < recipes.size() && subsets < 2; ++index, ++subsets)
+                    addSelected(index);
+                addSelected(1);
+                addSelected(2);
+            }
         }
-        std::size_t subsets = 0;
-        for (std::size_t index = recipeSet.subsetBegin;
-             index < recipes.size() && subsets < 2; ++index, ++subsets)
-            addSelected(index);
 
+        if (diag) {
+            std::fprintf(stderr, "SDIAG subsetBegin=%zu recipes=%zu selected=",
+                         recipeSet.subsetBegin, recipes.size());
+            for (std::size_t index : selected) std::fprintf(stderr, "%zu,", index);
+            std::fprintf(stderr, "\n");
+        }
         const char* dumpDir = std::getenv("OPUSOPTIMA_STANDARD_VARIANT_DIR");
         std::set<std::string> seen;
         std::size_t variantIndex = 0;

@@ -30,7 +30,8 @@ std::string Quote(const std::string& value) {
 void Write(const std::filesystem::path& path, const std::vector<std::byte>& bytes) {
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     out.exceptions(std::ios::badbit | std::ios::failbit);
-    out.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+    out.write(reinterpret_cast<const char*>(bytes.data()),
+              static_cast<std::streamsize>(bytes.size()));
     out.close();
 }
 bool Same(const VerificationReport& a, const VerificationReport& b) {
@@ -74,7 +75,10 @@ std::string CandidateSha256(const std::vector<std::byte>& bytes) {
         std::uint32_t w[64]{};
         for (int i = 0; i < 16; ++i)
             for (int j = 0; j < 4; ++j)
-                w[i] = (w[i] << 8) | std::to_integer<unsigned>(data[offset + i * 4 + j]);
+                w[i] = (w[i] << 8) |
+                       std::to_integer<unsigned>(
+                           data[offset + static_cast<std::size_t>(i) * 4 +
+                                static_cast<std::size_t>(j)]);
         for (int i = 16; i < 64; ++i) {
             auto s0 = std::rotr(w[i - 15], 7) ^ std::rotr(w[i - 15], 18) ^ (w[i - 15] >> 3);
             auto s1 = std::rotr(w[i - 2], 17) ^ std::rotr(w[i - 2], 19) ^ (w[i - 2] >> 10);

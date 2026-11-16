@@ -1,5 +1,8 @@
 #include "StandardModules.hpp"
 
+#include "StandardModel.hpp"
+#include "StandardProgram.hpp"
+
 // Ported from gtw123/OpusSolver@fdedd3f01a238b941ceba8bace7ea35cbd3b8c41 (MIT):
 // Solver/Standard/Output/Hex3/*. The builders generate fragments in the same
 // order and with the same arm motions as upstream; the assembler only decides
