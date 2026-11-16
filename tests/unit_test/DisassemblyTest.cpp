@@ -1375,7 +1375,10 @@ TEST_F(DisassemblyVerifierTest, OriginalClosedWheelMaterialCollection) {
     for (const bool defaultLimit : {false, true}) {
         SCOPED_TRACE(defaultLimit);
         test::ScopedTestDirectory scratch;
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        // Debug builds plus the verifier worker can need more than three seconds
+        // on a loaded machine; six still catches a solver that ignores the
+        // deadline without turning this archive test into a load flake.
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(6);
         io::VerificationOptions options;
         options.mode = io::VerificationMode::LegacyGate;
         options.outerDeadline = deadline;
