@@ -107,6 +107,14 @@ Standalone Standard 的质量是 1.089× / 1.063× / 1.058×；完整 portfolio 
 
 如果保留 native `legacy-gate` 作为权威验证，Pages 只能放前端，求解/验证要放到
 自建服务器或容器/Serverless 后端（CORS 配置好），这就不是“只用 Pages”了。
+
+## CLI / Web 边界
+
+网页实现放在独立的 `wasm/`（或 `web/`）target 里，**不修改** `main.cpp`、
+CLI 默认 portfolio、`CandidateArchive` 的发布语义或 `libverify` worker 的
+native 路径。共享的只有求解器/解析/写回/渲染这些纯 C++ 代码；浏览器特有的
+字节 ABI、内存 sink、in-process verifier、Worker 调度和 UI 都在 web 层实现。
+这样 CLI 的 146 题审计和 native gate 行为保持不变，WASM 构建可以独立演进。
 ## 验收建议
 
 - 同一批 146 题在 WASM 与原生 CLI 上逐槽指标一致（至少 standalone 模式）；
