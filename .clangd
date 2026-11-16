@@ -14,11 +14,6 @@ Diagnostics:
     Add:
       - "bugprone*"
       - "performance*"
-      - "readability*"
-      - "modernize*"
-    Remove:
-      - "modernize-use-trailing-return-type"
-      - "readability-braces-around-statements"
 
 InlayHints:
   Enabled: Yes
