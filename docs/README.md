@@ -10,17 +10,18 @@ note for how a puzzle becomes a machine.
 | [IndependentVerifier.md](IndependentVerifier.md) | the pinned `libverify` native authority and its worker process |
 | [ReviewAndNextSteps.md](ReviewAndNextSteps.md) | open findings and the agreed next steps |
 
-## Analysis archive
+## Technical reports
 
-Deep dives that informed the current capability roadmap. They are snapshots: the
-conclusions still hold, the measurements are dated.
+Current reports kept with the code. Intermediate search logs and superseded
+capability inventories were removed; their evidence remains under
+`../artifacts/result/`.
 
 | document | what it covers |
 |---|---|
-| [analysis/OPUSSOLVER_GAP_ANALYSIS_20261111.md](analysis/OPUSSOLVER_GAP_ANALYSIS_20261111.md) | 2026-11-11 metric comparison by class/metric, structural attribution (serial piston/track vs arm1 network), gap buckets and the targeted capability plan |
-| [analysis/OPUSSOLVER_ARCHITECTURE_GAP_20261110.md](analysis/OPUSSOLVER_ARCHITECTURE_GAP_20261110.md) | structural comparison with the upstream OpusSolver (scheduling, geometry, arm mix) and the C1–C5 capability gap |
-| [analysis/OPUSSOLVER_CAPABILITY_GAP.md](analysis/OPUSSOLVER_CAPABILITY_GAP.md) | earlier capability inventory (superseded by the dated analysis) |
-| [analysis/OPUSSOLVER_CAPABILITY_GAP_PHASE1.md](analysis/OPUSSOLVER_CAPABILITY_GAP_PHASE1.md) | phase 1 execution notes for that inventory |
+| [analysis/UPSTREAM_STANDARD_PORT_20261115.md](analysis/UPSTREAM_STANDARD_PORT_20261115.md) | the upstream Standard port, its module map and the first full comparison |
+| [analysis/UPSTREAM_STANDARD_OPTIMIZE_20261116.md](analysis/UPSTREAM_STANDARD_OPTIMIZE_20261116.md) | recipe/build-order/subset enumeration, Hex3 and three-atom shapes, final 146-puzzle audit |
+| [analysis/LIFEDEATH_STORAGE_PROOF_20261115.md](analysis/LIFEDEATH_STORAGE_PROOF_20261115.md) | the dispersion storage rail-trimming proof and its native measurements |
+| [analysis/WASM_DEPLOYMENT_ASSESSMENT_20261116.md](analysis/WASM_DEPLOYMENT_ASSESSMENT_20261116.md) | WebAssembly/GitHub Pages feasibility, missing layers and phased plan |
 
 ## Measurement reports
 
