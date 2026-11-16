@@ -20,6 +20,10 @@
   const buildButton = document.getElementById('build');
   const downloadPuzzle = document.getElementById('download-puzzle');
   const editorStatus = document.getElementById('editor-status');
+  const editJson = document.getElementById('edit-json');
+  const buildJsonButton = document.getElementById('build-json');
+  const downloadJsonPuzzle = document.getElementById('download-json-puzzle');
+  const advancedStatus = document.getElementById('advanced-status');
   const metricNodes = {
     cycles: document.getElementById('m-cycles'),
     cost: document.getElementById('m-cost'),
@@ -156,6 +160,23 @@
     editorStatus.className = `status ${kind}`;
   };
 
+  const useGeneratedPuzzle = (bytes, name, status) => {
+    puzzleBytes = bytes;
+    selectedFile = { name: `${name}.puzzle` };
+    solveButton.disabled = false;
+    metrics.hidden = true;
+    viewer.hidden = true;
+    scene = null;
+    trace = null;
+    stopPlayback();
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    downloadPuzzle.href = URL.createObjectURL(blob);
+    downloadPuzzle.download = `${name}.puzzle`;
+    downloadPuzzle.classList.remove('disabled');
+    status(`Built "${name}" (${bytes.length} bytes). Press Solve.`, 'ok');
+    setStatus(`Loaded generated puzzle "${name}".`);
+  };
+
   const buildPuzzle = async () => {
     buildButton.disabled = true;
     downloadPuzzle.classList.add('disabled');
@@ -195,21 +216,9 @@
         if (errorPtr) module.ccall('opusoptima_free', null, ['number'], [errorPtr]);
         const resultPtr = module.HEAPU32[resultPtrPtr >>> 2];
         const length = module.HEAPU32[lengthPtr >>> 2];
-        puzzleBytes = module.HEAPU8.slice(resultPtr, resultPtr + length);
+        const bytes = module.HEAPU8.slice(resultPtr, resultPtr + length);
         module.ccall('opusoptima_free', null, ['number'], [resultPtr]);
-        selectedFile = { name: `${name}.puzzle` };
-        solveButton.disabled = false;
-        metrics.hidden = true;
-        viewer.hidden = true;
-        scene = null;
-        trace = null;
-        stopPlayback();
-        const blob = new Blob([puzzleBytes], { type: 'application/octet-stream' });
-        downloadPuzzle.href = URL.createObjectURL(blob);
-        downloadPuzzle.download = `${name}.puzzle`;
-        downloadPuzzle.classList.remove('disabled');
-        setEditorStatus(`Built "${name}" (${puzzleBytes.length} bytes). Press Solve.`, 'ok');
-        setStatus(`Loaded generated puzzle "${name}".`);
+        useGeneratedPuzzle(bytes, name, setEditorStatus);
       } finally {
         module._free(namePtr); module._free(inPtr); module._free(inBondPtr);
         module._free(outPtr); module._free(outBondPtr); module._free(resultPtrPtr);
@@ -519,6 +528,51 @@
   });
 
   buildButton.addEventListener('click', () => { buildPuzzle(); });
+  const buildAdvanced = async () => {
+    buildJsonButton.disabled = true;
+    downloadJsonPuzzle.classList.add('disabled');
+    try {
+      const module = await ensureModule();
+      const encoded = new TextEncoder().encode(editJson.value);
+      const jsonPtr = module._malloc(encoded.length + 1);
+      module.HEAPU8.set(encoded, jsonPtr);
+      module.HEAPU8[jsonPtr + encoded.length] = 0;
+      const resultPtrPtr = module._malloc(4);
+      const lengthPtr = module._malloc(4);
+      const errorPtrPtr = module._malloc(4);
+      try {
+        const ok = module.ccall('opusoptima_make_puzzle_json', 'number',
+          ['number', 'number', 'number', 'number'],
+          [jsonPtr, resultPtrPtr, lengthPtr, errorPtrPtr]);
+        const errorPtr = module.HEAPU32[errorPtrPtr >>> 2];
+        if (!ok) throw new Error(errorPtr ? module.UTF8ToString(errorPtr) : 'advanced build failed');
+        if (errorPtr) module.ccall('opusoptima_free', null, ['number'], [errorPtr]);
+        const resultPtr = module.HEAPU32[resultPtrPtr >>> 2];
+        const length = module.HEAPU32[lengthPtr >>> 2];
+        const bytes = module.HEAPU8.slice(resultPtr, resultPtr + length);
+        module.ccall('opusoptima_free', null, ['number'], [resultPtr]);
+        let name = 'advanced puzzle';
+        try { name = JSON.parse(editJson.value).name || name; } catch (_) {}
+        useGeneratedPuzzle(bytes, name, (text, kind) => {
+          advancedStatus.textContent = text;
+          advancedStatus.className = `status ${kind || ''}`;
+        });
+        const blob = new Blob([bytes], { type: 'application/octet-stream' });
+        downloadJsonPuzzle.href = URL.createObjectURL(blob);
+        downloadJsonPuzzle.download = `${name}.puzzle`;
+        downloadJsonPuzzle.classList.remove('disabled');
+      } finally {
+        module._free(jsonPtr); module._free(resultPtrPtr); module._free(lengthPtr); module._free(errorPtrPtr);
+      }
+    } catch (error) {
+      advancedStatus.textContent = error?.message || String(error);
+      advancedStatus.className = 'status bad';
+    } finally {
+      buildJsonButton.disabled = false;
+    }
+  };
+
+  buildJsonButton.addEventListener('click', () => { buildAdvanced(); });
 
   fileInput.addEventListener('change', () => {
     if (fileInput.files?.[0]) readFile(fileInput.files[0]).catch((error) => setStatus(String(error), 'bad'));

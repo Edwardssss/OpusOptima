@@ -319,7 +319,7 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 （静态文件、单线程 Web Worker、无自定义 COOP/COEP 头）；但 Pages 不能运行 native CLI、
 `posix_spawn` 验证器或 `libverify.so`，需要这些时让 Pages 只做前端，求解/验证放到
 自建容器或服务器后端。首个目标已经放在 `wasm/`，静态页面在 `web/`：单线程模块包含上游 Standard、
-二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_trace` / `opusoptima_make_puzzle`，
+二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_trace` / `opusoptima_make_puzzle` / `opusoptima_make_puzzle_json`，
 由 `.github/workflows/pages.yml` 发布 `web/dist`。本地构建：
 
 ```sh
@@ -335,8 +335,10 @@ cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 `Deploy browser solver to GitHub Pages` workflow。页面使用进程内 omsim 检查，
 而不是 native 隔离的 `legacy-gate` 发布事务，并显示机器布局，回放 omsim 的
 逐周期物理轨迹（原子、键、机械臂和碰撞驱动的运动）及逐臂 tape 时间线。
-双分子编辑器通过 `opusoptima_make_puzzle` 支持原子和键，并可直接送入求解器；
-完整棋盘/生产编辑器和带 native 权威的后端仍属后续工作。
+基础编辑器通过 `opusoptima_make_puzzle` 支持原子和键；高级 JSON 编辑器通过
+`opusoptima_make_puzzle_json` 支持多个输入/输出端口和 production metadata
+（chambers、conduits、vials、shrink/isolation）。puzzle 文件本身没有更多自由
+棋盘布局，机械布局仍由求解器生成。带 native 权威的后端仍属后续工作。
 
 ## 开发约定
 

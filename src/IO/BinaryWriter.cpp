@@ -86,8 +86,6 @@ void BinaryWriter::WriteMolecule(std::vector<std::byte>& buf, const Molecule& mo
 }
 
 std::vector<std::byte> BinaryWriter::WritePuzzle(const PuzzleData& puzzle) {
-    if (puzzle.productionInfo)
-        throw std::invalid_argument("puzzle export does not support production metadata yet");
     if (puzzle.inputs.size() < 1 || puzzle.outputs.size() < 1)
         throw std::invalid_argument("puzzle export requires at least one input and output");
     std::vector<std::byte> buf;
@@ -100,7 +98,31 @@ std::vector<std::byte> BinaryWriter::WritePuzzle(const PuzzleData& puzzle) {
     WriteI32(buf, static_cast<std::int32_t>(puzzle.outputs.size()));
     for (const auto& molecule : puzzle.outputs) WriteMolecule(buf, molecule);
     WriteI32(buf, puzzle.outputMultiplier);
-    WriteBool(buf, false);
+    WriteBool(buf, puzzle.productionInfo.has_value());
+    if (puzzle.productionInfo) {
+        const auto& production = *puzzle.productionInfo;
+        WriteBool(buf, production.shrinkLeft);
+        WriteBool(buf, production.shrinkRight);
+        WriteBool(buf, production.isolation);
+        WriteI32(buf, static_cast<std::int32_t>(production.chambers.size()));
+        for (const auto& chamber : production.chambers) {
+            WriteHexI8(buf, chamber.position);
+            WriteString(buf, chamber.chamberType);
+        }
+        WriteI32(buf, static_cast<std::int32_t>(production.conduits.size()));
+        for (const auto& conduit : production.conduits) {
+            WriteHexI8(buf, conduit.positionA);
+            WriteHexI8(buf, conduit.positionB);
+            WriteI32(buf, static_cast<std::int32_t>(conduit.path.size()));
+            for (const auto cell : conduit.path) WriteHexI8(buf, cell);
+        }
+        WriteI32(buf, static_cast<std::int32_t>(production.vials.size()));
+        for (const auto& vial : production.vials) {
+            WriteHexI8(buf, vial.position);
+            WriteBool(buf, vial.top);
+            WriteI32(buf, vial.count);
+        }
+    }
     return buf;
 }
 

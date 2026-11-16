@@ -11,6 +11,7 @@
 
 #include "BinaryParser.hpp"
 #include "BinaryWriter.hpp"
+#include "EditorJson.hpp"
 #include "PuzzleSpecs.hpp"
 #include "StandardSolver.hpp"
 
@@ -281,6 +282,40 @@ EMSCRIPTEN_KEEPALIVE int opusoptima_make_puzzle(
         if (error) *error = Duplicate(exception.what());
     } catch (...) {
         if (error) *error = Duplicate("unknown puzzle editor failure");
+    }
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE int opusoptima_make_puzzle_json(const char* json, std::uint8_t** puzzle,
+                                                       int* puzzleLength, char** error) {
+    if (puzzle) *puzzle = nullptr;
+    if (puzzleLength) *puzzleLength = 0;
+    if (error) *error = nullptr;
+    if (!json) {
+        if (error) *error = Duplicate("missing editor JSON");
+        return 0;
+    }
+    std::string detail;
+    const auto data = opusoptima::wasm::BuildEditorPuzzle(json, detail);
+    if (!data) {
+        if (error) *error = Duplicate(detail);
+        return 0;
+    }
+    try {
+        const auto bytes = opusoptima::io::BinaryWriter::WritePuzzle(*data);
+        auto* result = static_cast<std::uint8_t*>(std::malloc(bytes.size()));
+        if (!result) {
+            if (error) *error = Duplicate("out of memory");
+            return 0;
+        }
+        std::memcpy(result, bytes.data(), bytes.size());
+        *puzzle = result;
+        *puzzleLength = static_cast<int>(bytes.size());
+        return 1;
+    } catch (const std::exception& exception) {
+        if (error) *error = Duplicate(exception.what());
+    } catch (...) {
+        if (error) *error = Duplicate("unknown puzzle writer failure");
     }
     return 0;
 }

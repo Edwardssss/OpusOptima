@@ -440,7 +440,7 @@ native CLI, `posix_spawn` verifier or `libverify.so`; for those, keep the fronte
 on Pages and put solving/verification on a self-hosted/container backend. The
 first target is in `wasm/` with the static page in `web/`. It builds one
 single-threaded module containing the upstream Standard port, the binary codecs
-and omsim, exposes `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_trace` / `opusoptima_make_puzzle` through a byte C ABI,
+and omsim, exposes `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_trace` / `opusoptima_make_puzzle` / `opusoptima_make_puzzle_json` through a byte C ABI,
 and deploys `web/dist` with `.github/workflows/pages.yml`. Local build:
 
 ```sh
@@ -456,9 +456,12 @@ then push to `main` or run the `Deploy browser solver to GitHub Pages` workflow
 manually. The page verifies candidates with the in-process omsim check, not the
 native isolated `legacy-gate` transaction, then renders the machine and replays
 omsim's per-cycle physics trace (atoms, bonds, arms and collision-driven
-movement) beside the tape timeline. A two-molecule editor supports atoms and
-bonds through `opusoptima_make_puzzle`. A full board/production editor and a
-server-backed native authority remain future work.
+movement) beside the tape timeline. The basic editor supports atoms and bonds;
+the advanced JSON editor supports multiple input/output ports and production
+metadata (chambers, conduits, vials, shrink/isolation flags) through
+`opusoptima_make_puzzle_json`. The puzzle file itself has no free-form board
+layout beyond this metadata, so mechanism placement remains solver-derived. A
+server-backed native authority remains future work.
 
 ## Development
 

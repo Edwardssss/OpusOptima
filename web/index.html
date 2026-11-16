@@ -79,6 +79,41 @@
         <a id="download-puzzle" class="secondary disabled" download>Download .puzzle</a>
       </div>
       <p id="editor-status" class="status" role="status">Edit atoms, then build.</p>
+      <details class="advanced">
+        <summary>Advanced JSON (multi-port and production metadata)</summary>
+        <p class="fineprint">
+          Arrays under <code>inputs</code>/<code>outputs</code> become separate
+          ports. Optional <code>production</code> accepts
+          <code>shrinkLeft</code>, <code>shrinkRight</code>,
+          <code>isolation</code>, <code>chambers</code>,
+          <code>conduits</code> and <code>vials</code>.
+        </p>
+        <textarea id="edit-json" rows="14" spellcheck="false">{
+  "name": "Advanced browser puzzle",
+  "outputMultiplier": 1,
+  "permissionBits": "0x17c7370f",
+  "inputs": [
+    { "atoms": [{ "type": 1, "q": 0, "r": 0 }] },
+    { "atoms": [{ "type": 2, "q": 0, "r": 0 }] }
+  ],
+  "outputs": [
+    { "atoms": [{ "type": 1, "q": 0, "r": 0 }] }
+  ],
+  "production": {
+    "shrinkLeft": false,
+    "shrinkRight": false,
+    "isolation": false,
+    "chambers": [{ "q": 0, "r": 0, "type": "Large" }],
+    "conduits": [],
+    "vials": []
+  }
+}</textarea>
+        <div class="row">
+          <button id="build-json" type="button">Build advanced</button>
+          <a id="download-json-puzzle" class="secondary disabled" download>Download .puzzle</a>
+        </div>
+        <p id="advanced-status" class="status" role="status">Edit JSON, then build.</p>
+      </details>
     </section>
 
     <section class="notes">

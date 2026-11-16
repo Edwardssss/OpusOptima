@@ -198,6 +198,34 @@ TEST(PuzzleParseUnitTest, WritePuzzleRoundTripsBasePuzzle) {
     EXPECT_EQ(parsed.outputs[0].atoms.size(), 1U);
 }
 
+TEST(PuzzleParseUnitTest, WritePuzzleRoundTripsProductionMetadata) {
+    opusoptima::io::PuzzleData puzzle;
+    puzzle.version = 3;
+    puzzle.name = "production round-trip";
+    puzzle.outputMultiplier = 1;
+    puzzle.inputs = {{{{{opusoptima::core::AtomType::Salt, {0, 0}}}, {}}}};
+    puzzle.outputs = {{{{{opusoptima::core::AtomType::Salt, {0, 0}}}, {}}}};
+    opusoptima::io::ProductionInfo production;
+    production.shrinkLeft = true;
+    production.isolation = true;
+    production.chambers = {{{0, 0}, "Large"}};
+    production.conduits = {{{0, 0}, {1, 0}, {{0, 0}, {1, 0}}}};
+    production.vials = {{{2, 0}, true, 3}};
+    puzzle.productionInfo = production;
+    const auto bytes = opusoptima::io::BinaryWriter::WritePuzzle(puzzle);
+    const auto parsed = opusoptima::io::BinaryParser::ParsePuzzle(bytes);
+    ASSERT_TRUE(parsed.productionInfo.has_value());
+    EXPECT_TRUE(parsed.productionInfo->shrinkLeft);
+    EXPECT_FALSE(parsed.productionInfo->shrinkRight);
+    EXPECT_TRUE(parsed.productionInfo->isolation);
+    ASSERT_EQ(parsed.productionInfo->chambers.size(), 1U);
+    EXPECT_EQ(parsed.productionInfo->chambers[0].chamberType, "Large");
+    ASSERT_EQ(parsed.productionInfo->conduits.size(), 1U);
+    EXPECT_EQ(parsed.productionInfo->conduits[0].path.size(), 2U);
+    ASSERT_EQ(parsed.productionInfo->vials.size(), 1U);
+    EXPECT_EQ(parsed.productionInfo->vials[0].count, 3);
+}
+
 TEST(PuzzleParseUnitTest, StringRoundTrip) {
     const auto buffer = BuildMinimalPuzzle("Hello World");
     const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzle(

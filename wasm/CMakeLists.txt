@@ -53,6 +53,7 @@ set(OPUSOPTIMA_CORE_SOURCES
 add_library(opusoptima_wasm_core STATIC
     ${OPUSOPTIMA_STANDARD_SOURCES}
     ${OPUSOPTIMA_CORE_SOURCES}
+    "${CMAKE_CURRENT_LIST_DIR}/EditorJson.cpp"
 )
 target_include_directories(opusoptima_wasm_core PUBLIC
     ${OPUSOPTIMA_INCLUDE_DIRS}
@@ -90,7 +91,7 @@ target_link_options(opusoptima PRIVATE
     "-sINITIAL_MEMORY=67108864"
     "-sSTACK_SIZE=8388608"
     "-sFILESYSTEM=1"
-    "-sEXPORTED_FUNCTIONS=_malloc,_free,_opusoptima_solve,_opusoptima_verify,_opusoptima_describe,_opusoptima_make_puzzle,_opusoptima_trace,_opusoptima_free"
+    "-sEXPORTED_FUNCTIONS=_malloc,_free,_opusoptima_solve,_opusoptima_verify,_opusoptima_describe,_opusoptima_make_puzzle,_opusoptima_make_puzzle_json,_opusoptima_trace,_opusoptima_free"
     "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap,UTF8ToString,HEAPU8,HEAPU32,HEAP32"
     "-sASSERTIONS=0"
     "-fexceptions"
