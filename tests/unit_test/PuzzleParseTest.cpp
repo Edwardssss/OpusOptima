@@ -226,6 +226,26 @@ TEST(PuzzleParseUnitTest, WritePuzzleRoundTripsProductionMetadata) {
     EXPECT_EQ(parsed.productionInfo->vials[0].count, 3);
 }
 
+TEST(PuzzleParseUnitTest, WritePuzzleRoundTripsMultiplePorts) {
+    opusoptima::io::PuzzleData puzzle;
+    puzzle.version = 3;
+    puzzle.name = "multi-port";
+    puzzle.outputMultiplier = 2;
+    opusoptima::io::Molecule salt;
+    salt.atoms.push_back({opusoptima::core::AtomType::Salt, {0, 0}});
+    opusoptima::io::Molecule air;
+    air.atoms.push_back({opusoptima::core::AtomType::Air, {0, 0}});
+    puzzle.inputs = {salt, air};
+    puzzle.outputs = {salt, air};
+    const auto bytes = opusoptima::io::BinaryWriter::WritePuzzle(puzzle);
+    const auto parsed = opusoptima::io::BinaryParser::ParsePuzzle(bytes);
+    ASSERT_EQ(parsed.inputs.size(), 2U);
+    ASSERT_EQ(parsed.outputs.size(), 2U);
+    EXPECT_EQ(parsed.inputs[1].atoms[0].type, opusoptima::core::AtomType::Air);
+    EXPECT_EQ(parsed.outputs[1].atoms[0].type, opusoptima::core::AtomType::Air);
+    EXPECT_EQ(parsed.outputMultiplier, 2);
+}
+
 TEST(PuzzleParseUnitTest, StringRoundTrip) {
     const auto buffer = BuildMinimalPuzzle("Hello World");
     const auto puzzle = opusoptima::io::BinaryParser::ParsePuzzle(
