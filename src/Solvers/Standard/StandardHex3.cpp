@@ -558,6 +558,8 @@ void Hex3AssemblerModule::AddAtom(Element element, int productID) {
     State& state = states_[productID];
     if (!state.started) {
         state.fragments = builderIt->second->GenerateFragments(*assemblyArea_);
+        if (state.fragments.empty())
+            throw std::invalid_argument("hex3 builder produced no fragments");
         state.next = 0;
         state.started = true;
     }
@@ -608,6 +610,8 @@ void Hex3AssemblerModule::MoveProductToOutput(const Molecule& product,
                                               const std::vector<Instr>& instructions) {
     const auto it = outputs_.find(product.Id());
     if (it == outputs_.end()) throw std::invalid_argument("unknown hex3 output product");
+    if (it->second.index > static_cast<int>(arms.size()))
+        throw std::invalid_argument("hex3 output arm index out of range");
     for (int i = 0; i < it->second.index; ++i)
         writer.WriteGrabResetAction(arms[static_cast<std::size_t>(i)], instructions);
 }

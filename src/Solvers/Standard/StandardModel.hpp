@@ -386,17 +386,10 @@ class GameObject {
 class Arm : public GameObject {
     public:
     Arm(GameObject* parent, Vec2 position, Rot rotation, ArmType type, int extension = 1)
-        : GameObject(parent, {position, rotation}), type(type), extension(extension),
-          uniqueId(s_nextId++) {}
+        : GameObject(parent, {position, rotation}), type(type), extension(extension) {}
 
     ArmType type{ArmType::Arm1};
     int extension{1};
-    int uniqueId{};
-
-    static void ResetArmIds() { s_nextId = 0; }
-
-    private:
-    static inline int s_nextId = 0;
 };
 
 class Glyph : public GameObject {

@@ -399,7 +399,7 @@ struct RecipeSet {
 std::vector<io::SolutionData> CompileUpstreamStandardVariants(
     const io::PuzzleData& puzzle,
     std::optional<std::chrono::steady_clock::time_point> deadline,
-    std::size_t maxVariants, const std::vector<std::size_t>& recipeIndices) {
+    std::size_t maxVariants) {
     const bool diag = std::getenv("OPUSOPTIMA_STANDARD_DIAG") != nullptr;
     std::vector<io::SolutionData> variants;
     try {
@@ -413,24 +413,24 @@ std::vector<io::SolutionData> CompileUpstreamStandardVariants(
         if (model.products.size() > 1) buildOrders.push_back(true);
 
         std::vector<std::size_t> selected;
-        if (recipeIndices.empty()) {
-            selected.push_back(0);
-            const bool multi = model.products.size() > 1;
-            if (multi) {
-                if (recipes.size() > 1) selected.push_back(1);
-                if (recipes.size() > 2) selected.push_back(2);
-            } else {
-                for (std::size_t index : {std::size_t{1}, std::size_t{2}, std::size_t{7}})
-                    if (index < recipeSet.subsetBegin && index < recipes.size())
-                        selected.push_back(index);
-            }
-            std::size_t subsets = 0;
-            for (std::size_t index = recipeSet.subsetBegin;
-                 index < recipes.size() && subsets < 2; ++index, ++subsets)
+        const auto addSelected = [&](std::size_t index) {
+            if (index < recipes.size() &&
+                std::find(selected.begin(), selected.end(), index) == selected.end())
                 selected.push_back(index);
+        };
+        addSelected(0);
+        const bool multi = model.products.size() > 1;
+        if (multi) {
+            addSelected(1);
+            addSelected(2);
         } else {
-            selected = recipeIndices;
+            for (std::size_t index : {std::size_t{1}, std::size_t{2}, std::size_t{7}})
+                if (index < recipeSet.subsetBegin) addSelected(index);
         }
+        std::size_t subsets = 0;
+        for (std::size_t index = recipeSet.subsetBegin;
+             index < recipes.size() && subsets < 2; ++index, ++subsets)
+            addSelected(index);
 
         const char* dumpDir = std::getenv("OPUSOPTIMA_STANDARD_VARIANT_DIR");
         std::set<std::string> seen;

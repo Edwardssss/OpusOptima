@@ -30,8 +30,7 @@ namespace opusoptima::solvers::standard {
 [[nodiscard]] std::vector<io::SolutionData> CompileUpstreamStandardVariants(
     const io::PuzzleData& puzzle,
     std::optional<std::chrono::steady_clock::time_point> deadline = std::nullopt,
-    std::size_t maxVariants = 0,
-    const std::vector<std::size_t>& recipeIndices = {});
+    std::size_t maxVariants = 0);
 
 
 } // namespace opusoptima::solvers::standard

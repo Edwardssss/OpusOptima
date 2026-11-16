@@ -124,7 +124,13 @@ void RecipeBuilder::AddProducts(const std::vector<Molecule>& products, int outpu
     }
 }
 
-Reaction RecipeBuilder::CreateReaction(ReactionType type, std::optional<Element> element, int id) {
+Reaction RecipeBuilder::CreateReaction(ReactionType type, std::optional<Element> element,
+                                       int id) {
+    if ((type == ReactionType::Calcification || type == ReactionType::VanBerlo ||
+         type == ReactionType::Projection || type == ReactionType::Purification) &&
+        !element) {
+        throw std::invalid_argument("this reaction requires an element");
+    }
     Reaction reaction;
     reaction.type = type;
     reaction.id = id;

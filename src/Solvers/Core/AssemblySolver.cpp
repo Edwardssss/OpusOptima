@@ -474,12 +474,11 @@ io::SolutionData CompileSpecialized(const io::PuzzleData& puzzle, const Assembly
             area = 40;
         else if (normalized == core::HexCoord{1, 1})
             area = 36;
-        else if (normalized == core::HexCoord{0, 1})
+        else if (normalized == core::HexCoord{0, 1} ||
+                 normalized == core::HexCoord{-1, 1})
             area = 34;
         else if (normalized == core::HexCoord{-1, 0})
             area = 33;
-        else if (normalized == core::HexCoord{-1, 1})
-            area = 34;
         else
             Reject("unverified three-atom workstation geometry");
         const int transfer = reverse ? 5 : 1;
@@ -592,7 +591,6 @@ io::SolutionData CompileMetalPurification(const io::PuzzleData&);
 io::SolutionData CompileTriplex(const io::PuzzleData&);
 io::SolutionData CompileDispersion(const io::PuzzleData&);
 io::SolutionData CompileBalancedDispersion(const io::PuzzleData&);
-io::SolutionData CompileLifeDeath(const io::PuzzleData&);
 io::SolutionData CompileUnification(const io::PuzzleData&);
 
 io::SolutionData AssemblySolver::Compile(const io::PuzzleData& puzzle, const AssemblyPlan& plan) {
@@ -2115,12 +2113,20 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         }
         if (!simple.inputs.empty() && simple.inputs.size() < puzzle.inputs.size()) {
             std::exception_ptr acceptanceError;
+            const auto remapInputs = [&](io::SolutionData& solution) {
+                for (auto& object : solution.objects) {
+                    if (object.typeName != "input") continue;
+                    const int index = object.bodyData.at(2);
+                    if (index < 0 || static_cast<std::size_t>(index) >= originalInputs.size())
+                        throw std::invalid_argument("singleton input index out of range");
+                    object.bodyData.at(2) =
+                        static_cast<std::int32_t>(originalInputs[static_cast<std::size_t>(index)]);
+                }
+            };
             try {
                 auto result = SolveAccepted(simple, [&](const io::SolutionData& candidate) {
                     auto mapped = candidate;
-                    for (auto& object : mapped.objects)
-                        if (object.typeName == "input")
-                            object.bodyData.at(2) = originalInputs.at(object.bodyData.at(2));
+                    remapInputs(mapped);
                     try {
                         return acceptStage("singleton-input-subset", mapped);
                     } catch (...) {
@@ -2128,9 +2134,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                         throw;
                     }
                 });
-                for (auto& object : result.objects)
-                    if (object.typeName == "input")
-                        object.bodyData.at(2) = originalInputs.at(object.bodyData.at(2));
+                remapInputs(result);
                 auto measured = acceptedSolution(std::move(result));
                 if (keep(measured)) return publish();
             } catch (const std::invalid_argument& error) {
