@@ -1408,6 +1408,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
         acceptedReport.reset();
         return candidate;
     };
+    const auto inventoryDeadline =
+        std::min(Deadline(), std::chrono::steady_clock::now() + std::chrono::seconds(5));
     auto inventory = [&](std::exception_ptr& acceptanceError) {
         if (verify) {
             return CompileVerifiedSupplyInventory(
@@ -1441,16 +1443,20 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                         "Inventory attempt {} period {} rotation {} spacing {} rejected: {}",
                         failure.materialAttempt, failure.productsPerPeriod, failure.rotation,
                         failure.spacing, failure.detail);
-                });
+                },
+                inventoryDeadline);
         }
-        return CompileAcceptedSupplyInventory(puzzle, [&](const io::SolutionData& candidate) {
-            try {
-                return accept(candidate);
-            } catch (...) {
-                acceptanceError = std::current_exception();
-                throw;
-            }
-        });
+        return CompileAcceptedSupplyInventory(
+            puzzle,
+            [&](const io::SolutionData& candidate) {
+                try {
+                    return accept(candidate);
+                } catch (...) {
+                    acceptanceError = std::current_exception();
+                    throw;
+                }
+            },
+            {}, inventoryDeadline);
     };
     auto attempt = [&](const char* stage, auto&& compile) -> std::optional<io::SolutionData> {
         std::optional<io::SolutionData> candidate;
@@ -2082,6 +2088,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     }
     std::exception_ptr fragmentAcceptanceError;
     bool fragmentExhausted = false;
+    const auto fragmentDeadline =
+        std::min(Deadline(), std::chrono::steady_clock::now() + std::chrono::seconds(2));
     try {
         auto result = CompileAcceptedFragmentFeed(puzzle, [&](const io::SolutionData& candidate) {
             try {
@@ -2090,7 +2098,7 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 fragmentAcceptanceError = std::current_exception();
                 throw;
             }
-        });
+        }, fragmentDeadline);
         if (result) {
             auto measured = acceptedSolution(std::move(*result));
             if (keep(measured)) return publish();

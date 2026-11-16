@@ -1,6 +1,8 @@
 #include "HeldArmMotion.hpp"
 #include <gtest/gtest.h>
 
+#include <chrono>
+
 using namespace opusoptima;
 using namespace solvers;
 namespace {
@@ -20,6 +22,14 @@ TEST(HeldArmMotion, EmitsTrackInstructionsForWholeHeldFragment) {
     EXPECT_EQ(result.instructions, (std::vector<char>{'A', 'A'}));
     EXPECT_EQ(HeldFragmentPose(p, result.states.back()), p.goal);
 }
+TEST(HeldArmMotion, ExpiredDeadlineReturnsExhaustedWithoutSearching) {
+    auto p = Corridor();
+    p.deadline = std::chrono::steady_clock::now() - std::chrono::milliseconds(1);
+    const auto result = RouteHeldArm(p);
+    EXPECT_EQ(result.status, MotionStatus::Exhausted);
+    EXPECT_EQ(result.explored, 0U);
+}
+
 TEST(HeldArmMotion, CannotTranslateWithoutTrackOrExtension) {
     auto p = Corridor();
     p.track.resize(1);

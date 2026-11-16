@@ -457,7 +457,8 @@ io::SolutionData CompileDisassemblyIR(const io::PuzzleData& p, const ExecutionIR
 }
 
 std::optional<io::SolutionData> CompileAcceptedFragmentFeed(
-    const io::PuzzleData& p, const std::function<bool(const io::SolutionData&)>& accept) {
+    const io::PuzzleData& p, const std::function<bool(const io::SolutionData&)>& accept,
+    std::chrono::steady_clock::time_point deadline) {
     ValidateSpecialRules(p);
     constexpr auto permissions =
         (1ULL << 0) | (1ULL << 3) | (1ULL << 9) | (1ULL << 22) | (1ULL << 23);
@@ -575,6 +576,9 @@ std::optional<io::SolutionData> CompileAcceptedFragmentFeed(
         outputAtoms += output.atoms.size();
     if (outputAtoms == 0) return std::nullopt;
     for (std::size_t period = input.atoms.size() / outputAtoms; period > 0; --period) {
+        if (deadline != std::chrono::steady_clock::time_point::max() &&
+            std::chrono::steady_clock::now() >= deadline)
+            return std::nullopt;
         if ((6ULL * p.outputMultiplier) % period != 0 ||
             (input.atoms.size() != period * outputAtoms && !(p.permissionBits & (1ULL << 17))))
             continue;
@@ -582,6 +586,9 @@ std::optional<io::SolutionData> CompileAcceptedFragmentFeed(
         for (unsigned mask = 1; mask < (1U << input.bonds.size()); ++mask)
             if (matchesOutputs(mask, period)) matchingMasks.push_back(mask);
         for (int rotation = 0; rotation < 6; ++rotation) {
+            if (deadline != std::chrono::steady_clock::time_point::max() &&
+            std::chrono::steady_clock::now() >= deadline)
+            return std::nullopt;
             const core::HexFrame frame{{0, 0}, rotation};
             int low = frame.ToWorld(input.atoms[0].position).q, high = low;
             for (const auto& atom : input.atoms) {
@@ -591,7 +598,13 @@ std::optional<io::SolutionData> CompileAcceptedFragmentFeed(
             }
             for (int transportFragments = 0; transportFragments < 2; ++transportFragments) {
                 for (const auto mask : matchingMasks) {
+                    if (deadline != std::chrono::steady_clock::time_point::max() &&
+            std::chrono::steady_clock::now() >= deadline)
+            return std::nullopt;
                     for (int clearance = 0; clearance < 3; ++clearance) {
+                        if (deadline != std::chrono::steady_clock::time_point::max() &&
+            std::chrono::steady_clock::now() >= deadline)
+            return std::nullopt;
                         std::optional<io::SolutionData> candidate;
                         try {
                             ExecutionIR program;

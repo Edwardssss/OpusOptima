@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include "FragmentCustody.hpp"
 #include "HeldArmMotion.hpp"
 #include "HexFrame.hpp"
@@ -13,6 +15,8 @@ class PhysicalInventory {
                                            const HeldArmState&, char, bool)>;
     PhysicalInventory(ExecutionIR::State state, std::vector<core::HexCoord> track, HeldArmState arm,
                       Certificate certificate, int maxLength = 1);
+    // Optional wall-clock budget for route searches and pose retries.
+    void SetDeadline(std::chrono::steady_clock::time_point deadline) { deadline_ = deadline; }
     void Grab(ExecutionIR::AtomId);
     void Park(std::size_t slot);
     void ReserveLoose(ExecutionIR::AtomId, std::size_t slot);
@@ -98,6 +102,7 @@ class PhysicalInventory {
     std::vector<core::HexCoord> track_;
     HeldArmState arm_;
     int maxLength_;
+    std::chrono::steady_clock::time_point deadline_{std::chrono::steady_clock::time_point::max()};
     Certificate certificate_;
     FragmentCustody custody_;
     std::vector<char> tape_;

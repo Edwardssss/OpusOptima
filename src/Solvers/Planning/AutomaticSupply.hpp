@@ -2,6 +2,7 @@
 #include "BinaryParser.hpp"
 #include "SolutionVerifier.hpp"
 #include <cstdint>
+#include <chrono>
 #include <functional>
 #include <optional>
 #include <string>
@@ -58,13 +59,18 @@ struct SupplyFailure {
 // remaining shared state budget across remaining periods, including period four.
 // Exhausted replanning reports terminal Material/Budget feedback with rotation -1
 // and spacing 0, distinguishing supported-period exhaustion from resource limits.
+// `deadline` bounds the whole inventory attempt, including route certificates.
 std::optional<io::SolutionData> CompileAcceptedSupplyInventory(
     const io::PuzzleData&, const std::function<bool(const io::SolutionData&)>& accept,
-    const std::function<void(const SupplyFailure&)>& feedback = {});
+    const std::function<void(const SupplyFailure&)>& feedback = {},
+    std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::time_point::max());
 
 // Retains the independent verifier's status, cycle and coordinates in feedback.
 std::optional<io::SolutionData> CompileVerifiedSupplyInventory(
     const io::PuzzleData&,
     const std::function<io::VerificationReport(const io::SolutionData&)>& verify,
-    const std::function<void(const SupplyFailure&)>& feedback = {});
+    const std::function<void(const SupplyFailure&)>& feedback = {},
+    std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::time_point::max());
 } // namespace opusoptima::solvers

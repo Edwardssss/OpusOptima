@@ -70,6 +70,9 @@ MotionStatus PhysicalInventory::RetrieveRouted(std::size_t slot, ExecutionIR::At
     for (std::size_t index = 0; index < track_.size(); ++index) {
         for (int length = 1; length <= maxLength_; ++length) {
             for (int direction = 0; direction < 6; ++direction) {
+                if (deadline_ != std::chrono::steady_clock::time_point::max() &&
+                    std::chrono::steady_clock::now() >= deadline_)
+                    return MotionStatus::Exhausted;
                 if (core::Add(track_[index], Rotate({length, 0}, direction)) != target) continue;
                 auto candidate = *this;
                 const auto status = candidate.MoveEmpty({index, length, direction, 0}, budget);
@@ -94,6 +97,9 @@ MotionStatus PhysicalInventory::RetrieveFragmentRouted(std::size_t slot, std::si
     if (parked == custody_.Parked().end()) throw ExecutionIR::Error("unknown parking slot");
     bool exhausted = false;
     for (auto id : parked->second.atoms) {
+        if (deadline_ != std::chrono::steady_clock::time_point::max() &&
+                    std::chrono::steady_clock::now() >= deadline_)
+            return MotionStatus::Exhausted;
         auto candidate = *this;
         const auto status = candidate.RetrieveRouted(slot, id, budget);
         if (status == MotionStatus::Found) {
@@ -124,6 +130,9 @@ MotionStatus PhysicalInventory::MoveParked(std::size_t slot, ExecutionIR::AtomId
         for (std::size_t index = 0; index < track_.size(); ++index) {
             for (int length = 1; length <= maxLength_; ++length) {
                 for (int direction = 0; direction < 6; ++direction) {
+                    if (deadline_ != std::chrono::steady_clock::time_point::max() &&
+                    std::chrono::steady_clock::now() >= deadline_)
+                        return MotionStatus::Exhausted;
                     if (core::Add(track_[index], Rotate({length, 0}, direction)) != contact)
                         continue;
                     auto candidate = *this;
@@ -463,6 +472,9 @@ MotionStatus PhysicalInventory::ActivateParked(
         for (std::size_t index = 0; index < track_.size(); ++index) {
             for (int length = 1; length <= maxLength_; ++length) {
                 for (int direction = 0; direction < 6; ++direction) {
+                    if (deadline_ != std::chrono::steady_clock::time_point::max() &&
+                    std::chrono::steady_clock::now() >= deadline_)
+                        return MotionStatus::Exhausted;
                     if (core::Add(track_[index], Rotate({length, 0}, direction)) !=
                         material_.atoms.at(id).position)
                         continue;
@@ -547,6 +559,7 @@ MotionStatus PhysicalInventory::MoveEmpty(HeldArmState goal, std::size_t budget)
     p.goal = goal;
     p.maxStates = budget;
     p.maxLength = maxLength_;
+    p.deadline = deadline_;
     p.executable = [&](const auto& from, const auto& to, char op) {
         return certificate_(material_, from, to, op, false);
     };
@@ -572,6 +585,7 @@ MotionStatus PhysicalInventory::MoveHeld(RigidPose goal, std::size_t budget) {
     p.maxLength = maxLength_;
     p.goal = goal;
     p.maxStates = budget;
+    p.deadline = deadline_;
     for (auto atom : ids)
         p.fragment.push_back(Relative(material_.atoms.at(atom).position, origin));
     auto at = [&](const HeldArmState& arm) {

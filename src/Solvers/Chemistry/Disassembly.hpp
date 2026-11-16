@@ -2,6 +2,7 @@
 
 #include "BinaryParser.hpp"
 #include "ExecutionIR.hpp"
+#include <chrono>
 #include <functional>
 #include <optional>
 
@@ -14,8 +15,11 @@ io::SolutionData CompileIntactFeed(const io::PuzzleData& puzzle);
 io::SolutionData CompileFragmentFeed(const io::PuzzleData& puzzle);
 // Acceptance runs outside compiler-error handling and may reject a layout
 // without discarding remaining cut candidates. Exceptions propagate unchanged.
+// `deadline` bounds the cut/rotation/layout search; expired searches return nullopt.
 std::optional<io::SolutionData> CompileAcceptedFragmentFeed(
-    const io::PuzzleData& puzzle, const std::function<bool(const io::SolutionData&)>& accept);
+    const io::PuzzleData& puzzle, const std::function<bool(const io::SolutionData&)>& accept,
+    std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::time_point::max());
 // Lowers complete bond cuts and outputs, optionally with detached-fragment
 // translation and parking in a horizontal corridor (piston reach at most three).
 // Piston motion can bypass always-active glyphs. Explicit output counts describe

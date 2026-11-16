@@ -13,7 +13,8 @@ PhysicalInventory LowerInventoryIR(
     std::size_t budget, const std::vector<std::size_t>& outputCounts,
     const std::map<std::size_t, std::vector<core::HexCoord>>& releasedProducts,
     const InventoryStepObserver& observe, bool freeSingletonOrientation,
-    const std::map<std::size_t, core::HexFrame>& wheelBindings) {
+    const std::map<std::size_t, core::HexFrame>& wheelBindings,
+    std::chrono::steady_clock::time_point deadline) {
     using IR = ExecutionIR;
     using K = IR::Kind;
     const auto requiredOutputs =
@@ -24,6 +25,9 @@ PhysicalInventory LowerInventoryIR(
         throw IR::Unsupported("inventory lowering requires an initial complete feed");
     std::size_t nextSlot = 0;
     for (const auto& step : program.steps) {
+        if (deadline != std::chrono::steady_clock::time_point::max() &&
+            std::chrono::steady_clock::now() >= deadline)
+            throw IR::BudgetFailure("inventory lowering deadline exceeded");
         if (step.operation.wheelCatalyst) {
             const auto& wheel = *step.operation.wheelCatalyst;
             if (!wheelBindings.contains(wheel.device) ||
@@ -41,6 +45,7 @@ PhysicalInventory LowerInventoryIR(
         IR::Fragment(feed, feed.atoms.begin()->first).size() != feed.atoms.size())
         throw IR::Unsupported("inventory lowering requires a connected initial feed");
     PhysicalInventory inventory(feed, track, start, std::move(motion), maxLength);
+    inventory.SetDeadline(deadline);
     if (!glyph || !glyph(program.steps.front(), inventory.Arm()))
         throw IR::TimingFailure("initial input spawn interval rejected");
     auto temporarySlot = [&]() {
@@ -84,6 +89,9 @@ PhysicalInventory LowerInventoryIR(
     if (observe) observe(0, inventory);
     std::map<IR::AtomId, core::HexCoord> worldOffsets;
     for (std::size_t i = 1; i < program.steps.size(); ++i) {
+        if (deadline != std::chrono::steady_clock::time_point::max() &&
+            std::chrono::steady_clock::now() >= deadline)
+            throw IR::BudgetFailure("inventory lowering deadline exceeded");
         const auto& step = program.steps[i];
         const auto& op = step.operation;
         if (op.kind == K::Acquire) {

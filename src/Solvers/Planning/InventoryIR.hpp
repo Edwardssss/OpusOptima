@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PhysicalInventory.hpp"
+#include <chrono>
 #include <functional>
 #include <map>
 
@@ -31,5 +32,7 @@ using InventoryStepObserver = std::function<void(std::size_t, const PhysicalInve
     const std::vector<std::size_t>& outputCounts = {},
     const std::map<std::size_t, std::vector<core::HexCoord>>& releasedProducts = {},
     const InventoryStepObserver& observe = {}, bool freeSingletonOrientation = false,
-    const std::map<std::size_t, core::HexFrame>& wheelBindings = {});
+    const std::map<std::size_t, core::HexFrame>& wheelBindings = {},
+    std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::time_point::max());
 } // namespace opusoptima::solvers

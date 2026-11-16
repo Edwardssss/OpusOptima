@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include "RigidMotion.hpp"
 
 namespace opusoptima::solvers {
@@ -19,8 +21,10 @@ struct HeldArmMotionProblem {
     RigidPose goal;
     int minLength{1}, maxLength{1};
     bool pivot{true};
-    // Like RouteRigidFragment, a zero budget returns Exhausted.
+    // Like RouteRigidFragment, a zero budget returns Exhausted. The optional
+    // wall-clock deadline stops a certificate-heavy route from running forever.
     std::size_t maxStates{20000};
+    std::chrono::steady_clock::time_point deadline{std::chrono::steady_clock::time_point::max()};
     // Mandatory physical certificate for the ENTIRE instruction interval,
     // including arm bodies, held atoms, other material and rotation sweeps.
     std::function<bool(const HeldArmState&, const HeldArmState&, char)> executable;
@@ -30,6 +34,7 @@ struct EmptyArmMotionProblem {
     HeldArmState start, goal;
     int minLength{1}, maxLength{1};
     std::size_t maxStates{20000};
+    std::chrono::steady_clock::time_point deadline{std::chrono::steady_clock::time_point::max()};
     // Certifies the moving empty arm against parked material and machine parts.
     std::function<bool(const HeldArmState&, const HeldArmState&, char)> executable;
 };

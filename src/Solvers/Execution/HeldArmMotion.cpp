@@ -53,6 +53,11 @@ HeldArmMotionResult SearchArm(const HeldArmMotionProblem& p, bool holding,
     }
     bool exhausted = false;
     for (std::size_t head = 0; head < nodes.size(); ++head) {
+        if (p.deadline != std::chrono::steady_clock::time_point::max() &&
+            std::chrono::steady_clock::now() >= p.deadline) {
+            exhausted = true;
+            break;
+        }
         const auto current = nodes[head].state;
         ++result.explored;
         if (goal(current)) {
@@ -69,6 +74,11 @@ HeldArmMotionResult SearchArm(const HeldArmMotionProblem& p, bool holding,
         auto add = [&](HeldArmState next, char instruction) {
             next.direction = Wrap(next.direction);
             next.fragmentRotation = Wrap(next.fragmentRotation);
+            if (p.deadline != std::chrono::steady_clock::time_point::max() &&
+                std::chrono::steady_clock::now() >= p.deadline) {
+                exhausted = true;
+                return;
+            }
             if (seen.contains(next) || !p.executable(current, next, instruction)) return;
             if (nodes.size() >= p.maxStates) {
                 exhausted = true;
@@ -136,6 +146,7 @@ HeldArmMotionResult RouteEmptyArm(const EmptyArmMotionProblem& p) {
     search.minLength = p.minLength;
     search.maxLength = p.maxLength;
     search.maxStates = p.maxStates;
+    search.deadline = p.deadline;
     search.executable = p.executable;
     return SearchArm(search, false, [&](const HeldArmState& state) {
         return state.trackIndex == p.goal.trackIndex && state.length == p.goal.length &&

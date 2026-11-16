@@ -135,7 +135,9 @@ io::SolutionData Compile(const io::PuzzleData& p, const AssemblyPlan& assembly,
                          const SupplyPlan& supply, int turns, int spacing,
                          std::unordered_set<Coord, core::HexCoordHash>* footprint = nullptr,
                          const JointSupplyPlan* joint = nullptr, bool preserveResidualBonds = false,
-                         const CompactLayout* compact = nullptr, bool sharedWorkstation = false) {
+                         const CompactLayout* compact = nullptr, bool sharedWorkstation = false,
+                         std::chrono::steady_clock::time_point deadline =
+                             std::chrono::steady_clock::time_point::max()) {
     std::vector<core::HexFrame> outputs =
         compact ? compact->outputs : std::vector<core::HexFrame>(p.outputs.size(), {{0, 0}, turns});
     struct Bounds {
@@ -984,6 +986,9 @@ io::SolutionData Compile(const io::PuzzleData& p, const AssemblyPlan& assembly,
     auto inventory = LowerInventoryIR(
         p, program, rail, start,
         [&](const auto& world, const auto& from, const auto& to, char op, bool holding) {
+            if (deadline != std::chrono::steady_clock::time_point::max() &&
+                std::chrono::steady_clock::now() >= deadline)
+                throw IR::BudgetFailure("automatic supply certificate deadline exceeded");
             if (compact) {
                 if (holding && op != 'G' && op != 'g')
                     for (const auto& [a, b] : bonds) {
@@ -1242,7 +1247,7 @@ io::SolutionData Compile(const io::PuzzleData& p, const AssemblyPlan& assembly,
                                             end});
             previousTapeLength = end;
         },
-        compact != nullptr);
+        compact != nullptr, {}, deadline);
     if (inventory.MoveEmpty(start, 3000) != MotionStatus::Found)
         throw IR::Unsupported("automatic rail cannot close period");
     const auto execution = MakeExecutionPlan(p, program);
@@ -1526,7 +1531,8 @@ std::optional<io::SolutionData> CompileCompact(
             std::optional<io::SolutionData> candidate;
             try {
                 candidate =
-                    Compile(materialPuzzle, assembly, supply, 0, 1, nullptr, joint, false, &layout);
+                    Compile(materialPuzzle, assembly, supply, 0, 1, nullptr, joint, false, &layout,
+                            false, layout.deadline);
             } catch (const IR::Error& error) {
                 if (feedback) feedback(error.what());
             }
@@ -1611,7 +1617,8 @@ std::optional<io::SolutionData> CompileSharedWorkstation(const io::PuzzleData& p
         if ((p.permissionBits & required) != required) return std::nullopt;
         const auto assembly = AssemblyPlanner::Plan(p);
         const auto supply = AssemblyPlanner::PlanSupply(p);
-        return Compile(p, assembly, supply, 0, 1, nullptr, nullptr, false, nullptr, true);
+        return Compile(p, assembly, supply, 0, 1, nullptr, nullptr, false, nullptr, true,
+                       std::chrono::steady_clock::now() + std::chrono::seconds(2));
     } catch (const std::invalid_argument& error) {
         GetLoggerOrFallback("solver")->info("Shared workstation rejected: {}", error.what());
         return std::nullopt;
@@ -1622,7 +1629,8 @@ std::optional<io::SolutionData> CompileSharedWorkstation(const io::PuzzleData& p
 }
 std::optional<io::SolutionData> CompileAcceptedSupplyInventory(
     const io::PuzzleData& p, const std::function<bool(const io::SolutionData&)>& accept,
-    const std::function<void(const SupplyFailure&)>& feedback) {
+    const std::function<void(const SupplyFailure&)>& feedback,
+    std::chrono::steady_clock::time_point overallDeadline) {
     std::size_t materialAttempt = 0;
     std::size_t productsPerPeriod = 0;
     auto report = [&](SupplyFailureCategory category, int rotation, int spacing,
@@ -1804,8 +1812,18 @@ std::optional<io::SolutionData> CompileAcceptedSupplyInventory(
                -1, 0, error.what());
         throw;
     }
+    const bool unbounded =
+        overallDeadline == std::chrono::steady_clock::time_point::max();
+    if (std::chrono::steady_clock::now() >= overallDeadline) {
+        report(SupplyFailureCategory::Budget, -1, 0,
+               "automatic supply inventory deadline exceeded");
+        return std::nullopt;
+    }
     if (p.productionInfo) {
-        const auto compactDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
+        const auto compactDeadline =
+            unbounded ? std::chrono::steady_clock::now() + std::chrono::seconds(4)
+                      : std::min(overallDeadline,
+                                 std::chrono::steady_clock::now() + std::chrono::seconds(4));
         auto candidate = CompileCompact(
             p, materialPuzzle, assembly, supply, joint ? &*joint : nullptr, compactDeadline, accept,
             [&](const std::string& detail) {
@@ -1813,12 +1831,19 @@ std::optional<io::SolutionData> CompileAcceptedSupplyInventory(
             });
         if (candidate) return candidate;
     }
-    // Compact placement has its own budget; fallbacks get their full slice afterward.
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    // Compact placement has its own budget; fallbacks share the remaining slice.
+    const auto deadline =
+        unbounded ? std::chrono::steady_clock::now() + std::chrono::seconds(2)
+                  : std::min(overallDeadline,
+                             std::chrono::steady_clock::now() + std::chrono::seconds(2));
     auto tryMaterial = [&](const JointSupplyPlan* material) -> std::optional<io::SolutionData> {
         ++materialAttempt;
         const auto materialDeadline =
-            std::min(deadline, std::chrono::steady_clock::now() + std::chrono::milliseconds(400));
+            std::min(deadline, std::chrono::steady_clock::now() +
+                                   (unbounded ? std::chrono::milliseconds(400)
+                                              : std::chrono::milliseconds(2000)));
+        const auto compileDeadline =
+            unbounded ? std::chrono::steady_clock::time_point::max() : materialDeadline;
         productsPerPeriod = material ? material->productsPerPeriod : supply.productsPerPeriod;
         const auto& usage = material ? material->usage : supply.usage;
         for (const auto input : mechanicalLimits.excludedInputs)
@@ -1870,7 +1895,7 @@ std::optional<io::SolutionData> CompileAcceptedSupplyInventory(
                     try {
                         candidate = Compile(materialPuzzle, assembly, supply, turns, spacing,
                                             p.productionInfo ? &footprint : nullptr, material,
-                                            preserveResidualBonds);
+                                            preserveResidualBonds, nullptr, false, compileDeadline);
                     } catch (const IR::PhysicalFailure& error) {
                         if (feedback)
                             feedback(
@@ -1989,7 +2014,8 @@ std::optional<io::SolutionData> CompileAcceptedSupplyInventory(
 std::optional<io::SolutionData> CompileVerifiedSupplyInventory(
     const io::PuzzleData& p,
     const std::function<io::VerificationReport(const io::SolutionData&)>& verify,
-    const std::function<void(const SupplyFailure&)>& feedback) {
+    const std::function<void(const SupplyFailure&)>& feedback,
+    std::chrono::steady_clock::time_point overallDeadline) {
     std::optional<io::VerificationReport> lastReport;
     auto candidate = CompileAcceptedSupplyInventory(
         p,
@@ -2007,7 +2033,8 @@ std::optional<io::SolutionData> CompileVerifiedSupplyInventory(
                 if (!lastReport->detail.empty()) enriched.detail = lastReport->detail;
             }
             feedback(enriched);
-        });
+        },
+        overallDeadline);
     if (candidate && lastReport) candidate->metrics = lastReport->metrics;
     return candidate;
 }
