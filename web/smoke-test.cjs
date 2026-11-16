@@ -38,11 +38,19 @@ const fs = require('fs');
     if (!describePtr) throw new Error('solution description returned no result');
     const description = JSON.parse(module.UTF8ToString(describePtr));
     module.ccall('opusoptima_free', null, ['number'], [describePtr]);
+    const tracePtr = module.ccall('opusoptima_trace', 'number',
+      ['number', 'number', 'number', 'number'],
+      [puzzlePtr, puzzle.length, solutionCopy, solution.length]);
+    if (!tracePtr) throw new Error('physics trace returned no result');
+    const trace = JSON.parse(module.UTF8ToString(tracePtr));
+    module.ccall('opusoptima_free', null, ['number'], [tracePtr]);
     module._free(solutionCopy);
     if (report.status !== 'passed') throw new Error(`verification failed: ${JSON.stringify(report)}`);
     if (description.error || !description.objects?.length)
       throw new Error(`description failed: ${JSON.stringify(description)}`);
-    console.log(`${puzzlePath}: ${length} bytes, ${JSON.stringify(report)}, ${description.objects.length} objects`);
+    if (trace.error || !trace.frames?.length)
+      throw new Error(`physics trace failed: ${JSON.stringify(trace)}`);
+    console.log(`${puzzlePath}: ${length} bytes, ${JSON.stringify(report)}, ${description.objects.length} objects, ${trace.frames.length} frames`);
   } finally {
     module._free(puzzlePtr);
     module._free(solutionPtrPtr);

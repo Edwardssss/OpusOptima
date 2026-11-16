@@ -319,7 +319,7 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 （静态文件、单线程 Web Worker、无自定义 COOP/COEP 头）；但 Pages 不能运行 native CLI、
 `posix_spawn` 验证器或 `libverify.so`，需要这些时让 Pages 只做前端，求解/验证放到
 自建容器或服务器后端。首个目标已经放在 `wasm/`，静态页面在 `web/`：单线程模块包含上游 Standard、
-二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_make_puzzle`，
+二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_trace` / `opusoptima_make_puzzle`，
 由 `.github/workflows/pages.yml` 发布 `web/dist`。本地构建：
 
 ```sh

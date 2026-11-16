@@ -70,6 +70,7 @@ set(OPUSOPTIMA_OMSIM_SOURCES
     "${OPUSOPTIMA_THIRD}/omsim/sim.c"
     "${OPUSOPTIMA_THIRD}/omsim/steady-state.c"
     "${OPUSOPTIMA_THIRD}/omsim/verifier.c"
+    "${CMAKE_CURRENT_LIST_DIR}/Trace.c"
 )
 add_library(opusoptima_omsim_wasm STATIC ${OPUSOPTIMA_OMSIM_SOURCES})
 target_include_directories(opusoptima_omsim_wasm PUBLIC "${OPUSOPTIMA_THIRD}/omsim")
@@ -89,7 +90,7 @@ target_link_options(opusoptima PRIVATE
     "-sINITIAL_MEMORY=67108864"
     "-sSTACK_SIZE=8388608"
     "-sFILESYSTEM=1"
-    "-sEXPORTED_FUNCTIONS=_malloc,_free,_opusoptima_solve,_opusoptima_verify,_opusoptima_describe,_opusoptima_make_puzzle,_opusoptima_free"
+    "-sEXPORTED_FUNCTIONS=_malloc,_free,_opusoptima_solve,_opusoptima_verify,_opusoptima_describe,_opusoptima_make_puzzle,_opusoptima_trace,_opusoptima_free"
     "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap,UTF8ToString,HEAPU8,HEAPU32,HEAP32"
     "-sASSERTIONS=0"
     "-fexceptions"

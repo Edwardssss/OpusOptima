@@ -29,6 +29,7 @@
   let selectedFile = null;
   let puzzleBytes = null;
   let scene = null;
+  let trace = null;
   let maxCycle = 0;
   let playTimer = null;
 
@@ -38,6 +39,7 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
   const DIRECTIONS = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
+  const TRACE_SYMBOLS = ['S', 'A', 'E', 'F', 'W', 'Q', 'G', 'V', 'C', 'I', 'T', 'L', '+', '-', 'R', 'X'];
 
   const setStatus = (text, kind = '') => {
     status.textContent = text;
@@ -58,6 +60,7 @@
     metrics.hidden = true;
     viewer.hidden = true;
     scene = null;
+    trace = null;
     stopPlayback();
     setStatus(`${file.name} loaded (${puzzleBytes.length} bytes).`);
   };
@@ -176,6 +179,7 @@
         metrics.hidden = true;
         viewer.hidden = true;
         scene = null;
+        trace = null;
         stopPlayback();
         const blob = new Blob([puzzleBytes], { type: 'application/octet-stream' });
         downloadPuzzle.href = URL.createObjectURL(blob);
@@ -191,6 +195,29 @@
       setEditorStatus(error?.message || String(error), 'bad');
     } finally {
       buildButton.disabled = false;
+    }
+  };
+
+  const callTrace = (module, solution) => {
+    const puzzlePtr = module._malloc(puzzleBytes.length);
+    const solutionPtr = module._malloc(solution.length);
+    try {
+      module.HEAPU8.set(puzzleBytes, puzzlePtr);
+      module.HEAPU8.set(solution, solutionPtr);
+      const jsonPtr = module.ccall(
+        'opusoptima_trace', 'number',
+        ['number', 'number', 'number', 'number'],
+        [puzzlePtr, puzzleBytes.length, solutionPtr, solution.length]);
+      if (!jsonPtr) return null;
+      const json = module.UTF8ToString(jsonPtr);
+      module.ccall('opusoptima_free', null, ['number'], [jsonPtr]);
+      const parsed = JSON.parse(json);
+      return parsed.error ? null : parsed;
+    } catch (_) {
+      return null;
+    } finally {
+      module._free(puzzlePtr);
+      module._free(solutionPtr);
     }
   };
 
@@ -289,6 +316,7 @@
 
   const drawScene = (time) => {
     if (!scene) return;
+    const frame = trace?.frames?.[Math.max(0, Math.min(time, trace.frames.length - 1))] || null;
     const points = [];
     const collect = (q, r) => points.push(pixel(q, r));
     for (const molecule of [...scene.puzzle.inputs, ...scene.puzzle.outputs]) {
@@ -299,6 +327,12 @@
         for (const [q, r] of trackCells(object)) collect(q, r);
       } else {
         collect(object.q, object.r);
+      }
+    }
+    if (trace?.frames) {
+      for (const frame of trace.frames) {
+        for (const a of frame.atoms) collect(a.q, a.r);
+        for (const arm of frame.arms) { collect(arm.q, arm.r); collect(arm.q + arm.du, arm.r + arm.dv); }
       }
     }
     if (!points.length) return;
@@ -333,8 +367,18 @@
       parts.push(`<circle cx="${p.x}" cy="${p.y}" r="${UNIT * 0.52}" fill="${atomColor(symbol)}" stroke="${outline}" stroke-width="1.5"/>`);
       if (symbol) parts.push(`<text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-family="monospace" fill="#111827">${symbol}</text>`);
     };
-    for (const molecule of scene.puzzle.inputs) for (const a of molecule.atoms) atom(a.q, a.r, a.symbol, '#75d69c');
-    for (const molecule of scene.puzzle.outputs) for (const a of molecule.atoms) atom(a.q, a.r, a.symbol, '#8cb8ff');
+    if (frame) {
+      for (const a of frame.atoms) atom(a.q, a.r, TRACE_SYMBOLS[a.type - 1] || '?', '#75d69c');
+      for (const arm of frame.arms) {
+        const base = pixel(arm.q, arm.r);
+        const tip = pixel(arm.q + arm.du, arm.r + arm.dv);
+        parts.push(`<line x1="${base.x}" y1="${base.y}" x2="${tip.x}" y2="${tip.y}" stroke="#c4cedd" stroke-width="4" stroke-linecap="round"/>`);
+        parts.push(`<circle cx="${base.x}" cy="${base.y}" r="${UNIT * 0.62}" fill="#171d28" stroke="#c4cedd" stroke-width="2"/>`);
+      }
+    } else {
+      for (const molecule of scene.puzzle.inputs) for (const a of molecule.atoms) atom(a.q, a.r, a.symbol, '#75d69c');
+      for (const molecule of scene.puzzle.outputs) for (const a of molecule.atoms) atom(a.q, a.r, a.symbol, '#8cb8ff');
+    }
     for (const object of scene.objects) {
       if (object.type === 'track') continue;
       const p = pixel(object.q, object.r);
@@ -408,7 +452,10 @@
       for (const key of Object.keys(metricNodes)) metricNodes[key].textContent = report[key] ?? '—';
       metrics.hidden = false;
       scene = callDescribe(module, solution);
-      maxCycle = Math.max(0, ...scene.objects.flatMap((object) => (object.tape || []).map(([, at]) => at)));
+      trace = callTrace(module, solution);
+      maxCycle = trace?.frames?.length
+        ? trace.frames.length - 1
+        : Math.max(0, ...scene.objects.flatMap((object) => (object.tape || []).map(([, at]) => at)));
       viewer.hidden = false;
       scrub.max = String(maxCycle);
       stopPlayback();
