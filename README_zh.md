@@ -333,10 +333,10 @@ cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 首次使用请在 **Settings → Pages → Build and deployment → Source** 选择
 **GitHub Actions**，然后推送到 `main` 或手动运行
 `Deploy browser solver to GitHub Pages` workflow。页面使用进程内 omsim 检查，
-而不是 native 隔离的 `legacy-gate` 发布事务，并显示机器布局与逐臂 tape 时间线
-回放；这是静态布局/时间线，不是碰撞模拟。简单的双分子编辑器通过
-`opusoptima_make_puzzle` 生成基础 `.puzzle` 并可直接送入求解器；完整棋盘/生产
-编辑器和带 native 权威的后端仍属后续工作。
+而不是 native 隔离的 `legacy-gate` 发布事务，并显示机器布局，回放 omsim 的
+逐周期物理轨迹（原子、键、机械臂和碰撞驱动的运动）及逐臂 tape 时间线。
+双分子编辑器通过 `opusoptima_make_puzzle` 支持原子和键，并可直接送入求解器；
+完整棋盘/生产编辑器和带 native 权威的后端仍属后续工作。
 
 ## 开发约定
 

@@ -454,8 +454,11 @@ cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 Enable **Settings → Pages → Build and deployment → Source: GitHub Actions** once;
 then push to `main` or run the `Deploy browser solver to GitHub Pages` workflow
 manually. The page verifies candidates with the in-process omsim check, not the
-native isolated `legacy-gate` transaction. A puzzle editor/solution renderer and
-a server-backed native authority remain future work.
+native isolated `legacy-gate` transaction, then renders the machine and replays
+omsim's per-cycle physics trace (atoms, bonds, arms and collision-driven
+movement) beside the tape timeline. A two-molecule editor supports atoms and
+bonds through `opusoptima_make_puzzle`. A full board/production editor and a
+server-backed native authority remain future work.
 
 ## Development
 

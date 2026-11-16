@@ -57,8 +57,9 @@ static bool add_frame(struct Buffer *buffer, struct solution *solution, struct b
         const int type = atom_type(value);
         if (!type) continue;
         const struct vector p = board->grid.atoms_at_positions[i].position;
-        if (!append(buffer, "%s{\"q\":%d,\"r\":%d,\"type\":%d}", first ? "" : ",", p.u, p.v,
-                    type))
+        const unsigned bonds = (unsigned)((value & NORMAL_BONDS) >> NORMAL_BOND);
+        if (!append(buffer, "%s{\"q\":%d,\"r\":%d,\"type\":%d,\"b\":%u}",
+                    first ? "" : ",", p.u, p.v, type, bonds))
             return false;
         first = false;
     }

@@ -392,7 +392,15 @@
       if (symbol) parts.push(`<text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-family="monospace" fill="#111827">${symbol}</text>`);
     };
     if (frame) {
-      for (const a of frame.atoms) atom(a.q, a.r, TRACE_SYMBOLS[a.type - 1] || '?', '#75d69c');
+      const traceBond = (a, d) => {
+        const p = pixel(a.q + DIRECTIONS[d][0], a.r + DIRECTIONS[d][1]);
+        const q = pixel(a.q, a.r);
+        parts.push(`<line x1="${q.x}" y1="${q.y}" x2="${p.x}" y2="${p.y}" stroke="#526078" stroke-width="2.5"/>`);
+      };
+      for (const a of frame.atoms) {
+        for (let d = 0; d < 6; ++d) if ((a.b || 0) & (1 << d)) traceBond(a, d);
+        atom(a.q, a.r, TRACE_SYMBOLS[a.type - 1] || '?', '#75d69c');
+      }
       for (const arm of frame.arms) {
         const base = pixel(arm.q, arm.r);
         const tip = pixel(arm.q + arm.du, arm.r + arm.dv);
