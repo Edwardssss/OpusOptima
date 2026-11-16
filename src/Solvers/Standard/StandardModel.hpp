@@ -264,6 +264,13 @@ class Molecule {
     [[nodiscard]] const Atom* GetAdjacentAtom(Vec2 position, Rot direction) const {
         return GetAtom(OffsetInDirection(position, direction, 1));
     }
+    /// Whether two atoms are next to each other on the hex grid, ignoring bonds.
+    [[nodiscard]] static bool AreAtomsAdjacent(const Atom& first, const Atom& second) {
+        const Vec2 offset = second.position - first.position;
+        return (offset.x == 0 && std::abs(offset.y) == 1) ||
+               (offset.y == 0 && std::abs(offset.x) == 1) ||
+               (offset.x == -offset.y && std::abs(offset.x) == 1);
+    }
     [[nodiscard]] std::vector<const Atom*> GetRow(int row) const {
         std::vector<const Atom*> out;
         for (int x = 0; x < width_; ++x)

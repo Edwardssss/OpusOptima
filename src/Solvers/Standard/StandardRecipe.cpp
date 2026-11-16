@@ -293,13 +293,29 @@ std::optional<Recipe> RecipeBuilder::SolveLp(
     return recipe;
 }
 
-std::vector<Recipe> RecipeBuilder::GenerateRecipes(bool generateMultiple) {
-    (void)generateMultiple;
-    const auto used = UsedElements(reactions_, productReactions_);
+std::vector<Recipe> RecipeBuilder::GenerateRecipes(
+    bool generateMultiple, const std::vector<int>& reagentIds) {
+    const std::vector<Reaction>* reactions = &reactions_;
+    std::vector<Reaction> filtered;
+    if (!reagentIds.empty()) {
+        for (const Reaction& reaction : reactions_) {
+            if (reaction.type == ReactionType::Reagent &&
+                std::find(reagentIds.begin(), reagentIds.end(), reaction.id) ==
+                    reagentIds.end())
+                continue;
+            filtered.push_back(reaction);
+        }
+        reactions = &filtered;
+    }
+    const auto used = UsedElements(*reactions, productReactions_);
+    std::vector<Recipe> recipes;
 
+    // Upstream `FindFeasibleRecipes`: every feasible product scale is a distinct
+    // recipe. Scale 1 is tried first, so the single-recipe path is unchanged.
     for (int scale = 1; scale <= 6; ++scale) {
-        if (auto recipe = SolveLp(reactions_, productReactions_, used, scale, {})) {
-            return {std::move(*recipe)};
+        if (auto recipe = SolveLp(*reactions, productReactions_, used, scale, {})) {
+            if (!generateMultiple) return {std::move(*recipe)};
+            recipes.push_back(std::move(*recipe));
         }
     }
 
@@ -308,16 +324,20 @@ std::vector<Recipe> RecipeBuilder::GenerateRecipes(bool generateMultiple) {
         if (std::find(used.begin(), used.end(), element) != used.end())
             cardinals.push_back(element);
     if (!cardinals.empty()) {
-        if (auto recipe =
-                SolveLp(reactions_, productReactions_, used, 1, cardinals)) {
-            return {std::move(*recipe)};
+        if (auto recipe = SolveLp(*reactions, productReactions_, used, 1, cardinals)) {
+            if (!generateMultiple) return {std::move(*recipe)};
+            recipes.push_back(std::move(*recipe));
         }
     }
 
-    if (auto recipe = SolveLp(reactions_, productReactions_, used, 1, used)) {
-        return {std::move(*recipe)};
+    if (auto recipe = SolveLp(*reactions, productReactions_, used, 1, used)) {
+        if (!generateMultiple) return {std::move(*recipe)};
+        recipes.push_back(std::move(*recipe));
     }
-    throw std::invalid_argument("could not solve the recipe linear program");
+
+    if (recipes.empty())
+        throw std::invalid_argument("could not solve the recipe linear program");
+    return recipes;
 }
 
 // ── RecipeGenerator ─────────────────────────────────────────────────────────
@@ -330,6 +350,18 @@ std::vector<Recipe> RecipeGenerator::GenerateRecipes(bool generateMultiple) {
     AnalyzeCardinalsAgain();
     AnalyzeMetals();
     return recipeBuilder_.GenerateRecipes(generateMultiple);
+}
+
+std::vector<Recipe> RecipeGenerator::GenerateRecipesForReagents(
+    bool generateMultiple, const std::vector<int>& reagentIds) {
+    AnalyzeProductsAndReagents();
+    AnalyzeQuintessence();
+    AnalyzeMorsVitae();
+    AnalyzeCardinals();
+    AnalyzeSalt();
+    AnalyzeCardinalsAgain();
+    AnalyzeMetals();
+    return recipeBuilder_.GenerateRecipes(generateMultiple, reagentIds);
 }
 
 void RecipeGenerator::AnalyzeProductsAndReagents() {
@@ -380,6 +412,12 @@ void RecipeGenerator::AnalyzeCardinals() {
             return;
         }
     }
+
+    // Upstream `RecipeOptions.IncludeUneededReactions`: an extra wheel can give
+    // the LP a cheaper reagent mix even when no cardinal is strictly missing.
+    if (includeUnneededReactions_ && puzzle_.AllowsArm(ArmType::VanBerlo) &&
+        puzzle_.AllowsGlyph(GlyphType::Duplication))
+        recipeBuilder_.AddReaction(ReactionType::VanBerlo);
 }
 
 void RecipeGenerator::AnalyzeSalt() {
@@ -389,7 +427,11 @@ void RecipeGenerator::AnalyzeSalt() {
         generatedElements_.insert(Element::Salt);
         needAnyCardinal_ = true;
         recipeBuilder_.AddReaction(ReactionType::Calcification);
+        return;
     }
+
+    if (includeUnneededReactions_ && puzzle_.AllowsGlyph(GlyphType::Calcification))
+        recipeBuilder_.AddReaction(ReactionType::Calcification);
 }
 
 void RecipeGenerator::AnalyzeCardinalsAgain() {

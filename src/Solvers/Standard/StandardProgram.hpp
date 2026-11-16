@@ -94,6 +94,14 @@ class ProgramWriter {
     }
     void AdjustTime(int delta) { fragments_[current_].AdjustTime(delta); }
 
+    /// Merges another writer's fragment into the current fragment at the current
+    /// time, matching upstream `ProgramWriter.AppendFragment`.
+    void AppendFragment(const Program& fragment, bool updateTime = true) {
+        for (const auto& [arm, instructions] : fragment.instructions)
+            fragments_[current_].AddInstructions({arm}, instructions, false);
+        if (updateTime) fragments_[current_].AdjustTime(fragment.currentTime);
+    }
+
     private:
     std::vector<Program> fragments_;
     std::size_t current_{};

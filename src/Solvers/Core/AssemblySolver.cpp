@@ -673,7 +673,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     bool nativeAdmission = false;
     bool staticEmbeddingAttempted = false;
     std::size_t constructionAttempts = 0;
-    auto verifyAt = [&](const char* stage, const io::SolutionData& candidate) {
+    auto verifyAtImpl = [&](const char* stage, const io::SolutionData& candidate,
+                            bool countAcceptance) {
         auto requireNative = [&](io::VerificationReport report) {
             return io::RequireCalcifyAnimismusAuthority(stage, std::move(report));
         };
@@ -691,7 +692,8 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
                 return requireNative(prior.second);
             }
         }
-        if (submissions >= MaxCandidateSubmissions || acceptedCount >= acceptedCap ||
+        if (submissions >= MaxCandidateSubmissions ||
+            (countAcceptance && acceptedCount >= acceptedCap) ||
             std::chrono::steady_clock::now() >= Deadline())
             throw CollectionStopped{};
         ++submissions;
@@ -707,12 +709,15 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
             nativeAdmission = report.authority == io::VerificationAuthority::LegacyGate;
             firstAcceptedStage = stage;
         }
-        acceptedCount += report.Passed();
+        if (countAcceptance) acceptedCount += report.Passed();
         GetLoggerOrFallback("solver")->info(
             "Assembly branch={} event=gate accepted={} submission={} cycles={} detail={}", stage,
             report.Passed(), submissions, report.metrics.cycles, report.detail);
         seen.emplace_back(std::move(bytes), report);
         return report;
+    };
+    auto verifyAt = [&](const char* stage, const io::SolutionData& candidate) {
+        return verifyAtImpl(stage, candidate, true);
     };
     std::vector<std::string> rejections;
     auto planningFailure = [&](const char* stage, const std::string& detail) {
@@ -1970,18 +1975,64 @@ io::SolutionData AssemblySolver::SolveCandidates(const io::PuzzleData& puzzle,
     // `EnableExtraPortfolio` (the CLI enables it), keeping the library API and its
     // first-result/submission contracts unchanged.
     if (extraPortfolio) {
+        std::optional<io::SolutionData> defaultUpstream;
         if (auto result = attempt("upstream-standard", [&]() -> io::SolutionData {
                 auto solution = standard::CompileUpstreamStandard(puzzle);
                 if (!solution) throw std::invalid_argument("upstream standard unsupported");
                 return std::move(*solution);
             })) {
-            // The candidate is already verified and archived by `attempt`; record it
-            // as the first result and run the once-only structural portfolio and
-            // second opinions while the budget is fresh. `keep` returns false for the
-            // upstream first stage, so the fixed-family chain still runs afterwards.
-            if (!firstAccepted) firstAccepted = std::move(*result);
-            (void)keep(*firstAccepted);
+            defaultUpstream = std::move(*result);
+            if (!firstAccepted) firstAccepted = *defaultUpstream;
         }
+        // Upstream `--optimize` enumerates recipe scales, the Standard build-order
+        // parameter, and the relaxed/unneeded-reaction recipes. This port also
+        // enumerates reagent subsets: the first LP optimum often spends an extra
+        // input where a smaller feasible subset gives a cheaper machine
+        // (f5922439 480/585/161 -> 305/608/117, exactly the oracle).
+        // The variants are bonus archive entries: they consume the independent
+        // submission budget but *not* accepted slots, so the structural portfolio
+        // and the fixed-family chain keep the same acceptance capacity. Measured
+        // wins include deecf24d 596->412 cycles, 803e8d4a 1600->1502 cycles /
+        // 355->352 area, 2637c0fe 1085/824/222 -> 970/817/171, 5911f6b1
+        // 1145/1235/237 -> 1085/1183/225 and e42f1f11 1205/858/236 ->
+        // 1030/801/201.
+        if (verify) {
+            const char* optimizeFlag = std::getenv("OPUSOPTIMA_STANDARD_OPTIMIZE");
+            const bool optimize =
+                !optimizeFlag || std::string_view(optimizeFlag) != "off";
+            if (optimize) {
+                // Multi-product puzzles compile the first three scales in both
+                // build orders plus the first two reagent-subset recipes;
+                // single-product puzzles compile the fixed set that measured best
+                // on the 114 single-output corpus puzzles (default, recipes 1/2,
+                // the relaxed/unneeded recipe 7) plus the first two subsets.
+                const bool multiOutput = puzzle.outputs.size() > 1;
+                const auto variants = standard::CompileUpstreamStandardVariants(
+                    puzzle, Deadline(), multiOutput ? 8 : 6);
+                const std::size_t firstVariant = defaultUpstream ? 1 : 0;
+                for (std::size_t i = firstVariant; i < variants.size(); ++i) {
+                    if (submissions >= MaxCandidateSubmissions ||
+                        std::chrono::steady_clock::now() >= Deadline())
+                        break;
+                    try {
+                        const auto report =
+                            verifyAtImpl("upstream-standard", variants[i], false);
+                        if (report.Passed() && !firstAccepted) {
+                            firstAccepted = variants[i];
+                            firstAccepted->metrics = report.metrics;
+                        }
+                    } catch (const CollectionStopped&) {
+                        break;
+                    } catch (const CallbackFailed&) {
+                        throw;
+                    }
+                }
+            }
+        }
+        // Run the once-only structural portfolio and second opinions after the
+        // variants are archived; `keep` returns false for the upstream stage, so
+        // the fixed-family chain still runs afterwards.
+        if (firstAccepted) (void)keep(*firstAccepted);
     }
     if (auto result = attempt("intact-feed", [&] { return CompileIntactFeed(puzzle); }))
         if (keep(*result)) return publish();

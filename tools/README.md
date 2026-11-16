@@ -48,3 +48,9 @@ solution readers, and wrappers for `build/OpusOptima` and `build/OpusOptimaTests
 * **Objective slots are independent.** `cost`, `cycles` and `area` are compared
   one by one against the OpusSolver oracle (`oracle.json`), and a machine only
   replaces a slot when it is strictly better.
+* **Upstream Standard variants are bonus entries.** The CLI enumerates recipe
+  scales, build orders and reagent subsets (`OPUSOPTIMA_STANDARD_OPTIMIZE=off`
+  disables it; `OPUSOPTIMA_STANDARD_SUBSET=off` keeps the upstream recipes but
+  skips subsets). They consume the independent submission budget but not the
+  caller's accepted slots. `OPUSOPTIMA_STANDARD_HEX3=off` and
+  `OPUSOPTIMA_STANDARD_SPECIAL_DISASSEMBLERS=off` isolate the two shape ports.

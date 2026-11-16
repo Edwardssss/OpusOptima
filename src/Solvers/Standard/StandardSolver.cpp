@@ -5,17 +5,24 @@
 
 
 #include <algorithm>
+#include <cctype>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <typeinfo>
 #include <vector>
 
 #include "BaseSolver.hpp"
+#include "BinaryWriter.hpp"
 #include "StandardModules.hpp"
 #include "StandardPipeline.hpp"
 #include "StandardProgram.hpp"
@@ -228,7 +235,7 @@ class CostOptimizer {
 
 namespace {
 
-std::optional<io::SolutionData> CompileWithRecipe(const Puzzle& model, Recipe& recipe,
+std::optional<io::SolutionData> CompileWithRecipe(Puzzle& model, Recipe& recipe,
                                                  bool reverseProductBuildOrder, bool diag) {
     auto trace = [&](const char* fmt, auto... args) {
         if (diag) std::fprintf(stderr, fmt, args...);
@@ -239,17 +246,27 @@ std::optional<io::SolutionData> CompileWithRecipe(const Puzzle& model, Recipe& r
             requiredReagents.push_back(&reagent);
 
     std::map<int, MoleculeElementInfo> reagentInfo;
-    for (const Molecule& reagent : model.reagents) {
+    for (Molecule& reagent : model.reagents) {
+        // Upstream `MoleculeDisassemblerFactory` rotates a bent/triangle reagent
+        // into the orientation its specialized disassembler expects before the
+        // element order is recorded.
+        PrepareReagentMolecule(reagent);
         MoleculeElementInfo info;
-        for (const Atom& atom : reagent.GetAtomsInInputOrder())
-            info.elementOrder.push_back(atom.element);
+        info.elementOrder = ReagentElementOrder(reagent);
         reagentInfo[reagent.Id()] = std::move(info);
     }
     std::map<int, MoleculeElementInfo> productInfo;
+    std::vector<const Molecule*> productPointers;
+    for (const Molecule& product : model.products) productPointers.push_back(&product);
+    const bool useHex3 = UseHex3Assembler(productPointers);
     for (const Molecule& product : model.products) {
         MoleculeElementInfo info;
-        for (const Atom& atom : product.GetAtomsInInputOrder())
-            info.elementOrder.push_back(atom.element);
+        if (useHex3) {
+            info.elementOrder = ProductBuildOrder(product);
+        } else {
+            for (const Atom& atom : product.GetAtomsInInputOrder())
+                info.elementOrder.push_back(atom.element);
+        }
         productInfo[product.Id()] = std::move(info);
     }
 
@@ -305,9 +322,187 @@ std::optional<io::SolutionData> CompileWithRecipe(const Puzzle& model, Recipe& r
 
 } // namespace
 
+namespace {
+
+[[nodiscard]] std::string SanitizePuzzleName(const std::string& name) {
+    std::string out;
+    out.reserve(name.size());
+    for (char c : name) {
+        const auto uc = static_cast<unsigned char>(c);
+        out.push_back(std::isalnum(uc) || c == '-' || c == '_' ? c : '_');
+    }
+    if (out.empty()) out = "puzzle";
+    return out;
+}
+
+struct RecipeSet {
+    std::vector<Recipe> recipes;
+    std::size_t subsetBegin{};
+};
+
+[[nodiscard]] bool NextCombination(std::vector<std::size_t>& positions,
+                                   std::size_t count) {
+    const std::size_t size = positions.size();
+    for (std::size_t i = size; i-- > 0;) {
+        if (positions[i] < count - size + i) {
+            ++positions[i];
+            for (std::size_t j = i + 1; j < size; ++j)
+                positions[j] = positions[j - 1] + 1;
+            return true;
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] RecipeSet GenerateAllRecipes(const Puzzle& model) {
+    RecipeSet set;
+    auto recipes = RecipeGenerator(model, false).GenerateRecipes(true);
+    auto extra = RecipeGenerator(model, true).GenerateRecipes(true);
+    recipes.insert(recipes.end(), std::make_move_iterator(extra.begin()),
+                   std::make_move_iterator(extra.end()));
+    set.recipes = std::move(recipes);
+    set.subsetBegin = set.recipes.size();
+
+    const char* subsetFlag = std::getenv("OPUSOPTIMA_STANDARD_SUBSET");
+    const bool enumerateSubsets =
+        subsetFlag == nullptr || std::string_view(subsetFlag) != "off";
+    if (!enumerateSubsets || model.reagents.size() <= 1) return set;
+
+    std::vector<int> ids;
+    for (const Molecule& reagent : model.reagents) ids.push_back(reagent.Id());
+    std::size_t added = 0;
+    const std::size_t maxSubsetSize = std::min<std::size_t>(3, ids.size() - 1);
+    for (std::size_t size = 1; size <= maxSubsetSize && added < 8; ++size) {
+        std::vector<std::size_t> positions(size);
+        for (std::size_t i = 0; i < size; ++i) positions[i] = i;
+        while (added < 8) {
+            std::vector<int> subset;
+            for (std::size_t position : positions) subset.push_back(ids[position]);
+            try {
+                auto subsetRecipes =
+                    RecipeGenerator(model, true).GenerateRecipesForReagents(true, subset);
+                if (!subsetRecipes.empty()) {
+                    set.recipes.push_back(std::move(subsetRecipes.front()));
+                    ++added;
+                }
+            } catch (const std::exception&) {
+                // The subset cannot satisfy the product balance.
+            }
+            if (!NextCombination(positions, ids.size())) break;
+        }
+    }
+    return set;
+}
+
+} // namespace
+
+std::vector<io::SolutionData> CompileUpstreamStandardVariants(
+    const io::PuzzleData& puzzle,
+    std::optional<std::chrono::steady_clock::time_point> deadline,
+    std::size_t maxVariants, const std::vector<std::size_t>& recipeIndices) {
+    const bool diag = std::getenv("OPUSOPTIMA_STANDARD_DIAG") != nullptr;
+    std::vector<io::SolutionData> variants;
+    try {
+        Puzzle model = BuildPuzzle(puzzle);
+        const auto recipeSet = GenerateAllRecipes(model);
+        const auto& recipes = recipeSet.recipes;
+
+        // `Standard.SolutionBuilder.GetAvailableParameters`: the only Standard
+        // parameter is the product build order, and only for multi-product puzzles.
+        std::vector<bool> buildOrders{false};
+        if (model.products.size() > 1) buildOrders.push_back(true);
+
+        std::vector<std::size_t> selected;
+        if (recipeIndices.empty()) {
+            selected.push_back(0);
+            const bool multi = model.products.size() > 1;
+            if (multi) {
+                if (recipes.size() > 1) selected.push_back(1);
+                if (recipes.size() > 2) selected.push_back(2);
+            } else {
+                for (std::size_t index : {std::size_t{1}, std::size_t{2}, std::size_t{7}})
+                    if (index < recipeSet.subsetBegin && index < recipes.size())
+                        selected.push_back(index);
+            }
+            std::size_t subsets = 0;
+            for (std::size_t index = recipeSet.subsetBegin;
+                 index < recipes.size() && subsets < 2; ++index, ++subsets)
+                selected.push_back(index);
+        } else {
+            selected = recipeIndices;
+        }
+
+        const char* dumpDir = std::getenv("OPUSOPTIMA_STANDARD_VARIANT_DIR");
+        std::set<std::string> seen;
+        std::size_t variantIndex = 0;
+        for (std::size_t recipeIndex : selected) {
+            if (recipeIndex >= recipes.size()) continue;
+            for (bool reverse : buildOrders) {
+                if (deadline && std::chrono::steady_clock::now() >= *deadline) return variants;
+                // Each compile records reaction usage, so every attempt needs a
+                // pristine copy of the recipe (upstream uses `recipe.Copy()`).
+                Recipe recipe = recipes[recipeIndex];
+                if (diag) {
+                    std::fprintf(stderr, "SDIAG recipe=%zu reverse=%d reactions:",
+                                 recipeIndex, reverse ? 1 : 0);
+                    for (int type = 0; type <= 8; ++type) {
+                        for (const ReactionUsage* usage :
+                             recipe.GetAvailableReactions(static_cast<ReactionType>(type))) {
+                            std::fprintf(stderr, " t%d/id%d/x%d", type, usage->Get().id,
+                                         usage->MaxUsages());
+                        }
+                    }
+                    std::fprintf(stderr, "\n");
+                }
+                try {
+                    auto solution = CompileWithRecipe(model, recipe, reverse, diag);
+                    if (!solution) continue;
+                    auto canonical = *solution;
+                    canonical.solutionName.clear();
+                    canonical.metrics = {};
+                    const auto bytes = io::BinaryWriter::WriteSolution(canonical);
+                    const std::string key(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+                    if (!seen.insert(key).second) continue;
+
+                    if (dumpDir != nullptr && *dumpDir != '\0') {
+                        std::error_code error;
+                        std::filesystem::create_directories(dumpDir, error);
+                        const auto base = std::filesystem::path(dumpDir) /
+                                          (SanitizePuzzleName(model.name) + "__v" +
+                                           std::to_string(variantIndex));
+                        io::BinaryWriter::WriteSolutionFile(base.string() + ".solution", *solution);
+                        std::ofstream meta(base.string() + ".meta");
+                        meta << "puzzle=" << model.name << "\n"
+                             << "variant=" << variantIndex << "\n"
+                             << "recipe=" << recipeIndex << "\n"
+                             << "reverse=" << (reverse ? 1 : 0) << "\n";
+                    }
+                    variants.push_back(std::move(*solution));
+                    ++variantIndex;
+                    if (maxVariants != 0 && variants.size() >= maxVariants) return variants;
+                } catch (const std::exception& error) {
+                    if (diag)
+                        std::fprintf(stderr, "SDIAG variant recipe=%zu reverse=%d: %s\n",
+                                     recipeIndex, reverse ? 1 : 0, error.what());
+                }
+            }
+        }
+    } catch (const std::exception& error) {
+        if (diag) std::fprintf(stderr, "SDIAG variants exception: %s\n", error.what());
+    }
+    return variants;
+}
+
 std::optional<io::SolutionData> CompileUpstreamStandard(const io::PuzzleData& puzzle) {
     const bool diag = std::getenv("OPUSOPTIMA_STANDARD_DIAG") != nullptr;
     try {
+        // The dump path is a measurement hook for the `--optimize` enumeration;
+        // the normal CLI still compiles one candidate.
+        if (std::getenv("OPUSOPTIMA_STANDARD_VARIANT_DIR") != nullptr) {
+            auto variants = CompileUpstreamStandardVariants(puzzle);
+            if (variants.empty()) return std::nullopt;
+            return std::move(variants.front());
+        }
         Puzzle model = BuildPuzzle(puzzle);
         RecipeGenerator generator(model);
         const auto recipes = generator.GenerateRecipes(false);

@@ -5,7 +5,9 @@
 
 
 #include <algorithm>
+#include <cstdlib>
 #include <stdexcept>
+#include <string_view>
 
 namespace opusoptima::solvers::standard {
 
@@ -93,6 +95,168 @@ void LinearDisassemblerModule::GenerateNextAtom() {
     if (x == width - 1) writer.Write(grabArm_, Instr::Reset, false);
     writer.WriteGrabResetAction(outputArm_, Instr::RotateCCW);
     step_ = (x + 1 >= width) ? 0 : x + 1;
+}
+
+namespace {
+
+[[nodiscard]] bool SpecialDisassemblersEnabled() {
+    const char* flag = std::getenv("OPUSOPTIMA_STANDARD_SPECIAL_DISASSEMBLERS");
+    return flag == nullptr || std::string_view(flag) != "off";
+}
+
+[[nodiscard]] bool Bent3Compatible(const Molecule& molecule) {
+    return molecule.Atoms().size() == 3 && molecule.Size() == 3;
+}
+
+[[nodiscard]] bool Bent3Oriented(const Molecule& molecule) {
+    return molecule.GetAtom({0, 1}) != nullptr && molecule.GetAtom({1, 1}) != nullptr &&
+           molecule.GetAtom({2, 0}) != nullptr;
+}
+
+void PrepareBent3(Molecule& molecule) {
+    for (int turn = 0; turn < 6; ++turn) {
+        if (Bent3Oriented(molecule)) return;
+        molecule.Rotate60CW();
+    }
+    throw std::invalid_argument("unexpected bent three-atom molecule orientation");
+}
+
+[[nodiscard]] bool Triangle3Compatible(const Molecule& molecule) {
+    return molecule.Atoms().size() == 3 && molecule.Size() == 2;
+}
+
+[[nodiscard]] bool Triangle3Oriented(const Molecule& molecule) {
+    const Atom* first = molecule.GetAtom({0, 0});
+    if (first == nullptr || first->bonds[R60.value] == BondType::None) return false;
+    const Atom* second = molecule.GetAtom({1, 0});
+    return second != nullptr && second->bonds[R120.value] != BondType::None;
+}
+
+void PrepareTriangle3(Molecule& molecule) {
+    for (int turn = 0; turn < 6; ++turn) {
+        if (Triangle3Oriented(molecule)) return;
+        molecule.Rotate60CW();
+    }
+    throw std::invalid_argument("unexpected triangle three-atom molecule orientation");
+}
+
+[[nodiscard]] bool Triangle3AllBonds(const Molecule& molecule) {
+    const Atom* first = molecule.GetAtom({0, 0});
+    return first != nullptr && first->bonds[R0.value] != BondType::None;
+}
+
+} // namespace
+
+void PrepareReagentMolecule(Molecule& molecule) {
+    if (!SpecialDisassemblersEnabled() || molecule.Height() == 1) return;
+    if (Bent3Compatible(molecule)) {
+        PrepareBent3(molecule);
+    } else if (Triangle3Compatible(molecule)) {
+        PrepareTriangle3(molecule);
+    }
+}
+
+std::vector<Element> ReagentElementOrder(const Molecule& molecule) {
+    if (SpecialDisassemblersEnabled() && molecule.Height() != 1 && Bent3Compatible(molecule) &&
+        Bent3Oriented(molecule)) {
+        return {molecule.GetAtom({2, 0})->element, molecule.GetAtom({0, 1})->element,
+                molecule.GetAtom({1, 1})->element};
+    }
+    if (SpecialDisassemblersEnabled() && molecule.Height() != 1 &&
+        Triangle3Compatible(molecule) && Triangle3Oriented(molecule)) {
+        std::vector<Element> order{molecule.GetAtom({0, 0})->element};
+        if (Triangle3AllBonds(molecule)) {
+            order.push_back(molecule.GetAtom({0, 1})->element);
+            order.push_back(molecule.GetAtom({1, 0})->element);
+        } else {
+            order.push_back(molecule.GetAtom({1, 0})->element);
+            order.push_back(molecule.GetAtom({0, 1})->element);
+        }
+        return order;
+    }
+    std::vector<Element> order;
+    for (const Atom& atom : molecule.GetAtomsInInputOrder()) order.push_back(atom.element);
+    return order;
+}
+
+Bent3DisassemblerModule::Bent3DisassemblerModule(GameObject* parent, ProgramWriter& writer,
+                                                 Vec2 position, const Molecule& molecule)
+    : MoleculeDisassembler(parent, writer, position, molecule) {
+    const Vec2 reagentPosition{-6, -1};
+    Make<Reagent>(this, reagentPosition, R0, &molecule);
+    grabArm_ = Make<Arm>(this, reagentPosition + Vec2{1, 2}, R240, ArmType::Arm1);
+    middleArm_ = Make<Arm>(this, reagentPosition + Vec2{2, 2}, R240, ArmType::Arm1);
+    outputArm_ = Make<Arm>(this, Vec2{-3, 3}, R240, ArmType::Arm1, 3);
+    Make<Glyph>(this, Vec2{-4, 0}, R0, GlyphType::Unbonding);
+}
+
+void Bent3DisassemblerModule::GenerateNextAtom() {
+    writer.NewFragment();
+    switch (step_) {
+    case 0:
+        writer.Write(grabArm_, std::vector<Instr>{Instr::Grab, Instr::RotateCCW});
+        break;
+    case 1:
+        writer.Write(grabArm_,
+                     std::vector<Instr>{Instr::PivotCCW, Instr::PivotCCW, Instr::Reset});
+        writer.AdjustTime(-1);
+        break;
+    default:
+        writer.WriteGrabResetAction(middleArm_, Instr::RotateCCW);
+        break;
+    }
+    writer.WriteGrabResetAction(outputArm_, Instr::RotateCCW);
+    step_ = (step_ + 1) % 3;
+}
+
+Triangle3DisassemblerModule::Triangle3DisassemblerModule(GameObject* parent,
+                                                         ProgramWriter& writer, Vec2 position,
+                                                         const Molecule& molecule)
+    : MoleculeDisassembler(parent, writer, position, molecule),
+      allBonds_(Triangle3AllBonds(molecule)) {
+    const Vec2 reagentPosition{-6, 0};
+    Make<Reagent>(this, reagentPosition, R0, &molecule);
+    grabArm_ = Make<Arm>(this, reagentPosition + Vec2{0, 3}, R240, ArmType::Arm1,
+                         allBonds_ ? 3 : 2);
+    outputArm_ = Make<Arm>(this, Vec2{-3, 3}, R240, ArmType::Arm1, 3);
+    Make<Glyph>(this, Vec2{-3, 0}, R120, GlyphType::Unbonding);
+    Make<Track>(this, grabArm_->LocalTransform().position, allBonds_ ? R120 : R300, 1);
+}
+
+void Triangle3DisassemblerModule::GenerateNextAtom() {
+    writer.NewFragment();
+    if (allBonds_) {
+        switch (step_) {
+        case 0:
+            writer.Write(grabArm_, std::vector<Instr>{Instr::Grab, Instr::RotateCCW,
+                                                      Instr::PivotCCW, Instr::Drop});
+            writer.AdjustTime(-1);
+            break;
+        case 1:
+            writer.Write(grabArm_,
+                         std::vector<Instr>{Instr::MovePos, Instr::Grab, Instr::PivotCCW});
+            break;
+        default:
+            writer.Write(grabArm_, std::vector<Instr>{Instr::MoveNeg, Instr::Reset});
+            writer.AdjustTime(-1);
+            break;
+        }
+    } else {
+        switch (step_) {
+        case 0:
+            writer.Write(grabArm_, std::vector<Instr>{Instr::Grab, Instr::RotateCCW});
+            break;
+        case 1:
+            writer.Write(grabArm_, Instr::PivotCW);
+            break;
+        default:
+            writer.Write(grabArm_, std::vector<Instr>{Instr::MovePos, Instr::Reset});
+            writer.AdjustTime(-1);
+            break;
+        }
+    }
+    writer.WriteGrabResetAction(outputArm_, Instr::RotateCCW);
+    step_ = (step_ + 1) % 3;
 }
 
 // ── Universal disassembler ──────────────────────────────────────────────────
@@ -393,6 +557,12 @@ void ComplexInputAreaModule::AddMultiAtomDisassemblers(
         MoleculeDisassembler* disassembler = nullptr;
         if (reagent->Height() == 1) {
             disassembler = Make<LinearDisassemblerModule>(this, writer, Vec2{0, 0}, *reagent);
+        } else if (SpecialDisassemblersEnabled() && Bent3Compatible(*reagent) &&
+                   Bent3Oriented(*reagent)) {
+            disassembler = Make<Bent3DisassemblerModule>(this, writer, Vec2{0, 0}, *reagent);
+        } else if (SpecialDisassemblersEnabled() && Triangle3Compatible(*reagent) &&
+                   Triangle3Oriented(*reagent)) {
+            disassembler = Make<Triangle3DisassemblerModule>(this, writer, Vec2{0, 0}, *reagent);
         } else {
             disassembler = Make<UniversalDisassemblerModule>(this, writer, Vec2{0, 0}, *reagent);
         }

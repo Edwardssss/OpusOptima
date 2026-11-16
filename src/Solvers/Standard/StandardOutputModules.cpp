@@ -520,6 +520,8 @@ SimpleOutputAreaModule::SimpleOutputAreaModule(GameObject* parent, ProgramWriter
         assembler_ = Make<MonoAssemblerModule>(this, writer, position, products);
     } else if (allLinear && !anyTriplex) {
         assembler_ = Make<LinearAssemblerModule>(this, writer, position, products);
+    } else if (UseHex3Assembler(products)) {
+        assembler_ = Make<Hex3AssemblerModule>(this, writer, position, products);
     } else {
         assembler_ = Make<UniversalAssemblerModule>(this, writer, position, products);
     }

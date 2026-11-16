@@ -103,6 +103,51 @@ class LinearDisassemblerModule : public MoleculeDisassembler {
     int step_{};
 };
 
+// Upstream NonLinear3BentDisassembler: the three-atom bent shape
+//   O - O
+//        (diagonal)
+//         O
+class Bent3DisassemblerModule : public MoleculeDisassembler {
+    public:
+    Bent3DisassemblerModule(GameObject* parent, ProgramWriter& writer, Vec2 position,
+                            const Molecule& molecule);
+    [[nodiscard]] int Height() const override { return 5; }
+    [[nodiscard]] int HeightBelowOrigin() const override { return 1; }
+    void GenerateNextAtom() override;
+
+    private:
+    Arm* grabArm_{};
+    Arm* middleArm_{};
+    Arm* outputArm_{};
+    int step_{};
+};
+
+// Upstream NonLinear3TriangleDisassembler: the three-atom triangle shape,
+// with either two bonds (bent) or three bonds (closed triangle).
+class Triangle3DisassemblerModule : public MoleculeDisassembler {
+    public:
+    Triangle3DisassemblerModule(GameObject* parent, ProgramWriter& writer, Vec2 position,
+                                const Molecule& molecule);
+    [[nodiscard]] int Height() const override { return 4; }
+    [[nodiscard]] int HeightBelowOrigin() const override { return 1; }
+    void GenerateNextAtom() override;
+
+    private:
+    bool allBonds_{};
+    Arm* grabArm_{};
+    Arm* outputArm_{};
+    int step_{};
+};
+
+/// Rotates a reagent into the orientation expected by the specialized
+/// disassemblers; a no-op for every other molecule. Must run before the
+/// element input order is computed and before the modules are created.
+void PrepareReagentMolecule(Molecule& molecule);
+
+/// Element order the specialized disassembler actually consumes. Falls back to
+/// `GetAtomsInInputOrder` for linear/monoatomic/universal reagents.
+[[nodiscard]] std::vector<Element> ReagentElementOrder(const Molecule& molecule);
+
 class UniversalDisassemblerModule : public MoleculeDisassembler {
     public:
     UniversalDisassemblerModule(GameObject* parent, ProgramWriter& writer, Vec2 position,
@@ -325,6 +370,153 @@ class MoleculeAssembler : public SolverComponent {
     virtual void AddAtom(Element element, int productID) = 0;
     virtual void OptimizeParts() {}
 };
+
+// ── Hex3 output assembler (upstream Output/Hex3) ────────────────────────────
+class Hex3AssemblyArea;
+
+enum class Hex3OutputLocation { Left, Right, RightSimple, RightNoCenter };
+
+class Hex3MoleculeBuilder {
+    public:
+    explicit Hex3MoleculeBuilder(const Molecule& product) : product_(&product) {}
+    virtual ~Hex3MoleculeBuilder() = default;
+
+    [[nodiscard]] const Molecule& Product() const { return *product_; }
+    [[nodiscard]] virtual Vec2 CenterAtomPosition() const = 0;
+    [[nodiscard]] virtual Hex3OutputLocation OutputLocation() const = 0;
+    [[nodiscard]] virtual Rot OutputRotation() const = 0;
+    [[nodiscard]] virtual Vec2 OutputPositionOffset() const { return {0, 0}; }
+    [[nodiscard]] virtual bool RequiresRotationsBetweenOutputPositions() const { return true; }
+    [[nodiscard]] virtual std::vector<Element> GetElementsInBuildOrder() const = 0;
+    [[nodiscard]] virtual std::vector<Program> GenerateFragments(
+        Hex3AssemblyArea& assemblyArea) const = 0;
+
+    private:
+    const Molecule* product_;
+};
+
+class Hex3CenterAtomBuilder final : public Hex3MoleculeBuilder {
+    public:
+    Hex3CenterAtomBuilder(const Molecule& product, const std::vector<const Atom*>& centralAtoms);
+    [[nodiscard]] Vec2 CenterAtomPosition() const override { return centerAtom_->position; }
+    [[nodiscard]] Hex3OutputLocation OutputLocation() const override;
+    [[nodiscard]] Rot OutputRotation() const override;
+    [[nodiscard]] std::vector<Element> GetElementsInBuildOrder() const override;
+    [[nodiscard]] std::vector<Program> GenerateFragments(
+        Hex3AssemblyArea& assemblyArea) const override;
+
+    private:
+    enum class OperationType {
+        RotateClockwise,
+        RotateCounterclockwise,
+        GrabAtom,
+        Bond,
+        MoveAwayFromBonder,
+        MoveTowardBonder
+    };
+    struct Operation {
+        OperationType type{};
+        Rot finalRotation{};
+        const Atom* atom{};
+    };
+    [[nodiscard]] const Atom* ChooseCenterAtom(const std::vector<const Atom*>& centralAtoms) const;
+    void GenerateCenterOperations();
+    void GenerateClockwiseOperations();
+    void GenerateCounterclockwiseOperations();
+    void AddRotationOperations(std::vector<Operation>& operations,
+                               const std::vector<Rot>& rotations, bool moveBeforeRotating,
+                               bool moveAfterRotating);
+    [[nodiscard]] std::vector<Program> BuildFragments(Hex3AssemblyArea& assemblyArea) const;
+
+    const Atom* centerAtom_{};
+    const Molecule* product_{};
+    std::vector<Operation> centerOperations_;
+    std::vector<Operation> clockwiseOperations_;
+    std::vector<Operation> counterclockwiseOperations_;
+    bool needAvoidBondBeforeCounterclockwiseOperations_{};
+    Rot currentDirection_{R0};
+    std::map<int, const Atom*> grabbedAtoms_;
+    std::set<int> constructedClockwiseBonds_;
+};
+
+class Hex3MissingCenterAtomBuilder final : public Hex3MoleculeBuilder {
+    public:
+    explicit Hex3MissingCenterAtomBuilder(const Molecule& product);
+    [[nodiscard]] Vec2 CenterAtomPosition() const override { return centerPosition_; }
+    [[nodiscard]] Hex3OutputLocation OutputLocation() const override {
+        return Hex3OutputLocation::RightNoCenter;
+    }
+    [[nodiscard]] Rot OutputRotation() const override { return outputRotation_; }
+    [[nodiscard]] Vec2 OutputPositionOffset() const override { return {1, 0}; }
+    [[nodiscard]] bool RequiresRotationsBetweenOutputPositions() const override { return false; }
+    [[nodiscard]] std::vector<Element> GetElementsInBuildOrder() const override {
+        return elementBuildOrder_;
+    }
+    [[nodiscard]] std::vector<Program> GenerateFragments(
+        Hex3AssemblyArea& assemblyArea) const override;
+
+    private:
+    void DetermineBuildOrder();
+    [[nodiscard]] Vec2 FindCenterPosition() const;
+
+    Vec2 centerPosition_{};
+    std::vector<Element> elementBuildOrder_;
+    Rot outputRotation_{};
+    bool needsAllBonds_{};
+};
+
+class Hex3AssemblyArea : public SolverComponent {
+    public:
+    Hex3AssemblyArea(SolverComponent* parent, ProgramWriter& writer);
+    void OptimizeParts();
+
+    Arm* horizontalArm{};
+    Arm* assemblyArm{};
+    bool isLeftBonderUsed{};
+
+    private:
+    Glyph* leftBonder_{};
+};
+
+class Hex3AssemblerModule : public MoleculeAssembler {
+    public:
+    Hex3AssemblerModule(GameObject* parent, ProgramWriter& writer, Vec2 position,
+                        const std::vector<const Molecule*>& products);
+    void AddAtom(Element element, int productID) override;
+    void OptimizeParts() override;
+
+    private:
+    struct Output {
+        int index{};
+        bool useSimpleOutput{};
+    };
+    struct State {
+        std::vector<Program> fragments;
+        std::size_t next{};
+        bool started{};
+    };
+    void MoveProductToOutput(const Molecule& product, const std::vector<Arm*>& arms,
+                             const std::vector<Instr>& instructions);
+    void MoveProductToRighthandOutput(const Molecule& product, bool moveAfterRotate);
+    void MoveProductToLefthandOutput(const Molecule& product);
+    [[nodiscard]] std::vector<Arm*> AddOutputs(
+        const std::vector<const Hex3MoleculeBuilder*>& builders, Vec2 initialPosition,
+        Vec2 offset, Rot rotationOffset);
+
+    Hex3AssemblyArea* assemblyArea_{};
+    std::map<int, std::unique_ptr<Hex3MoleculeBuilder>> builders_;
+    std::map<int, Output> outputs_;
+    std::map<int, State> states_;
+    std::vector<Arm*> rightOutputArms_;
+    std::vector<Arm*> leftOutputArms_;
+};
+
+/// The upstream `Hex3Assembler.IsProductCompatible` predicate.
+[[nodiscard]] bool IsHex3ProductCompatible(const Molecule& product);
+/// Whether the whole product set selects the Hex3 assembler.
+[[nodiscard]] bool UseHex3Assembler(const std::vector<const Molecule*>& products);
+/// Element order the selected assembler consumes, before the pipeline is built.
+[[nodiscard]] std::vector<Element> ProductBuildOrder(const Molecule& product);
 
 class BondProgrammer {
     public:

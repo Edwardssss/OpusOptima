@@ -89,7 +89,8 @@ class RecipeBuilder {
     void AddReagents(const std::vector<Molecule>& reagents);
     void AddProducts(const std::vector<Molecule>& products, int outputScale);
     void AddReaction(ReactionType type);
-    [[nodiscard]] std::vector<Recipe> GenerateRecipes(bool generateMultiple);
+    [[nodiscard]] std::vector<Recipe> GenerateRecipes(
+        bool generateMultiple, const std::vector<int>& reagentIds = {});
 
     private:
     [[nodiscard]] static Reaction CreateReaction(ReactionType type,
@@ -110,8 +111,14 @@ class RecipeBuilder {
 
 class RecipeGenerator {
     public:
-    explicit RecipeGenerator(const Puzzle& puzzle) : puzzle_(puzzle) {}
+    explicit RecipeGenerator(const Puzzle& puzzle, bool includeUnneededReactions = false)
+        : puzzle_(puzzle), includeUnneededReactions_(includeUnneededReactions) {}
     [[nodiscard]] std::vector<Recipe> GenerateRecipes(bool generateMultiple);
+    /// Same as `GenerateRecipes`, but only the listed reagent molecule ids are
+    /// available. Used to enumerate recipes that need fewer inputs than the
+    /// first LP optimum (a common source of cheaper machines).
+    [[nodiscard]] std::vector<Recipe> GenerateRecipesForReagents(
+        bool generateMultiple, const std::vector<int>& reagentIds);
 
     private:
     void AnalyzeProductsAndReagents();
@@ -128,6 +135,7 @@ class RecipeGenerator {
     [[nodiscard]] std::vector<Element> GetMissingElements(const std::vector<Element>& elements) const;
 
     const Puzzle& puzzle_;
+    bool includeUnneededReactions_{};
     std::set<Element> generatedElements_;
     std::set<Element> neededElements_;
     std::set<Element> reagentElements_;

@@ -1,6 +1,6 @@
 # OpusOptima
 
-> **Current direction:** approved next steps are (1) generic material→mechanical acceptance feedback and classified failures, (2) verified candidate archives with exactly three representative slots (cost / cycles / area), (3) complementary construction families, and (4) local optimization and shared-budget scheduling, followed by coverage and real OpusSolver comparison. One verified solution may occupy multiple slots; minima mean only discovered verified candidates, not global optima. Steps 1–4 have bounded implementations with retained evidence; final coverage and real comparison remain pending. Step 4 demonstrates repeatable local area improvements on two development fixtures, not universal quality gains. The independent-certification roadmap remains paused; pinned omsim, legacy protection, explicit backends and 2/10/20 defaults remain. See the [authoritative plan](docs/ReviewAndNextSteps.md) and [step-1 evidence](result/solver-material-feedback-step1/report.md). Historical seen puzzles are not unseen evaluation. The retained omsim binary is hash-locked, not source-reproducible; do not replace it from a mutable release URL.
+> **Current direction:** approved next steps are (1) generic material→mechanical acceptance feedback and classified failures, (2) verified candidate archives with exactly three representative slots (cost / cycles / area), (3) complementary construction families, and (4) local optimization and shared-budget scheduling, followed by coverage and real OpusSolver comparison. One verified solution may occupy multiple slots; minima mean only discovered verified candidates, not global optima. Steps 1–4 have bounded implementations with retained evidence; reference-corpus coverage (146/146) and the real OpusSolver comparison are complete, while broader unseen-corpus evaluation remains a separate validation. Step 4 demonstrates repeatable local area improvements on two development fixtures, not universal quality gains. The independent-certification roadmap remains paused; pinned omsim, legacy protection, explicit backends and 2/10/20 defaults remain. See the [authoritative plan](docs/ReviewAndNextSteps.md) and [step-1 evidence](result/solver-material-feedback-step1/report.md). Historical seen puzzles are not unseen evaluation. The retained omsim binary is hash-locked, not source-reproducible; do not replace it from a mutable release URL.
 
 A C++20 toolkit for parsing, rendering and solving Opus Magnum puzzle files.
 
@@ -25,10 +25,13 @@ The default `assembly` CLI now includes a faithful C++ port of
 [the port report](docs/analysis/UPSTREAM_STANDARD_PORT_20261115.md)). It is enabled
 through the CLI's extra-portfolio path only, so the library API keeps its original
 first-result and quota contracts. It solves **146/146** corpus puzzles and, after
-the one-shot structural portfolio and local passes, the `jobs=2` audit totals are
-cost **0.916×**, cycles **0.779×** and area **0.863×** of the OpusSolver oracle
-(two runs identical). The standalone port is within 1.06–1.09× of the oracle on
-every objective; mechanical-only (`instructions>0`) totals are within 2.4–3.9%.
+the one-shot structural portfolio, upstream recipe/build-order/subset enumeration
+and local passes, the `jobs=2` audit totals are cost **0.857×**, cycles **0.742×**
+and area **0.821×** of the OpusSolver oracle. The standalone port is within
+1.06–1.09× of the oracle; mechanical-only (`instructions>0`) totals are now
+**0.966× / 0.989× / 0.973×**, i.e. below the oracle on all three objectives, and
+no corpus puzzle loses every slot. See
+[the optimization report](docs/analysis/UPSTREAM_STANDARD_OPTIMIZE_20261116.md).
 
 - [Full coverage report](result/verifier-m2-m6-certified-legacy-fresh-20261029/coverage.json)
 - [Baseline comparison](result/verifier-m2-m6-certified-legacy-fresh-20261029/comparison.json)

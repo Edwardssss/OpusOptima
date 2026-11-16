@@ -1,5 +1,11 @@
 # OpusSolver Standard 移植：从 12.5× 到追平/反超（2026-11-15）
 
+> **2026-11-16 更新：** 在移植体之上又接入了上游 `--optimize` 的配方 /
+> build-order / 配方子集枚举，并补上 `Hex3Assembler`、`NonLinear3Bent`、
+> `NonLinear3Triangle`。最终 146/146、cost 0.8567×、cycles 0.7420×、
+> area 0.8211×，机械槽三项均低于 oracle，逐题三指标全负为 0。详见
+> [UPSTREAM_STANDARD_OPTIMIZE_20261116.md](UPSTREAM_STANDARD_OPTIMIZE_20261116.md)。
+
 ## 结论
 
 本轮把上游 `gtw123/OpusSolver@fdedd3f01a238b941ceba8bace7ea35cbd3b8c41`
