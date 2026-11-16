@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -57,6 +58,26 @@ TEST(StandardVariantTest, SingleOutputDoesNotGainABuildOrderVariant) {
     const auto single = CompileUpstreamStandard(puzzle);
     ASSERT_TRUE(single.has_value());
     EXPECT_EQ(Canonical(*single), Canonical(variants.front()));
+}
+
+TEST(StandardVariantTest, RepeatsCompressEveryArm) {
+    const auto root = test::RepoRoot(__FILE__);
+    const auto puzzle = io::BinaryParser::ParsePuzzleFile(
+        root / "asset/puzzle/custom/repeats.puzzle");
+    const auto solution = CompileUpstreamStandard(puzzle);
+    ASSERT_TRUE(solution.has_value());
+    std::size_t compressedArms = 0;
+    for (const auto& object : solution->objects) {
+        if (object.typeName.rfind("arm", 0) != 0) continue;
+        if (std::any_of(object.instructions.begin(), object.instructions.end(),
+                        [](const io::ArmInstruction& instruction) {
+                            return instruction.action == 'C';
+                        }))
+            ++compressedArms;
+    }
+    // AddRepeats must continue with later arms after one arm's sequence stops
+    // matching; a return from the whole pass leaves every later arm expanded.
+    EXPECT_GE(compressedArms, 2U);
 }
 
 TEST(StandardVariantTest, SpecializedShapeAssetsCompile) {

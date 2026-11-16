@@ -1,7 +1,7 @@
 #include "StandardProgram.hpp"
 
 // Ported from gtw123/OpusSolver@fdedd3f01a238b941ceba8bace7ea35cbd3b8c41 (MIT).
-// See docs/analysis/UPSTREAM_STANDARD_PORT_20261115.md for the module map.
+// The module map is documented in README.md.
 
 
 #include <algorithm>
@@ -194,7 +194,10 @@ void ProgramBuilder::AddRepeats() {
         const std::size_t startIndex = static_cast<std::size_t>(end) + 1;
         for (std::size_t i = startIndex; i < instructions.size(); ++i) {
             if (instructions[i] == Instr::None) continue;
-            if (i + sequence.size() > instructions.size()) return;
+            // Upstream's helper returns from ReplaceSequenceWithRepeat for this
+            // arm; the outer loop must still visit the remaining arms. Returning
+            // from AddRepeats here silently disabled all later arms' compression.
+            if (i + sequence.size() > instructions.size()) break;
             bool matches = true;
             for (std::size_t j = 0; j < sequence.size(); ++j) {
                 if (instructions[i + j] != sequence[j]) {
@@ -202,7 +205,7 @@ void ProgramBuilder::AddRepeats() {
                     break;
                 }
             }
-            if (!matches) return;
+            if (!matches) break;
             instructions[i] = Instr::Repeat;
             for (std::size_t j = 1; j < sequence.size(); ++j) instructions[i + j] = Instr::None;
             i += sequence.size();
