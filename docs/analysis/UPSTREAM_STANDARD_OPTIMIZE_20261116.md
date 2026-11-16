@@ -193,7 +193,7 @@ oracle（见 §3.3/§3.4）。最终证据见 §3.4。
 ### 3.7 测试与确定性
 
 - 全量 Debug 测试：**1103 tests / 133 suites，1098 passed、5 skipped、
-  0 failed，exit 0，1067.5 s**（新增 `StandardVariantTest` 6 项）。
+  0 failed，exit 0，1002.7 s**（新增 `StandardVariantTest` 6 项）。
 - `final3` 与 `final4` 两次独立的最终二进制审计逐槽一致（**0/438 diff**）；
   每个 `.objectives.json` 的 **438/438** 槽都是 `status=passed`、
   `authority=legacy-gate`、`engine=omsim-a88d12d8+production-replay-v1`。
