@@ -15,6 +15,8 @@
   const editMultiplier = document.getElementById('edit-multiplier');
   const editInput = document.getElementById('edit-input');
   const editOutput = document.getElementById('edit-output');
+  const editInputBonds = document.getElementById('edit-input-bonds');
+  const editOutputBonds = document.getElementById('edit-output-bonds');
   const buildButton = document.getElementById('build');
   const downloadPuzzle = document.getElementById('download-puzzle');
   const editorStatus = document.getElementById('editor-status');
@@ -136,6 +138,19 @@
     return atoms;
   };
 
+  const parseBonds = (text) => {
+    const bonds = [];
+    for (const line of text.split(/\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const parts = trimmed.split(/\s+/).map(Number);
+      if (parts.length !== 5 || parts.some((value) => !Number.isInteger(value)))
+        throw new Error(`bond line must be "bits q1 r1 q2 r2": ${trimmed}`);
+      bonds.push(...parts);
+    }
+    return bonds;
+  };
+
   const setEditorStatus = (text, kind = '') => {
     editorStatus.textContent = text;
     editorStatus.className = `status ${kind}`;
@@ -147,6 +162,8 @@
     try {
       const input = parseAtoms(editInput.value);
       const output = parseAtoms(editOutput.value);
+      const inputBonds = parseBonds(editInputBonds.value);
+      const outputBonds = parseBonds(editOutputBonds.value);
       const multiplier = Number(editMultiplier.value);
       if (!Number.isInteger(multiplier) || multiplier < 1) throw new Error('multiplier must be positive');
       const module = await ensureModule();
@@ -156,16 +173,22 @@
       module.HEAPU8.set(encoded, namePtr);
       module.HEAPU8[namePtr + encoded.length] = 0;
       const inPtr = module._malloc(input.length * 4);
+      const inBondPtr = module._malloc(Math.max(4, inputBonds.length * 4));
       const outPtr = module._malloc(output.length * 4);
+      const outBondPtr = module._malloc(Math.max(4, outputBonds.length * 4));
       const resultPtrPtr = module._malloc(4);
       const lengthPtr = module._malloc(4);
       const errorPtrPtr = module._malloc(4);
       try {
         module.HEAP32.set(Int32Array.from(input), inPtr >>> 2);
+        module.HEAP32.set(Int32Array.from(inputBonds), inBondPtr >>> 2);
         module.HEAP32.set(Int32Array.from(output), outPtr >>> 2);
+        module.HEAP32.set(Int32Array.from(outputBonds), outBondPtr >>> 2);
         const ok = module.ccall('opusoptima_make_puzzle', 'number',
-          ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
-          [namePtr, input.length / 3, inPtr, output.length / 3, outPtr, multiplier,
+          ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number',
+           'number', 'number', 'number', 'number', 'number'],
+          [namePtr, input.length / 3, inPtr, inputBonds.length / 5, inBondPtr,
+           output.length / 3, outPtr, outputBonds.length / 5, outBondPtr, multiplier,
            resultPtrPtr, lengthPtr, errorPtrPtr]);
         const errorPtr = module.HEAPU32[errorPtrPtr >>> 2];
         if (!ok) throw new Error(errorPtr ? module.UTF8ToString(errorPtr) : 'puzzle build failed');
@@ -188,8 +211,9 @@
         setEditorStatus(`Built "${name}" (${puzzleBytes.length} bytes). Press Solve.`, 'ok');
         setStatus(`Loaded generated puzzle "${name}".`);
       } finally {
-        module._free(namePtr); module._free(inPtr); module._free(outPtr);
-        module._free(resultPtrPtr); module._free(lengthPtr); module._free(errorPtrPtr);
+        module._free(namePtr); module._free(inPtr); module._free(inBondPtr);
+        module._free(outPtr); module._free(outBondPtr); module._free(resultPtrPtr);
+        module._free(lengthPtr); module._free(errorPtrPtr);
       }
     } catch (error) {
       setEditorStatus(error?.message || String(error), 'bad');

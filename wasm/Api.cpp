@@ -215,8 +215,9 @@ EMSCRIPTEN_KEEPALIVE char* opusoptima_describe(const std::uint8_t* puzzleBytes, 
 }
 
 EMSCRIPTEN_KEEPALIVE int opusoptima_make_puzzle(
-    const char* name, int inputAtomCount, const int* inputAtoms, int outputAtomCount,
-    const int* outputAtoms, int outputMultiplier, std::uint8_t** puzzle, int* puzzleLength,
+    const char* name, int inputAtomCount, const int* inputAtoms, int inputBondCount,
+    const int* inputBonds, int outputAtomCount, const int* outputAtoms, int outputBondCount,
+    const int* outputBonds, int outputMultiplier, std::uint8_t** puzzle, int* puzzleLength,
     char** error) {
     if (puzzle) *puzzle = nullptr;
     if (puzzleLength) *puzzleLength = 0;
@@ -226,7 +227,8 @@ EMSCRIPTEN_KEEPALIVE int opusoptima_make_puzzle(
         return 0;
     };
     if (!name || !inputAtoms || !outputAtoms || inputAtomCount < 1 || outputAtomCount < 1 ||
-        outputMultiplier < 1)
+        outputMultiplier < 1 || (inputBondCount && !inputBonds) ||
+        (outputBondCount && !outputBonds))
         return fail("invalid puzzle editor arguments");
     try {
         opusoptima::io::PuzzleData data;
@@ -234,9 +236,7 @@ EMSCRIPTEN_KEEPALIVE int opusoptima_make_puzzle(
         data.name = name;
         data.permissionBits = 0x17c7370fULL;
         data.outputMultiplier = outputMultiplier;
-        opusoptima::io::Molecule input;
-        opusoptima::io::Molecule output;
-        const auto add = [](opusoptima::io::Molecule& molecule, const int* atoms, int count) {
+        const auto addAtoms = [](opusoptima::io::Molecule& molecule, const int* atoms, int count) {
             for (int i = 0; i < count; ++i) {
                 const int type = atoms[i * 3];
                 const int q = atoms[i * 3 + 1];
@@ -247,8 +247,27 @@ EMSCRIPTEN_KEEPALIVE int opusoptima_make_puzzle(
                     {static_cast<opusoptima::core::AtomType>(type), {q, r}});
             }
         };
-        add(input, inputAtoms, inputAtomCount);
-        add(output, outputAtoms, outputAtomCount);
+        const auto addBonds = [](opusoptima::io::Molecule& molecule, const int* bonds, int count) {
+            for (int i = 0; i < count; ++i) {
+                const int bits = bonds[i * 5];
+                const int aq = bonds[i * 5 + 1];
+                const int ar = bonds[i * 5 + 2];
+                const int bq = bonds[i * 5 + 3];
+                const int br = bonds[i * 5 + 4];
+                if (bits < 1 || bits > 255 || aq < -128 || aq > 127 || ar < -128 || ar > 127 ||
+                    bq < -128 || bq > 127 || br < -128 || br > 127)
+                    throw std::invalid_argument("invalid bond bits or coordinate");
+                molecule.bonds.push_back({static_cast<std::uint8_t>(bits),
+                                          {aq, ar},
+                                          {bq, br}});
+            }
+        };
+        opusoptima::io::Molecule input;
+        opusoptima::io::Molecule output;
+        addAtoms(input, inputAtoms, inputAtomCount);
+        addBonds(input, inputBonds, inputBondCount);
+        addAtoms(output, outputAtoms, outputAtomCount);
+        addBonds(output, outputBonds, outputBondCount);
         data.inputs.push_back(std::move(input));
         data.outputs.push_back(std::move(output));
         const auto bytes = opusoptima::io::BinaryWriter::WritePuzzle(data);

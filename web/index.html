@@ -62,14 +62,17 @@
       <p class="eyebrow">Puzzle editor</p>
       <h2>Build a simple two-molecule puzzle</h2>
       <p class="fineprint">
-        One input molecule and one output molecule, no bonds, no production
-        metadata. Atom lines use the game symbols, for example <code>S 0 0</code>.
+        One input molecule and one output molecule, with optional bonds; no
+        production metadata. Atom lines use game symbols, for example <code>S 0 0</code>;
+        bond lines use <code>bits q1 r1 q2 r2</code>, for example <code>1 0 0 1 0</code>.
       </p>
       <div class="editor-grid">
         <label>Name<input id="edit-name" value="Browser puzzle"></label>
         <label>Output multiplier<input id="edit-multiplier" type="number" min="1" max="12" value="1"></label>
         <label>Input atoms<textarea id="edit-input" rows="3">S 0 0</textarea></label>
         <label>Output atoms<textarea id="edit-output" rows="3">S 0 0</textarea></label>
+        <label>Input bonds<textarea id="edit-input-bonds" rows="2" placeholder="bits q1 r1 q2 r2"></textarea></label>
+        <label>Output bonds<textarea id="edit-output-bonds" rows="2" placeholder="bits q1 r1 q2 r2"></textarea></label>
       </div>
       <div class="row">
         <button id="build" type="button">Build and load</button>

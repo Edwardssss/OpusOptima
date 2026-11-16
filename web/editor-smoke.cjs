@@ -19,8 +19,10 @@ const path = require('path');
     module.HEAP32.set(new Int32Array([1, 0, 0]), inputPtr >>> 2);
     module.HEAP32.set(new Int32Array([1, 0, 0]), outputPtr >>> 2);
     const ok = module.ccall('opusoptima_make_puzzle', 'number',
-      ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
-      [namePtr, 1, inputPtr, 1, outputPtr, 1, puzzlePtrPtr, lengthPtr, errorPtrPtr]);
+      ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number',
+       'number', 'number', 'number', 'number', 'number'],
+      [namePtr, 1, inputPtr, 0, 0, 1, outputPtr, 0, 0, 1,
+       puzzlePtrPtr, lengthPtr, errorPtrPtr]);
     const errorPtr = module.HEAPU32[errorPtrPtr >>> 2];
     if (!ok) throw new Error(errorPtr ? module.UTF8ToString(errorPtr) : 'editor build failed');
     if (errorPtr) module.ccall('opusoptima_free', null, ['number'], [errorPtr]);
