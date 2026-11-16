@@ -3698,7 +3698,7 @@
         "contact_true_distance_upper_bound": 59,
         "arithmetic": "IEEE binary32 round-to-nearest; locked operation order; no contraction, FTZ or DAZ; assumes correctly rounded binary64 libm sqrt (not proved by probes)",
         "scope": "conditional board-query geometry only; outer-loop premises not qualified; no certification expansion",
-        "derivation": "docs/IndependentVerifier.md"
+        "derivation": "tests/functional_test/VerifierNumericalEvidence.json"
       },
       "exit_code": 0,
       "certification_eligible": false,

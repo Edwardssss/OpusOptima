@@ -10,7 +10,7 @@ Everything the tools need to talk to the project lives here:
 
 Path conventions
 ----------------
-The repository only contains source, tests, assets, tools and docs. Solver runs,
+The repository only contains source, tests, assets and tools. Solver runs,
 probe output and reports live outside the tree::
 
     <workspace>/artifacts/build     <- symlinked as ./build

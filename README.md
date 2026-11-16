@@ -1,6 +1,6 @@
 # OpusOptima
 
-> **Current direction:** approved next steps are (1) generic material→mechanical acceptance feedback and classified failures, (2) verified candidate archives with exactly three representative slots (cost / cycles / area), (3) complementary construction families, and (4) local optimization and shared-budget scheduling, followed by coverage and real OpusSolver comparison. One verified solution may occupy multiple slots; minima mean only discovered verified candidates, not global optima. Steps 1–4 have bounded implementations with retained evidence; reference-corpus coverage (146/146) and the real OpusSolver comparison are complete, while broader unseen-corpus evaluation remains a separate validation. Step 4 demonstrates repeatable local area improvements on two development fixtures, not universal quality gains. The independent-certification roadmap remains paused; pinned omsim, legacy protection, explicit backends and 2/10/20 defaults remain. See the [authoritative plan](docs/ReviewAndNextSteps.md) and [step-1 evidence](result/solver-material-feedback-step1/report.md). Historical seen puzzles are not unseen evaluation. The retained omsim binary is hash-locked, not source-reproducible; do not replace it from a mutable release URL.
+> **Current direction:** approved next steps are (1) generic material→mechanical acceptance feedback and classified failures, (2) verified candidate archives with exactly three representative slots (cost / cycles / area), (3) complementary construction families, and (4) local optimization and shared-budget scheduling, followed by coverage and real OpusSolver comparison. One verified solution may occupy multiple slots; minima mean only discovered verified candidates, not global optima. Steps 1–4 have bounded implementations with retained evidence; reference-corpus coverage (146/146) and the real OpusSolver comparison are complete, while broader unseen-corpus evaluation remains a separate validation. Step 4 demonstrates repeatable local area improvements on two development fixtures, not universal quality gains. The independent-certification roadmap remains paused; pinned omsim, legacy protection, explicit backends and 2/10/20 defaults remain. See [step-1 evidence](result/solver-material-feedback-step1/report.md). Historical seen puzzles are not unseen evaluation. The retained omsim binary is hash-locked, not source-reproducible; do not replace it from a mutable release URL.
 
 A C++20 toolkit for parsing, rendering and solving Opus Magnum puzzle files.
 
@@ -21,8 +21,7 @@ new puzzles, globally optimal scores or complete equivalence with the original g
 
 The default `assembly` CLI now includes a faithful C++ port of
 `gtw123/OpusSolver@fdedd3f`'s Standard solver under
-[`src/Solvers/Standard/`](src/Solvers/Standard/) (MIT; see
-[the port report](docs/analysis/UPSTREAM_STANDARD_PORT_20261115.md)). It is enabled
+[`src/Solvers/Standard/`](src/Solvers/Standard/) (MIT). It is enabled
 through the CLI's extra-portfolio path only, so the library API keeps its original
 first-result and quota contracts. It solves **146/146** corpus puzzles and, after
 the one-shot structural portfolio, upstream recipe/build-order/subset enumeration
@@ -30,24 +29,34 @@ and local passes, the `jobs=2` audit totals are cost **0.857×**, cycles **0.742
 and area **0.821×** of the OpusSolver oracle. The standalone port is within
 1.06–1.09× of the oracle; mechanical-only (`instructions>0`) totals are now
 **0.966× / 0.989× / 0.973×**, i.e. below the oracle on all three objectives, and
-no corpus puzzle loses every slot. See
-[the optimization report](docs/analysis/UPSTREAM_STANDARD_OPTIMIZE_20261116.md).
+no corpus puzzle loses every slot.
+
+### Reference-corpus results (items 1-6)
+
+Across the 146 byte-distinct reference puzzles the final audit totals are cost
+**89,825** (0.8567× oracle), cycles **66,427** (0.7420×) and area **20,285**
+(0.8211×). Per-slot wins/ties/losses are 75/70/1 (cost), 66/76/4 (cycles) and
+70/73/3 (area); 55 puzzles win all three slots and none loses all three.
+Mechanical-only (`instructions>0`) totals are 0.9657× / 0.9887× / 0.9733×.
+Pipeline/cheap-arms totals are 0.9283× / 0.9624× / 0.9320×; the universal
+family is 0.8794× / 0.7007× / 0.8438×. For item 6, 71/146 puzzles have at least
+one single solution that is no worse than the oracle on all three objectives and
+strictly better on one. Two `final3`/`final4` audits are slot-identical
+(0/438 differences). The external 2401 corpus is tracked separately: a 300-file
+sample passes 299, with one timeout (`GEN737`) caused by an expensive held-arm
+route search, not by a wrong candidate.
 
 - [Full coverage report](result/verifier-m2-m6-certified-legacy-fresh-20261029/coverage.json)
 - [Baseline comparison](result/verifier-m2-m6-certified-legacy-fresh-20261029/comparison.json)
-- [Independent verifier profiles, commands and limitations](docs/IndependentVerifier.md)
-- [Cleanup review, known issues and next priorities](docs/ReviewAndNextSteps.md)
 - [B3–B6 implementation, evidence and limitations](tests/functional_test/ProductionB3B6Progress.md)
 
 ## Repository layout and developer workflow
 
 Only source is tracked. Build trees, logs and measurement reports live outside the
 repository under `../artifacts/`, exposed through the `build/`, `log/` and
-`result/` symlinks, so `git status` only ever shows source, tests, assets, tools
-and docs.
+`result/` symlinks, so `git status` only ever shows source, tests, assets and tools.
 
-- [`docs/PROJECT_LAYOUT.md`](docs/PROJECT_LAYOUT.md) — directory map, artifact convention, review rules
-- [`docs/README.md`](docs/README.md) — documentation index (architecture, verifier, analysis archive)
+- This README is the only project documentation; there is no separate `docs/` tree.
 - [`tools/README.md`](tools/README.md) — measurement scripts
 
 ```sh
@@ -107,8 +116,7 @@ not a fresh measurement of every subsequent binary.
 This measures OpusOptima on that corpus, not a head-to-head OpusSolver comparison;
 byte novelty is not semantic deduplication or proof of an unseen holdout.
 The imported puzzles come from `gtw123/OpusSolver` (MIT licensed, © its authors);
-they are data, not code, and no separate license copy is kept next to them. See
-[verifier replacement recommendations](docs/ReviewAndNextSteps.md#5-opussolver-题库导入与自研验证器建议).
+they are data, not code, and no separate license copy is kept next to them.
 
 ## Build
 
@@ -338,8 +346,7 @@ profile now supports independent finite-output execution, all four metrics and
 interval-certified nominal motion; it can publish with reference support disabled.
 Production walls/conduits and other uncertified combinations remain unavailable,
 and the global default remains `legacy-gate`.
-See [the independent verifier scope and commands](docs/IndependentVerifier.md) and
-[acceptance evidence](result/independent-finite-certified-shadow-20261029/provenance.json).
+See the verifier sections below and [acceptance evidence](result/independent-finite-certified-shadow-20261029/provenance.json).
 
 Vial/nondefault-display-bound production candidates additionally require the
 independent production executor and matching completion cycles. Version-locked
@@ -383,9 +390,7 @@ corpus has already influenced development; its holdout is not an unseen external
 
 ## Code and documentation map
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full project layout, the
-solver data flow from `main` to the native gate, the `src/Solvers/` capability
-subdirectories and the invariants a refactor must preserve.
+The table below is the code map. The solver flow is `main` → puzzle parser → assembly/portfolio → candidate archive → native gate; `src/Solvers/` holds the capability families and their shared planning/lowering code.
 
 | Location | Role |
 | --- | --- |
@@ -407,6 +412,31 @@ Historical acceptance records, not current capability specifications:
 - [Initial real-target breakthrough](tests/functional_test/RealTargetProgress.md)
 - [Phase-A failure matrix](tests/functional_test/RemainingCompositionA1.md)
 - [Phase-A acceptance](tests/functional_test/RemainingCompositionAcceptance.md)
+
+## Solver architecture and invariants
+
+The data flow is `io::PuzzleData` (binary parser) → `AssemblySolver` planning and
+bounded candidate compilers → `CandidateArchive` verification/publication → the
+native `legacy-gate`. The upstream Standard port lives under
+`src/Solvers/Standard/`; it is offered first by the CLI extra-portfolio and keeps
+the library's first-result and quota contracts. A refactor must preserve:
+puzzle bytes are immutable inputs; planning certificates and independent
+verification stay separate; only verified bytes are published; the first verified
+result is retained; the archive keeps one minimum per objective slot; there is no
+automatic OpusSolver fallback; and the default authority remains `legacy-gate`.
+The four metrics are measured by the pinned omsim gate, not by `HexSimulator`.
+
+## WebAssembly and GitHub Pages
+
+The web build is a **separate target** (`wasm/` or `web/`) that reuses only the
+portable solver/IO/render code; it must not change CLI defaults, the file archive
+or the native worker path. Pure WASM can be hosted on GitHub Pages (static files,
+single-thread Web Worker, no custom COOP/COEP headers). Pages cannot run the
+native CLI, `posix_spawn` verifier or `libverify.so`; for those, keep the frontend
+on Pages and put solving/verification on a self-hosted/container backend. The
+remaining web work is an Emscripten target, a byte C ABI/embind, an in-process
+`verifier_create_from_bytes` wrapper, an in-memory candidate sink, a puzzle
+encoder/editor and a solution renderer.
 
 ## Development
 

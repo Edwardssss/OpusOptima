@@ -58,7 +58,7 @@ sha256sum build/libverify.so result/benchmark-verifier build/OpusOptima
 
 `build/libverify.so` is produced by CMake from the pinned `third_party/omsim`
 submodule (`git submodule update --init third_party/omsim` first); nothing is
-downloaded at run time. See `docs/IndependentVerifier.md` for reference and
+downloaded at run time. See the repository README for the verifier contract and
 independent-profile limitations. The C adapter does not run the extra production
 replay gate or confer independent-profile authority. Select the same clearly
 identified validation policy for both solvers and do not count uncertified results

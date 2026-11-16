@@ -1,7 +1,7 @@
 #pragma once
 
 // Ported from gtw123/OpusSolver@fdedd3f01a238b941ceba8bace7ea35cbd3b8c41 (MIT).
-// See docs/analysis/UPSTREAM_STANDARD_PORT_20261115.md for the module map.
+// The module map is documented in README.md.
 
 // Front end for the upstream Standard solver port. `CompileUpstreamStandard` is
 // also registered as the `upstream-standard` CLI solver and is offered first by

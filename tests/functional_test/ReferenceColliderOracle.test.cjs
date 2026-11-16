@@ -103,7 +103,6 @@ test('collider evidence records bounded source behavior, not certification', () 
     const audit = evidence.reference_trajectory_audit;
     const record = audit.ordinary_collider_oracle;
     const harnessText = fs.readFileSync(harness, 'utf8');
-    const documentation = fs.readFileSync(path.join(__dirname, '../../docs/IndependentVerifier.md'), 'utf8');
     assert.equal(record.source_sha256, audit.collision_sha256);
     for (const sha of [record.source_sha256, record.header_sha256]) assert.ok(harnessText.includes(`'${sha}'`));
     assert.equal(record.scenario_groups, 8);
@@ -129,7 +128,6 @@ test('collider evidence records bounded source behavior, not certification', () 
     assert.deepEqual(board.collider_radii, [15, 20, 29]);
     assert.deepEqual(board.omission_counterexample, {center_xy: [0, 0], omitted_cell: [0, 2], collider_radius: 136, atom_radius: 29});
     assert.match(board.scope, /finite regression only; not general/);
-    for (const count of [board.integer_centers, board.boundary_centers]) assert.ok(documentation.includes(String(count)));
     const lemma = record.board_query_conditional_lemma;
     assert.equal(lemma.input_xy_absolute_bound, board.integer_coordinate_bound);
     assert.equal(lemma.candidate_xy_absolute_bound, 262400);
@@ -143,7 +141,6 @@ test('collider evidence records bounded source behavior, not certification', () 
     assert.ok(lemma.omitted_cell_distance_lower_bound > lemma.contact_true_distance_upper_bound);
     assert.match(lemma.arithmetic, /assumes correctly rounded binary64 libm sqrt \(not proved by probes\)/);
     assert.match(lemma.scope, /outer-loop premises not qualified; no certification expansion/);
-    for (const bound of [1.003, 69.79, 262400]) assert.ok(documentation.includes(String(bound)));
     assert.equal(record.exit_code, 0);
     assert.equal(record.certification_eligible, false);
     assert.match(record.scope, /synthetic board/);
@@ -163,9 +160,4 @@ test('collider evidence records bounded source behavior, not certification', () 
     assert.match(outer.limitations, /no upstream wheel\/grabber classification or chain coverage/);
     assert.match(outer.limitations, /not real board implementation/);
     assert.match(outer.limitations, /no continuous-coverage, compiler\/libm correctness or game-equivalence certification/);
-    assert.ok(documentation.includes('在真实插入函数前记录 collider／cursor。39 组有限场景'));
-    assert.ok(documentation.includes('这不证明上游 wheel／grabber 分类或生命周期。'));
-    assert.ok(documentation.includes('ReferenceOuterLoopOracle.cjs'));
-    assert.ok(documentation.includes('40401'));
-    assert.ok(documentation.includes('ReferenceColliderOracle.cjs'));
 });

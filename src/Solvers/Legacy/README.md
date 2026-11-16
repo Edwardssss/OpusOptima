@@ -20,4 +20,4 @@ Rules for this directory:
   gate; nothing in this directory may publish directly.
 
 The recommended backend is `assembly` (`AssemblySolver`), which runs the bounded
-portfolio described in [`../docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md).
+portfolio described in the repository README.

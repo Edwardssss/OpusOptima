@@ -9,8 +9,8 @@
 #   log    -> ../artifacts/log       runtime logs
 #   result -> ../artifacts/result    solver runs, reports, probes, benchmarks
 #
-# Only source, tests, assets, tools and docs are tracked. Keep this file in sync
-# with docs/PROJECT_LAYOUT.md.
+# Only source, tests, assets and tools are tracked. Keep this file in sync
+# with the repository layout in README.md.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Artifact roots (symlinks to ../artifacts, plus non-linked fallbacks) ──────

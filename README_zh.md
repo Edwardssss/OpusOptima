@@ -1,6 +1,6 @@
 # OpusOptima
 
-> **当前方向**：获批新四步为 ①泛化材料→机械接受反馈/能力及失败分类 ②已验解候选与恰好三个代表槽 cost / cycles / area ③少量互补构造家族 ④局部优化与共享预算调度，随后统一覆盖及真实 OpusSolver 对标。同一真实已验解可占多个槽，“最低”仅限已发现验证通过候选而非全局最优；本包已实施第1–4步限定范围，最终覆盖及真实对标仍待执行；第4步在两个开发fixture上重现局部面积收益，不代表普遍质量提升。旧独立认证开发继续暂停，固定 omsim、legacy 保护、显式旧后端和2/10/20默认预算保留。见[权威计划](docs/ReviewAndNextSteps.md)与[第1步证据](result/solver-material-feedback-step1/report.md)；旧已见题不称 unseen。 现有 omsim binary 仅锁 hash，不声称源码可重现，勿从移动 release URL 替换。
+> **当前方向**：获批新四步为 ①泛化材料→机械接受反馈/能力及失败分类 ②已验解候选与恰好三个代表槽 cost / cycles / area ③少量互补构造家族 ④局部优化与共享预算调度，随后统一覆盖及真实 OpusSolver 对标。同一真实已验解可占多个槽，“最低”仅限已发现验证通过候选而非全局最优；本包已实施第1–4步限定范围，最终覆盖及真实对标仍待执行；第4步在两个开发fixture上重现局部面积收益，不代表普遍质量提升。旧独立认证开发继续暂停，固定 omsim、legacy 保护、显式旧后端和2/10/20默认预算保留。见[第1步证据](result/solver-material-feedback-step1/report.md)；旧已见题不称 unseen。 现有 omsim binary 仅锁 hash，不声称源码可重现，勿从移动 release URL 替换。
 
 用于解析、渲染和求解 Opus Magnum 谜题文件的 C++20 工具包。
 
@@ -17,18 +17,27 @@ journal **37/37**。该次扫描对每个文件重新运行五种后端，共 **
 
 - [完整覆盖报告](result/verifier-m2-m6-certified-legacy-fresh-20261029/coverage.json)
 - [基线比较](result/verifier-m2-m6-certified-legacy-fresh-20261029/comparison.json)
-- [独立验证器子域、用法与限制](docs/IndependentVerifier.md)
-- [整理与 Review、已知问题及下一步建议](docs/ReviewAndNextSteps.md)
+### 参考题库结果（1–6 项）
+
+146 道字节去重参考题的最终审计总量为 cost **89,825**（oracle 的 0.8567×）、
+cycles **66,427**（0.7420×）、area **20,285**（0.8211×）。逐槽胜/平/负为
+cost 75/70/1、cycles 66/76/4、area 70/73/3；55 题三项全胜，0 题三项全负。
+仅机械槽（`instructions>0`）为 0.9657× / 0.9887× / 0.9733×；
+pipeline/cheap-arms 为 0.9283× / 0.9624× / 0.9320×；universal 为
+0.8794× / 0.7007× / 0.8438×。第 6 项中，71/146 题存在至少一个单解在三项上
+都不劣于 oracle 且至少一项严格更好。两次 `final3`/`final4` 审计槽位完全一致
+（0/438 差异）。外部 2401 题库单独统计：300 题抽样通过 299 题，唯一超时是
+`GEN737`，原因是空臂路线搜索耗时，不是候选结果错误。
+
 - [B3–B6 实现、证据与能力边界](tests/functional_test/ProductionB3B6Progress.md)
 
 ## 仓库结构与开发流程
 
 仓库只跟踪源码。构建目录、日志与实测报告都在仓库之外的 `../artifacts/` 下，通过
 `build/`、`log/`、`result/` 三个符号链接暴露，因此 `git status` 只会显示源码、测试、
-题库、工具和文档。
+题库和工具。
 
-- [`docs/PROJECT_LAYOUT.md`](docs/PROJECT_LAYOUT.md) — 目录图、产物约定、评审规则
-- [`docs/README.md`](docs/README.md) — 文档索引（架构、验解器、分析归档）
+- 本 README 是唯一的项目文档，不再维护独立的 `docs/` 目录。
 - [`tools/README.md`](tools/README.md) — 测量脚本
 
 ```sh
@@ -76,8 +85,7 @@ python3 tools/probe_layout.py --count 12  # 发射器层 intake 与 feeder 对�
 外部测量发生在 worker 改造前，保留为冻结基线，不代表每个后续二进制都已重跑此库。
 这是本项目在上游题库上的覆盖测量，不是与 OpusSolver 同机对比；字节新增也不代表语义去重
 或真正未见的 holdout。导入的题目来自 `gtw123/OpusSolver`（MIT 许可，版权归其作者），
-它们是数据而非代码，因此不在旁边额外保留许可副本。见
-[自研验证器路线](docs/ReviewAndNextSteps.md#5-opussolver-题库导入与自研验证器建议)。
+它们是数据而非代码，因此不在旁边额外保留许可副本。
 
 ## 构建
 
@@ -235,7 +243,7 @@ OpusSolver 仅作对标工具，不是自动 fallback，产品运行不要求 .N
 independent／reference 两个 exec 型 worker 保持依赖隔离，主 CLI、父库和独立 worker 不链接
 `libverify.so`。首个 `finite-ordinary-v1` 子域现已接通普通有限输出、四项独立指标及区间认证的
 名义运动，可在关闭参考裁判的配置中发布。生产墙体／导管等未认证组合仍不可用，**全局默认
-仍为 legacy-gate**；见[独立验证器范围与使用方式](docs/IndependentVerifier.md)及
+仍为 legacy-gate**；见下文验证器章节及
 [本轮验收](result/independent-finite-certified-shadow-20261029/provenance.json)。
 
 带 vial 或非默认显示边界字段的生产候选还必须通过独立生产执行，且两引擎完成周期一致。
@@ -271,8 +279,7 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 
 ## 代码与文档导航
 
-完整项目布局、从 `main` 到 native gate 的求解数据流、`src/Solvers/` 能力子目录和重构
-必须保持的不变量见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+下表即代码导航。求解数据流为 `main` → puzzle parser → assembly/portfolio → candidate archive → native gate；`src/Solvers/` 保存各能力家族及其共享的 planning/lowering 代码。
 
 | 位置 | 职责 |
 | --- | --- |
@@ -294,6 +301,24 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 - [首次真实目标突破](tests/functional_test/RealTargetProgress.md)
 - [阶段 A 故障矩阵](tests/functional_test/RemainingCompositionA1.md)
 - [阶段 A 验收](tests/functional_test/RemainingCompositionAcceptance.md)
+
+## 求解器结构与不变量
+
+数据流为 `io::PuzzleData`（二进制解析）→ `AssemblySolver` 规划与有界候选编译器 →
+`CandidateArchive` 验证/发布 → native `legacy-gate`。上游 Standard 移植位于
+`src/Solvers/Standard/`，由 CLI extra-portfolio 首先尝试，并保持库 API 的首解与配额契约。
+重构必须保持：puzzle 字节是只读输入；规划证书与独立验证分离；只发布已验字节；保留首解；
+归档每个目标槽只保留最小值；不自动回退到 OpusSolver；默认权限仍是 `legacy-gate`。
+四项指标由锁定 omsim gate 测量，`HexSimulator` 不是裁判。
+
+## WebAssembly 与 GitHub Pages
+
+网页构建放在独立的 `wasm/` 或 `web/` target，只复用可移植的 solver/IO/render 代码，
+不修改 CLI 默认、文件归档或 native worker 路径。纯 WASM 可以只用 GitHub Pages 托管
+（静态文件、单线程 Web Worker、无自定义 COOP/COEP 头）；但 Pages 不能运行 native CLI、
+`posix_spawn` 验证器或 `libverify.so`，需要这些时让 Pages 只做前端，求解/验证放到
+自建容器或服务器后端。剩余工作：Emscripten target、字节 C ABI/embind、进程内
+`verifier_create_from_bytes` 包装、内存候选 sink、puzzle 编码器/编辑器和 solution 渲染。
 
 ## 开发约定
 

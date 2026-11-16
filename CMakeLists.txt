@@ -128,7 +128,7 @@ target_link_libraries(OpusOptima
 # submodule exactly as its own Makefile does:
 #   $(CC) -O2 -std=c11 -g -shared -fpic -o libverify.so <SOURCE> -lm
 # Nothing is vendored as a prebuilt binary; the pinned submodule commit is the
-# reproducible anchor (see third_party/omsim and docs/IndependentVerifier.md).
+# reproducible anchor (see third_party/omsim and README.md).
 option(OPUSOPTIMA_ENABLE_LIBVERIFY "Enable external solution verification (Linux)" ON)
 set(OPUSOPTIMA_OMSIM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/omsim")
 set(OPUSOPTIMA_OMSIM_SOURCES

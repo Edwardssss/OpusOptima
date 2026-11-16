@@ -62,7 +62,6 @@ test('recorded differential coverage and source locks remain consistent', () => 
     const evidence = JSON.parse(fs.readFileSync(path.join(__dirname, 'VerifierNumericalEvidence.json'), 'utf8'));
     const result = evidence.reference_trajectory_audit.motion_diagnostic.extracted_c_differential;
     const source = fs.readFileSync(harness, 'utf8');
-    const documentation = fs.readFileSync(path.join(__dirname, '../../docs/IndependentVerifier.md'), 'utf8');
     assert.equal(result.motions, 20000 + 792 + 48);
     assert.equal(result.time_points_per_motion, 9);
     assert.equal(result.bitwise_point_comparisons_passed, 187349);
@@ -76,8 +75,6 @@ test('recorded differential coverage and source locks remain consistent', () => 
         assert.match(hash, /^[a-f0-9]{64}$/);
         assert.ok(source.includes(`'${hash}'`));
     }
-    for (const count of [187349, 211, 20840]) assert.ok(documentation.includes(String(count)));
-    assert.ok(documentation.includes('48／48'));
     const environment = evidence.reference_trajectory_audit.motion_diagnostic.environment_validation;
     assert.equal(environment.passed,
         environment.reference_motion_tests + environment.continuous_collision_tests);
@@ -86,8 +83,5 @@ test('recorded differential coverage and source locks remain consistent', () => 
     assert.equal(environment.continuous_collision_tests, 18);
     assert.deepEqual(environment.node_default, { passed: 3, skipped: 1, failed: 0 });
     assert.deepEqual(environment.node_locked_header, { passed: 4, skipped: 0, failed: 0 });
-    assert.ok(documentation.includes(`${environment.passed}／${environment.passed}`));
-    assert.ok(documentation.includes(`${environment.duration_ms} ms`));
     assert.match(environment.gate, /not cross-platform libm certification/);
-    assert.match(documentation, /动态认证保持 `Unavailable`/);
 });

@@ -1,6 +1,6 @@
 # 组合执行链：A1 基线与测试约束（2026-10-26）
 
-此文档只记录可复查的诊断和阶段 A 测试选择，不将有界搜索失败判作游戏无解。原始证据：`result/local-chain-fragment-pivot-fresh-20261026/coverage.json` 及同目录的 `N-assembly.log`；原始清单：`tests/functional_test/FairBenchmark.split.json`。全量基线为 155/169，字节去重 135/146，journal 37/37；14 个失败路径对应 11 个不同字节实例。验解器对 vial 规则无独立判定（见 `docs/IndependentVerifier.md`），该条件下不得发布候选。
+此文档只记录可复查的诊断和阶段 A 测试选择，不将有界搜索失败判作游戏无解。原始证据：`result/local-chain-fragment-pivot-fresh-20261026/coverage.json` 及同目录的 `N-assembly.log`；原始清单：`tests/functional_test/FairBenchmark.split.json`。全量基线为 155/169，字节去重 135/146，journal 37/37；14 个失败路径对应 11 个不同字节实例。验解器对 vial 规则无独立判定（见仓库 README 的验证器章节），该条件下不得发布候选。
 
 | 扫描序号（重复路径合并） | 物料/房间/规则特征 | 首个有证据的障碍 | 独立验解边界 |
 | --- | --- | --- | --- |
