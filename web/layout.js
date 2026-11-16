@@ -22,25 +22,37 @@
       if (object.rotation !== undefined &&
           (!Number.isInteger(object.rotation) || object.rotation < 0 || object.rotation > 5))
         throw new Error('object rotation must be 0..5');
+      if (object.cells !== undefined) {
+        if (!Array.isArray(object.cells) || !object.cells.length)
+          throw new Error('track cells must be a non-empty array');
+        for (const cell of object.cells)
+          if (!Array.isArray(cell) || cell.length !== 2 ||
+              !Number.isInteger(cell[0]) || !Number.isInteger(cell[1]))
+            throw new Error('track cells must be [q,r] pairs');
+      }
     }
     return layout;
   };
 
+  const cellsOf = (object) => object.cells?.length ? object.cells : [[object.q, object.r]];
   const addObject = (layout, object) => {
     const next = { type: object.type, q: object.q, r: object.r, rotation: object.rotation || 0 };
     if (object.length) next.length = object.length;
+    if (object.cells) next.cells = object.cells.map((cell) => [cell[0], cell[1]]);
     validate({ version: 1, objects: [next] });
     layout.objects.push(next);
     return next;
   };
   const removeAt = (layout, q, r) => {
     const before = layout.objects.length;
-    layout.objects = layout.objects.filter((object) => object.q !== q || object.r !== r);
+    layout.objects = layout.objects.filter(
+      (object) => !cellsOf(object).some((cell) => cell[0] === q && cell[1] === r));
     return before !== layout.objects.length;
   };
   const toJSON = (layout) => JSON.stringify(validate(layout), null, 2);
   const fromJSON = (text) => validate(JSON.parse(text));
-  const objectsAt = (layout, q, r) => layout.objects.filter((object) => object.q === q && object.r === r);
+  const objectsAt = (layout, q, r) =>
+    layout.objects.filter((object) => cellsOf(object).some((cell) => cell[0] === q && cell[1] === r));
 
   const api = { TYPES, createLayout, validate, addObject, removeAt, toJSON, fromJSON, objectsAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -95,8 +107,17 @@
       const p = pixel(object.q, object.r);
       const isSelected = object === selected;
       if (object.type === 'track') {
-        parts.push(`<polygon data-q="${object.q}" data-r="${object.r}" points="${hexPoints(p.x, p.y, UNIT * 0.92)}" fill="#20242c" stroke="${isSelected ? '#f2b84b' : '#586579'}" stroke-width="2"/>`);
-        parts.push(`<text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="12" font-family="monospace" fill="#9aa4b5">T</text>`);
+        const cells = cellsOf(object);
+        for (let i = 1; i < cells.length; ++i) {
+          const a = pixel(cells[i - 1][0], cells[i - 1][1]);
+          const b = pixel(cells[i][0], cells[i][1]);
+          parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${isSelected ? '#f2b84b' : '#586579'}" stroke-width="5" stroke-linecap="round"/>`);
+        }
+        for (const cell of cells) {
+          const c = pixel(cell[0], cell[1]);
+          parts.push(`<polygon data-q="${cell[0]}" data-r="${cell[1]}" points="${hexPoints(c.x, c.y, UNIT * 0.92)}" fill="#20242c" stroke="${isSelected ? '#f2b84b' : '#586579'}" stroke-width="2"/>`);
+          if (cell === cells[0]) parts.push(`<text x="${c.x}" y="${c.y + 4}" text-anchor="middle" font-size="12" font-family="monospace" fill="#9aa4b5">T</text>`);
+        }
       } else if (object.type.startsWith('glyph-')) {
         parts.push(`<polygon data-q="${object.q}" data-r="${object.r}" points="${hexPoints(p.x, p.y, UNIT * 0.82)}" fill="#2b2415" stroke="${isSelected ? '#fff' : '#f2b84b'}" stroke-width="2"/>`);
         parts.push(`<text x="${p.x}" y="${p.y + 5}" text-anchor="middle" font-size="12" font-weight="700" font-family="monospace" fill="#f2b84b">${label(object.type)}</text>`);
@@ -125,6 +146,17 @@
           return;
         }
         if (hit) { selected = hit; setStatus(`Selected ${hit.type} at ${q},${r}.`); render(); return; }
+        if (tool.value === 'track' && selected?.type === 'track') {
+          const cells = cellsOf(selected);
+          const adjacent = cells.some(([cq, cr]) => Math.abs(cq - q) <= 1 && Math.abs(cr - r) <= 1 &&
+            !(cq === q && cr === r) && Math.abs((cq + cr) - (q + r)) <= 1);
+          if (adjacent && !cells.some(([cq, cr]) => cq === q && cr === r)) {
+            selected.cells = [...cells, [q, r]];
+            setStatus(`Extended track to ${q},${r}.`);
+            render();
+            return;
+          }
+        }
         selected = addObject(layout, { type: tool.value, q, r, rotation: Number(rotation.value) });
         setStatus(`Placed ${selected.type} at ${q},${r}.`);
         render();
