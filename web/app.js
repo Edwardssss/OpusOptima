@@ -11,6 +11,13 @@
   const scrub = document.getElementById('scrub');
   const playButton = document.getElementById('play');
   const clock = document.getElementById('clock');
+  const editName = document.getElementById('edit-name');
+  const editMultiplier = document.getElementById('edit-multiplier');
+  const editInput = document.getElementById('edit-input');
+  const editOutput = document.getElementById('edit-output');
+  const buildButton = document.getElementById('build');
+  const downloadPuzzle = document.getElementById('download-puzzle');
+  const editorStatus = document.getElementById('editor-status');
   const metricNodes = {
     cycles: document.getElementById('m-cycles'),
     cost: document.getElementById('m-cost'),
@@ -103,6 +110,89 @@
     }
   };
 
+
+
+  const SYMBOLS = {
+    S: 1, A: 2, E: 3, F: 4, W: 5, Q: 6, G: 7, V: 8, C: 9,
+    I: 10, T: 11, L: 12, '+': 13, '-': 14, R: 15, X: 16,
+  };
+
+  const parseAtoms = (text) => {
+    const atoms = [];
+    for (const line of text.split(/\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const [symbol, q, r] = trimmed.split(/\s+/);
+      if (!(symbol in SYMBOLS) || q === undefined || r === undefined)
+        throw new Error(`atom line must be "symbol q r": ${trimmed}`);
+      const iq = Number(q), ir = Number(r);
+      if (!Number.isInteger(iq) || !Number.isInteger(ir)) throw new Error(`bad coordinate: ${trimmed}`);
+      atoms.push(SYMBOLS[symbol], iq, ir);
+    }
+    if (!atoms.length) throw new Error('at least one atom is required');
+    return atoms;
+  };
+
+  const setEditorStatus = (text, kind = '') => {
+    editorStatus.textContent = text;
+    editorStatus.className = `status ${kind}`;
+  };
+
+  const buildPuzzle = async () => {
+    buildButton.disabled = true;
+    downloadPuzzle.classList.add('disabled');
+    try {
+      const input = parseAtoms(editInput.value);
+      const output = parseAtoms(editOutput.value);
+      const multiplier = Number(editMultiplier.value);
+      if (!Number.isInteger(multiplier) || multiplier < 1) throw new Error('multiplier must be positive');
+      const module = await ensureModule();
+      const namePtr = module._malloc(new TextEncoder().encode(editName.value || 'Browser puzzle').length + 1);
+      const name = editName.value || 'Browser puzzle';
+      const encoded = new TextEncoder().encode(name);
+      module.HEAPU8.set(encoded, namePtr);
+      module.HEAPU8[namePtr + encoded.length] = 0;
+      const inPtr = module._malloc(input.length * 4);
+      const outPtr = module._malloc(output.length * 4);
+      const resultPtrPtr = module._malloc(4);
+      const lengthPtr = module._malloc(4);
+      const errorPtrPtr = module._malloc(4);
+      try {
+        module.HEAP32.set(Int32Array.from(input), inPtr >>> 2);
+        module.HEAP32.set(Int32Array.from(output), outPtr >>> 2);
+        const ok = module.ccall('opusoptima_make_puzzle', 'number',
+          ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+          [namePtr, input.length / 3, inPtr, output.length / 3, outPtr, multiplier,
+           resultPtrPtr, lengthPtr, errorPtrPtr]);
+        const errorPtr = module.HEAPU32[errorPtrPtr >>> 2];
+        if (!ok) throw new Error(errorPtr ? module.UTF8ToString(errorPtr) : 'puzzle build failed');
+        if (errorPtr) module.ccall('opusoptima_free', null, ['number'], [errorPtr]);
+        const resultPtr = module.HEAPU32[resultPtrPtr >>> 2];
+        const length = module.HEAPU32[lengthPtr >>> 2];
+        puzzleBytes = module.HEAPU8.slice(resultPtr, resultPtr + length);
+        module.ccall('opusoptima_free', null, ['number'], [resultPtr]);
+        selectedFile = { name: `${name}.puzzle` };
+        solveButton.disabled = false;
+        metrics.hidden = true;
+        viewer.hidden = true;
+        scene = null;
+        stopPlayback();
+        const blob = new Blob([puzzleBytes], { type: 'application/octet-stream' });
+        downloadPuzzle.href = URL.createObjectURL(blob);
+        downloadPuzzle.download = `${name}.puzzle`;
+        downloadPuzzle.classList.remove('disabled');
+        setEditorStatus(`Built "${name}" (${puzzleBytes.length} bytes). Press Solve.`, 'ok');
+        setStatus(`Loaded generated puzzle "${name}".`);
+      } finally {
+        module._free(namePtr); module._free(inPtr); module._free(outPtr);
+        module._free(resultPtrPtr); module._free(lengthPtr); module._free(errorPtrPtr);
+      }
+    } catch (error) {
+      setEditorStatus(error?.message || String(error), 'bad');
+    } finally {
+      buildButton.disabled = false;
+    }
+  };
 
   const callDescribe = (module, solution) => {
     const puzzlePtr = module._malloc(puzzleBytes.length);
@@ -348,6 +438,8 @@
       renderAt(t);
     }, 110);
   });
+
+  buildButton.addEventListener('click', () => { buildPuzzle(); });
 
   fileInput.addEventListener('change', () => {
     if (fileInput.files?.[0]) readFile(fileInput.files[0]).catch((error) => setStatus(String(error), 'bad'));

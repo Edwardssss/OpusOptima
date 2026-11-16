@@ -58,6 +58,26 @@
       </p>
     </section>
 
+    <section id="editor" class="panel editor">
+      <p class="eyebrow">Puzzle editor</p>
+      <h2>Build a simple two-molecule puzzle</h2>
+      <p class="fineprint">
+        One input molecule and one output molecule, no bonds, no production
+        metadata. Atom lines use the game symbols, for example <code>S 0 0</code>.
+      </p>
+      <div class="editor-grid">
+        <label>Name<input id="edit-name" value="Browser puzzle"></label>
+        <label>Output multiplier<input id="edit-multiplier" type="number" min="1" max="12" value="1"></label>
+        <label>Input atoms<textarea id="edit-input" rows="3">S 0 0</textarea></label>
+        <label>Output atoms<textarea id="edit-output" rows="3">S 0 0</textarea></label>
+      </div>
+      <div class="row">
+        <button id="build" type="button">Build and load</button>
+        <a id="download-puzzle" class="secondary disabled" download>Download .puzzle</a>
+      </div>
+      <p id="editor-status" class="status" role="status">Edit atoms, then build.</p>
+    </section>
+
     <section class="notes">
       <h2>What runs here</h2>
       <p>

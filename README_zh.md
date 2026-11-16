@@ -319,7 +319,7 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 （静态文件、单线程 Web Worker、无自定义 COOP/COEP 头）；但 Pages 不能运行 native CLI、
 `posix_spawn` 验证器或 `libverify.so`，需要这些时让 Pages 只做前端，求解/验证放到
 自建容器或服务器后端。首个目标已经放在 `wasm/`，静态页面在 `web/`：单线程模块包含上游 Standard、
-二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe`，
+二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_make_puzzle`，
 由 `.github/workflows/pages.yml` 发布 `web/dist`。本地构建：
 
 ```sh
@@ -334,8 +334,9 @@ cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 **GitHub Actions**，然后推送到 `main` 或手动运行
 `Deploy browser solver to GitHub Pages` workflow。页面使用进程内 omsim 检查，
 而不是 native 隔离的 `legacy-gate` 发布事务，并显示机器布局与逐臂 tape 时间线
-回放；这是静态布局/时间线，不是碰撞模拟。puzzle 编辑器和带 native 权威的
-后端仍属后续工作。
+回放；这是静态布局/时间线，不是碰撞模拟。简单的双分子编辑器通过
+`opusoptima_make_puzzle` 生成基础 `.puzzle` 并可直接送入求解器；完整棋盘/生产
+编辑器和带 native 权威的后端仍属后续工作。
 
 ## 开发约定
 

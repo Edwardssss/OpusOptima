@@ -214,5 +214,57 @@ EMSCRIPTEN_KEEPALIVE char* opusoptima_describe(const std::uint8_t* puzzleBytes, 
     }
 }
 
+EMSCRIPTEN_KEEPALIVE int opusoptima_make_puzzle(
+    const char* name, int inputAtomCount, const int* inputAtoms, int outputAtomCount,
+    const int* outputAtoms, int outputMultiplier, std::uint8_t** puzzle, int* puzzleLength,
+    char** error) {
+    if (puzzle) *puzzle = nullptr;
+    if (puzzleLength) *puzzleLength = 0;
+    if (error) *error = nullptr;
+    const auto fail = [&](const char* detail) {
+        if (error) *error = Duplicate(detail);
+        return 0;
+    };
+    if (!name || !inputAtoms || !outputAtoms || inputAtomCount < 1 || outputAtomCount < 1 ||
+        outputMultiplier < 1)
+        return fail("invalid puzzle editor arguments");
+    try {
+        opusoptima::io::PuzzleData data;
+        data.version = 3;
+        data.name = name;
+        data.permissionBits = 0x17c7370fULL;
+        data.outputMultiplier = outputMultiplier;
+        opusoptima::io::Molecule input;
+        opusoptima::io::Molecule output;
+        const auto add = [](opusoptima::io::Molecule& molecule, const int* atoms, int count) {
+            for (int i = 0; i < count; ++i) {
+                const int type = atoms[i * 3];
+                const int q = atoms[i * 3 + 1];
+                const int r = atoms[i * 3 + 2];
+                if (type < 1 || type > 16 || q < -128 || q > 127 || r < -128 || r > 127)
+                    throw std::invalid_argument("invalid atom type or coordinate");
+                molecule.atoms.push_back(
+                    {static_cast<opusoptima::core::AtomType>(type), {q, r}});
+            }
+        };
+        add(input, inputAtoms, inputAtomCount);
+        add(output, outputAtoms, outputAtomCount);
+        data.inputs.push_back(std::move(input));
+        data.outputs.push_back(std::move(output));
+        const auto bytes = opusoptima::io::BinaryWriter::WritePuzzle(data);
+        auto* result = static_cast<std::uint8_t*>(std::malloc(bytes.size()));
+        if (!result) return fail("out of memory");
+        std::memcpy(result, bytes.data(), bytes.size());
+        *puzzle = result;
+        *puzzleLength = static_cast<int>(bytes.size());
+        return 1;
+    } catch (const std::exception& exception) {
+        if (error) *error = Duplicate(exception.what());
+    } catch (...) {
+        if (error) *error = Duplicate("unknown puzzle editor failure");
+    }
+    return 0;
+}
+
 EMSCRIPTEN_KEEPALIVE void opusoptima_free(void* pointer) { std::free(pointer); }
 }

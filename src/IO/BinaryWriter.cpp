@@ -49,6 +49,61 @@ void BinaryWriter::WriteString(std::vector<std::byte>& buf, const std::string& s
     }
 }
 
+
+void BinaryWriter::WriteU64(std::vector<std::byte>& buf, std::uint64_t value) {
+    for (int i = 0; i < 8; ++i)
+        buf.push_back(static_cast<std::byte>((value >> (i * core::kBitsPerByte)) & core::kByteMask));
+}
+
+void BinaryWriter::WriteBool(std::vector<std::byte>& buf, bool value) {
+    WriteU8(buf, value ? 1U : 0U);
+}
+
+void BinaryWriter::WriteHexI8(std::vector<std::byte>& buf, core::HexCoord cell) {
+    const auto check = [](int value) {
+        if (value < -128 || value > 127)
+            throw std::invalid_argument("puzzle coordinate does not fit signed 8-bit");
+        return static_cast<std::uint8_t>(static_cast<std::int8_t>(value));
+    };
+    WriteU8(buf, check(cell.q));
+    WriteU8(buf, check(cell.r));
+}
+
+void BinaryWriter::WriteMolecule(std::vector<std::byte>& buf, const Molecule& molecule) {
+    WriteI32(buf, static_cast<std::int32_t>(molecule.atoms.size()));
+    for (const auto& atom : molecule.atoms) {
+        const auto id = static_cast<std::uint8_t>(atom.type);
+        if (id == 0) throw std::invalid_argument("puzzle atom type is unset");
+        WriteU8(buf, id);
+        WriteHexI8(buf, atom.position);
+    }
+    WriteI32(buf, static_cast<std::int32_t>(molecule.bonds.size()));
+    for (const auto& bond : molecule.bonds) {
+        WriteU8(buf, bond.bits);
+        WriteHexI8(buf, bond.from);
+        WriteHexI8(buf, bond.to);
+    }
+}
+
+std::vector<std::byte> BinaryWriter::WritePuzzle(const PuzzleData& puzzle) {
+    if (puzzle.productionInfo)
+        throw std::invalid_argument("puzzle export does not support production metadata yet");
+    if (puzzle.inputs.size() < 1 || puzzle.outputs.size() < 1)
+        throw std::invalid_argument("puzzle export requires at least one input and output");
+    std::vector<std::byte> buf;
+    WriteI32(buf, core::kPuzzleFormatVersion);
+    WriteString(buf, puzzle.name);
+    WriteU64(buf, puzzle.creatorSteamId);
+    WriteU64(buf, puzzle.permissionBits);
+    WriteI32(buf, static_cast<std::int32_t>(puzzle.inputs.size()));
+    for (const auto& molecule : puzzle.inputs) WriteMolecule(buf, molecule);
+    WriteI32(buf, static_cast<std::int32_t>(puzzle.outputs.size()));
+    for (const auto& molecule : puzzle.outputs) WriteMolecule(buf, molecule);
+    WriteI32(buf, puzzle.outputMultiplier);
+    WriteBool(buf, false);
+    return buf;
+}
+
 std::vector<std::byte> BinaryWriter::WriteSolution(const SolutionData& solution) {
     std::vector<std::byte> buf;
 

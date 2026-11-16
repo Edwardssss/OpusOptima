@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "BinaryParser.hpp"
+#include "BinaryWriter.hpp"
 #include "UnitTestConstants.hpp"
 
 using opusoptima::test::BufferBuilder;
@@ -176,6 +177,25 @@ TEST(PuzzleParseUnitTest, AcceptsMinimumSizedListEntries) {
     ASSERT_EQ(puzzle.productionInfo->conduits.size(), 1U);
     EXPECT_EQ(puzzle.productionInfo->conduits.front().path.size(), 1U);
     EXPECT_EQ(puzzle.productionInfo->vials.size(), 1U);
+}
+
+TEST(PuzzleParseUnitTest, WritePuzzleRoundTripsBasePuzzle) {
+    opusoptima::io::PuzzleData puzzle;
+    puzzle.version = 3;
+    puzzle.name = "editor round-trip";
+    puzzle.permissionBits = (1ULL << 0) | (1ULL << 3);
+    puzzle.outputMultiplier = 2;
+    puzzle.inputs = {{{{{opusoptima::core::AtomType::Salt, {0, 0}}}, {}}}};
+    puzzle.outputs = {{{{{opusoptima::core::AtomType::Air, {1, 0}}}, {}}}};
+    const auto bytes = opusoptima::io::BinaryWriter::WritePuzzle(puzzle);
+    const auto parsed = opusoptima::io::BinaryParser::ParsePuzzle(bytes);
+    EXPECT_EQ(parsed.name, puzzle.name);
+    EXPECT_EQ(parsed.permissionBits, puzzle.permissionBits);
+    EXPECT_EQ(parsed.outputMultiplier, 2);
+    ASSERT_EQ(parsed.inputs.size(), 1U);
+    ASSERT_EQ(parsed.outputs.size(), 1U);
+    EXPECT_EQ(parsed.inputs[0].atoms.size(), 1U);
+    EXPECT_EQ(parsed.outputs[0].atoms.size(), 1U);
 }
 
 TEST(PuzzleParseUnitTest, StringRoundTrip) {
