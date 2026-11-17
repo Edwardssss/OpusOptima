@@ -186,11 +186,11 @@
   load.addEventListener('change', async () => {
     try {
       layout = fromJSON(await load.files[0].text()); selected = null; setStatus(tr(`Loaded ${layout.objects.length} objects.`, `已加载 ${layout.objects.length} 个对象。`), 'ok'); render();
-    } catch (error) { setStatus(String(error.message || error), 'bad'); }
+    } catch (error) { setStatus(OpusI18n.error(error.message || error), 'bad'); }
   });
   apply.addEventListener('click', () => {
     try { layout = fromJSON(json.value); selected = null; setStatus(tr(`Applied ${layout.objects.length} objects.`, `已应用 ${layout.objects.length} 个对象。`), 'ok'); render(); }
-    catch (error) { setStatus(String(error.message || error), 'bad'); }
+    catch (error) { setStatus(OpusI18n.error(error.message || error), 'bad'); }
   });
   render();
 })(typeof globalThis !== 'undefined' ? globalThis : this);

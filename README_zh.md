@@ -326,7 +326,7 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 emcmake cmake -S wasm -B build-wasm -DCMAKE_BUILD_TYPE=Release
 emmake cmake --build build-wasm --parallel 2
 mkdir -p web/dist
-cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/dist/
+cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/example.puzzle web/dist/
 cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 ```
 

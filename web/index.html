@@ -23,6 +23,7 @@
       </label>
       <div class="row">
         <button id="solve" disabled data-en="Solve" data-zh="求解">Solve</button>
+        <button id="load-example" class="secondary" type="button" data-en="Example: Refined Gold" data-zh="示例：冶炼金">Example: Refined Gold</button>
         <a id="download" class="secondary disabled" download data-en="Download .solution" data-zh="下载 .solution">Download .solution</a>
       </div>
       <p id="status" class="status" role="status" data-en="Waiting for a puzzle." data-zh="等待题目。">Waiting for a puzzle.</p>
@@ -91,14 +92,14 @@
             <li data-en="Pick an atom and click a grid cell. Erase removes an atom and its bonds." data-zh="选择原子并点击格子。删除工具会移除原子及其键。">Pick an atom and click a grid cell. Erase removes an atom and its bonds.</li>
             <li data-en="Choose Bond, choose a bond type, then click two atoms. Clicking the same pair again changes its type." data-zh="选择“键”和键类型，然后依次点击两个原子；再次点击同一对原子会改变键类型。">Choose Bond, choose a bond type, then click two atoms. Clicking the same pair again changes its type.</li>
             <li data-en="Enable production to add chambers, conduits and vials with the form rows." data-zh="启用 production 后，用表单行添加反应室、导管和瓶。">Enable production to add chambers, conduits and vials with the form rows.</li>
-            <li data-en="Build and load, then press Solve. Text/JSON editors remain under the collapsed section." data-zh="点击“构建并加载”，然后按“求解”。文本/JSON 编辑器保留在折叠区域。">Build and load, then press Solve. Text/JSON editors remain under the collapsed section.</li>
+            <li data-en="Build and load, then press Solve. Text/JSON editing is under Advanced settings." data-zh="点击“构建并加载”，然后按“求解”。文本/JSON 编辑在“高级设置”中。">Build and load, then press Solve. Text/JSON editing is under Advanced settings.</li>
           </ol>
         </div>
       </div>
     </section>
 
     <details id="editor" class="panel editor">
-      <summary data-en="Text/JSON editor" data-zh="文本 / JSON 编辑器">Text/JSON editor</summary>
+      <summary data-en="Advanced settings: text/JSON editor" data-zh="高级设置：文本 / JSON 编辑器">Advanced settings: text/JSON editor</summary>
       <div class="details-body">
       <p class="eyebrow" data-en="Puzzle editor" data-zh="题目编辑器">Puzzle editor</p>
       <div class="editor-grid">
@@ -149,7 +150,6 @@
     <section id="layout-editor" class="panel layout-editor">
       <p class="eyebrow" data-en="Machine layout" data-zh="机器布局">Machine layout</p>
       <h2 data-en="Place mechanisms and glyphs" data-zh="放置机械与 glyph">Place mechanisms and glyphs</h2>
-      <p class="fineprint" data-en="Planning-only machine layout. Saved as a separate .layout.json; it does not change the puzzle." data-zh="仅用于规划的机器布局。保存为独立的 .layout.json，不修改 puzzle。">Planning-only machine layout. Saved as a separate .layout.json; it does not change the puzzle.</p>
       <div class="layout-toolbar">
         <label><span data-en="Tool" data-zh="工具">Tool</span><select id="layout-tool">
           <option value="arm1">arm1</option><option value="piston">piston</option>

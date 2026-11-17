@@ -226,7 +226,7 @@
         module._free(lengthPtr); module._free(errorPtrPtr);
       }
     } catch (error) {
-      setEditorStatus(error?.message || String(error), 'bad');
+      setEditorStatus(OpusI18n.error(error?.message || error), 'bad');
     } finally {
       buildButton.disabled = false;
     }
@@ -472,6 +472,16 @@
     playButton.textContent = tr('Play', '播放');
   };
 
+  const loadExample = async () => {
+    try {
+      const bytes = new Uint8Array(await (await fetch('example.puzzle')).arrayBuffer());
+      await readFile(new File([bytes], 'example.puzzle'));
+      setStatus(tr('Loaded example: Refined Gold.', '已加载示例：冶炼金。'));
+    } catch (error) {
+      setStatus(OpusI18n.error(error?.message || error), 'bad');
+    }
+  };
+
   solveButton.addEventListener('click', async () => {
     if (!puzzleBytes) return;
     solveButton.disabled = true;
@@ -494,14 +504,19 @@
       for (const key of Object.keys(metricNodes)) metricNodes[key].textContent = report[key] ?? '—';
       metrics.hidden = false;
       scene = callDescribe(module, solution);
-      trace = callTrace(module, solution);
-      maxCycle = trace?.frames?.length
-        ? trace.frames.length - 1
-        : Math.max(0, ...scene.objects.flatMap((object) => (object.tape || []).map(([, at]) => at)));
+      trace = null;
+      maxCycle = Math.max(0, ...scene.objects.flatMap((object) => (object.tape || []).map(([, at]) => at)));
       viewer.hidden = false;
       scrub.max = String(maxCycle);
       stopPlayback();
       renderAt(0);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      trace = callTrace(module, solution);
+      if (trace?.frames?.length) {
+        maxCycle = trace.frames.length - 1;
+        scrub.max = String(maxCycle);
+        renderAt(0);
+      }
       const base = (selectedFile?.name || 'puzzle').replace(/\.puzzle$/i, '');
       const blob = new Blob([solution], { type: 'application/octet-stream' });
       download.href = URL.createObjectURL(blob);
@@ -509,7 +524,7 @@
       download.classList.remove('disabled');
       setStatus(tr(`Solved and verified in ${elapsed} ms.`, `求解并验证完成，用时 ${elapsed} ms。`), 'ok');
     } catch (error) {
-      setStatus(error?.message || String(error), 'bad');
+      setStatus(OpusI18n.error(error?.message || error), 'bad');
     } finally {
       solveButton.disabled = false;
     }
@@ -566,7 +581,7 @@
         module._free(jsonPtr); module._free(resultPtrPtr); module._free(lengthPtr); module._free(errorPtrPtr);
       }
     } catch (error) {
-      advancedStatus.textContent = error?.message || String(error);
+      advancedStatus.textContent = OpusI18n.error(error?.message || error);
       advancedStatus.className = 'status bad';
     } finally {
       buildJsonButton.disabled = false;
@@ -575,8 +590,10 @@
 
   buildJsonButton.addEventListener('click', () => { buildAdvanced(); });
 
+  document.getElementById('load-example').addEventListener('click', loadExample);
+
   fileInput.addEventListener('change', () => {
-    if (fileInput.files?.[0]) readFile(fileInput.files[0]).catch((error) => setStatus(String(error), 'bad'));
+    if (fileInput.files?.[0]) readFile(fileInput.files[0]).catch((error) => setStatus(OpusI18n.error(error?.message || error), 'bad'));
   });
   for (const event of ['dragenter', 'dragover']) {
     drop.addEventListener(event, (ev) => { ev.preventDefault(); drop.classList.add('over'); });
@@ -586,7 +603,7 @@
   }
   drop.addEventListener('drop', (ev) => {
     const file = ev.dataTransfer?.files?.[0];
-    if (file) readFile(file).catch((error) => setStatus(String(error), 'bad'));
+    if (file) readFile(file).catch((error) => setStatus(OpusI18n.error(error?.message || error), 'bad'));
   });
 
   window.OpusUI = {

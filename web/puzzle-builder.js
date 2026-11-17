@@ -304,7 +304,7 @@
         module._free(jsonPtr); module._free(resultPtrPtr); module._free(lengthPtr); module._free(errorPtrPtr);
       }
     } catch (error) {
-      setStatus(error?.message || String(error), 'bad');
+      setStatus(OpusI18n.error(error?.message || error), 'bad');
     } finally {
       button.disabled = false;
     }
@@ -327,7 +327,7 @@
   root.innerHTML = `
     <p class="eyebrow" data-en="Puzzle builder" data-zh="题目构建器">Puzzle builder</p>
     <h2 data-en="Build a full multi-port puzzle" data-zh="构建完整的多端口题目">Build a full multi-port puzzle</h2>
-    <p class="fineprint" data-en="Click atoms/bonds on the grid, switch ports, then add production metadata. The builder writes the same JSON schema as the advanced editor." data-zh="在网格上点击原子/键，切换端口，再添加 production metadata；构建器使用与高级编辑器相同的 JSON schema。">Click atoms/bonds on the grid, switch ports, then add production metadata. The builder writes the same JSON schema as the advanced editor.</p>
+    <p class="fineprint" data-en="Pick a port, choose an atom or bond tool, and click the grid." data-zh="选择端口，选择原子或键工具，然后点击网格。">Pick a port, choose an atom or bond tool, and click the grid.</p>
     <div class="builder-meta">
       <label><span data-en="Name" data-zh="名称">Name</span><input id="builder-name"></label>
       <label><span data-en="Output multiplier" data-zh="输出倍数">Output multiplier</span><input id="builder-multiplier" type="number" min="1" max="12"></label>
@@ -345,6 +345,7 @@
       </div>
       <div id="builder-production" class="builder-production"></div>
     </div>
+    <div id="builder-advanced" class="builder-advanced"></div>
     <div class="row"><button id="builder-build" type="button" data-en="Build and load" data-zh="构建并加载">Build and load</button><a id="builder-download" class="secondary disabled" download data-en="Download .puzzle" data-zh="下载 .puzzle">Download .puzzle</a></div>
     <p id="builder-status" class="status" role="status" data-en="Click a grid cell to add an atom." data-zh="点击网格添加原子。">Click a grid cell to add an atom.</p>`;
 
@@ -357,6 +358,12 @@
   document.getElementById('builder-name').addEventListener('input', (event) => { state.name = event.target.value; });
   document.getElementById('builder-multiplier').addEventListener('input', (event) => { state.multiplier = Number(event.target.value) || 1; });
   document.getElementById('builder-permissions').addEventListener('input', (event) => { state.permissions = event.target.value; });
+  const advancedHost = document.getElementById('builder-advanced');
+  const legacyEditor = document.getElementById('editor');
+  if (advancedHost && legacyEditor) {
+    legacyEditor.open = false;
+    advancedHost.appendChild(legacyEditor);
+  }
   document.getElementById('builder-build').addEventListener('click', build);
   window.addEventListener('opus-lang', () => { render(); OpusI18n.apply(); });
   render();

@@ -49,7 +49,7 @@ jobs:
       - name: Assemble static site
         run: |
           mkdir -p web/dist
-          cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/dist/
+          cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/example.puzzle web/dist/
           cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
           touch web/dist/.nojekyll
       - uses: actions/configure-pages@v5

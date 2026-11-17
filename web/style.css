@@ -148,3 +148,7 @@ code { color: var(--accent); }
 @media (max-width: 760px) { .guide-grid { grid-template-columns: 1fr; } .atom-legend { grid-template-columns: 1fr; } }
 
 .atom-id { color: var(--accent); font: 10px ui-monospace, monospace; }
+
+.builder-advanced { margin-top: 14px; }
+.builder-advanced > details { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #141820; }
+.builder-advanced > details > summary { cursor: pointer; color: var(--accent); font-weight: 700; }

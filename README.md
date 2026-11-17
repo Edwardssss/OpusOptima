@@ -447,7 +447,7 @@ and deploys `web/dist` with `.github/workflows/pages.yml`. Local build:
 emcmake cmake -S wasm -B build-wasm -DCMAKE_BUILD_TYPE=Release
 emmake cmake --build build-wasm --parallel 2
 mkdir -p web/dist
-cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/dist/
+cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/example.puzzle web/dist/
 cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 ```
 
