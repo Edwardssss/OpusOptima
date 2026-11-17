@@ -11,12 +11,7 @@
     <header class="hero">
       <p class="eyebrow">OpusOptima / WebAssembly</p>
       <h1 data-en="Solve an Opus Magnum puzzle locally." data-zh="在本地求解 Opus Magnum 谜题。">Solve an Opus Magnum puzzle locally.</h1>
-      <p class="lede" data-en="The Standard solver, the binary codecs and the pinned omsim verifier run in this tab. Nothing is uploaded. This is a single-threaded demo; the native isolated <code>legacy-gate</code> transaction remains the publication authority." data-zh="Standard 求解器、二进制 codec 和锁定版 omsim 验证器都在此标签页内运行，不会上传任何内容。当前是单线程演示；native 隔离的 <code>legacy-gate</code> 发布事务仍是权威路径。">
-        The Standard solver, the binary codecs and the pinned omsim verifier run
-        in this tab. Nothing is uploaded. This is a single-threaded demo; the
-        native isolated <code>legacy-gate</code> transaction remains the
-        publication authority.
-      </p>
+      <p class="lede" data-en="Solve and build puzzles locally in your browser. Nothing is uploaded." data-zh="在浏览器中本地求解和构建谜题，不会上传任何内容。">Solve and build puzzles locally in your browser. Nothing is uploaded.</p>
       <button id="lang-toggle" class="lang-toggle" type="button">中文</button>
     </header>
 
@@ -53,22 +48,59 @@
       </div>
       <svg id="scene" role="img" aria-label="Solution machine layout"></svg>
       <div id="tapes" class="tapes"></div>
-      <p class="fineprint" data-en="The animation uses omsim's per-cycle physics trace; the in-process omsim result above is the verification record." data-zh="动画使用 omsim 的逐周期物理轨迹；上方的进程内 omsim 结果就是验证记录。">
-        The animation uses omsim's per-cycle physics trace; the in-process omsim
-        result above is the verification record.
-      </p>
     </section>
 
     <section id="puzzle-builder" class="panel builder"></section>
 
-    <section id="editor" class="panel editor">
+    <section id="guide" class="panel guide">
+      <p class="eyebrow" data-en="Reference" data-zh="参考">Reference</p>
+      <h2 data-en="Atoms, bonds and controls" data-zh="原子、键与操作">Atoms, bonds and controls</h2>
+      <div class="guide-grid">
+        <div>
+          <h3 data-en="Atoms" data-zh="原子">Atoms</h3>
+          <div class="atom-legend">
+            <div><span class="atom-symbol">S</span><code class="atom-id">1</code><b data-en="Salt" data-zh="盐">Salt</b><small data-en="basic atom" data-zh="基础原子">basic atom</small></div>
+            <div><span class="atom-symbol">A</span><code class="atom-id">2</code><b data-en="Air" data-zh="气">Air</b><small data-en="elemental" data-zh="元素">elemental</small></div>
+            <div><span class="atom-symbol">E</span><code class="atom-id">3</code><b data-en="Earth" data-zh="土">Earth</b><small data-en="elemental" data-zh="元素">elemental</small></div>
+            <div><span class="atom-symbol">F</span><code class="atom-id">4</code><b data-en="Fire" data-zh="火">Fire</b><small data-en="elemental" data-zh="元素">elemental</small></div>
+            <div><span class="atom-symbol">W</span><code class="atom-id">5</code><b data-en="Water" data-zh="水">Water</b><small data-en="elemental" data-zh="元素">elemental</small></div>
+            <div><span class="atom-symbol">Q</span><code class="atom-id">6</code><b data-en="Quicksilver" data-zh="水银">Quicksilver</b><small data-en="catalyst" data-zh="催化剂">catalyst</small></div>
+            <div><span class="atom-symbol">G</span><code class="atom-id">7</code><b data-en="Gold" data-zh="金">Gold</b><small data-en="metal" data-zh="金属">metal</small></div>
+            <div><span class="atom-symbol">V</span><code class="atom-id">8</code><b data-en="Silver" data-zh="银">Silver</b><small data-en="metal" data-zh="金属">metal</small></div>
+            <div><span class="atom-symbol">C</span><code class="atom-id">9</code><b data-en="Copper" data-zh="铜">Copper</b><small data-en="metal" data-zh="金属">metal</small></div>
+            <div><span class="atom-symbol">I</span><code class="atom-id">10</code><b data-en="Iron" data-zh="铁">Iron</b><small data-en="metal" data-zh="金属">metal</small></div>
+            <div><span class="atom-symbol">T</span><code class="atom-id">11</code><b data-en="Tin" data-zh="锡">Tin</b><small data-en="metal" data-zh="金属">metal</small></div>
+            <div><span class="atom-symbol">L</span><code class="atom-id">12</code><b data-en="Lead" data-zh="铅">Lead</b><small data-en="metal" data-zh="金属">metal</small></div>
+            <div><span class="atom-symbol">+</span><code class="atom-id">13</code><b data-en="Vitae" data-zh="生命">Vitae</b><small data-en="life" data-zh="生命">life</small></div>
+            <div><span class="atom-symbol">−</span><code class="atom-id">14</code><b data-en="Mors" data-zh="死亡">Mors</b><small data-en="death" data-zh="死亡">death</small></div>
+            <div><span class="atom-symbol">R</span><code class="atom-id">15</code><b data-en="Repeat" data-zh="重复">Repeat</b><small data-en="repeating-output placeholder" data-zh="重复输出占位">repeating-output placeholder</small></div>
+            <div><span class="atom-symbol">X</span><code class="atom-id">16</code><b data-en="Quintessence" data-zh="第五元素">Quintessence</b><small data-en="quintessence" data-zh="第五元素">quintessence</small></div>
+          </div>
+        </div>
+        <div>
+          <h3 data-en="Bonds" data-zh="键">Bonds</h3>
+          <div class="bond-legend">
+            <div><span class="bond-swatch" style="background:#c4cedd"></span><b data-en="Normal" data-zh="普通键">Normal</b><code>bits = 1</code><small data-en="standard bond" data-zh="标准键">standard bond</small></div>
+            <div><span class="bond-swatch" style="background:#ff6b6b"></span><b data-en="Red triplex" data-zh="红色三键">Red triplex</b><code>bits = 2</code><small data-en="red bond" data-zh="红色键">red bond</small></div>
+            <div><span class="bond-swatch" style="background:#9ca3af"></span><b data-en="Black triplex" data-zh="黑色三键">Black triplex</b><code>bits = 4</code><small data-en="black bond (shown gray)" data-zh="黑色键（显示为灰色）">black bond (shown gray)</small></div>
+            <div><span class="bond-swatch" style="background:#f2d14b"></span><b data-en="Yellow triplex" data-zh="黄色三键">Yellow triplex</b><code>bits = 8</code><small data-en="yellow bond" data-zh="黄色键">yellow bond</small></div>
+          </div>
+          <h3 data-en="How to use" data-zh="使用方法">How to use</h3>
+          <ol class="howto">
+            <li data-en="Pick Inputs or Outputs, then a port. Use + Port to add another molecule." data-zh="选择输入或输出，再选端口；点击 + 端口 添加另一个分子。">Pick Inputs or Outputs, then a port. Use + Port to add another molecule.</li>
+            <li data-en="Pick an atom and click a grid cell. Erase removes an atom and its bonds." data-zh="选择原子并点击格子。删除工具会移除原子及其键。">Pick an atom and click a grid cell. Erase removes an atom and its bonds.</li>
+            <li data-en="Choose Bond, choose a bond type, then click two atoms. Clicking the same pair again changes its type." data-zh="选择“键”和键类型，然后依次点击两个原子；再次点击同一对原子会改变键类型。">Choose Bond, choose a bond type, then click two atoms. Clicking the same pair again changes its type.</li>
+            <li data-en="Enable production to add chambers, conduits and vials with the form rows." data-zh="启用 production 后，用表单行添加反应室、导管和瓶。">Enable production to add chambers, conduits and vials with the form rows.</li>
+            <li data-en="Build and load, then press Solve. Text/JSON editors remain under the collapsed section." data-zh="点击“构建并加载”，然后按“求解”。文本/JSON 编辑器保留在折叠区域。">Build and load, then press Solve. Text/JSON editors remain under the collapsed section.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <details id="editor" class="panel editor">
+      <summary data-en="Text/JSON editor" data-zh="文本 / JSON 编辑器">Text/JSON editor</summary>
+      <div class="details-body">
       <p class="eyebrow" data-en="Puzzle editor" data-zh="题目编辑器">Puzzle editor</p>
-      <h2 data-en="Build a simple two-molecule puzzle" data-zh="构建简单的双分子题目">Build a simple two-molecule puzzle</h2>
-      <p class="fineprint" data-en="One input molecule and one output molecule, with optional bonds; no production metadata. Atom lines use game symbols, for example <code>S 0 0</code>; bond lines use <code>bits q1 r1 q2 r2</code>, for example <code>1 0 0 1 0</code>." data-zh="一个输入分子和一个输出分子，可选键；不包含 production metadata。原子行使用游戏符号，例如 <code>S 0 0</code>；键行格式为 <code>bits q1 r1 q2 r2</code>，例如 <code>1 0 0 1 0</code>。">
-        One input molecule and one output molecule, with optional bonds; no
-        production metadata. Atom lines use game symbols, for example <code>S 0 0</code>;
-        bond lines use <code>bits q1 r1 q2 r2</code>, for example <code>1 0 0 1 0</code>.
-      </p>
       <div class="editor-grid">
         <label><span data-en="Name" data-zh="名称">Name</span><input id="edit-name" value="Browser puzzle"></label>
         <label><span data-en="Output multiplier" data-zh="输出倍数">Output multiplier</span><input id="edit-multiplier" type="number" min="1" max="12" value="1"></label>
@@ -84,13 +116,6 @@
       <p id="editor-status" class="status" role="status" data-en="Edit atoms, then build." data-zh="编辑原子后构建。">Edit atoms, then build.</p>
       <details class="advanced">
         <summary data-en="Advanced JSON (multi-port and production metadata)" data-zh="高级 JSON（多端口与 production metadata）">Advanced JSON (multi-port and production metadata)</summary>
-        <p class="fineprint">
-          <span data-en="Arrays under <code>inputs</code>/<code>outputs</code> become separate ports. Optional <code>production</code> accepts <code>shrinkLeft</code>, <code>shrinkRight</code>, <code>isolation</code>, <code>chambers</code>, <code>conduits</code> and <code>vials</code>." data-zh="<code>inputs</code>/<code>outputs</code> 数组会变成独立端口。可选 <code>production</code> 支持 <code>shrinkLeft</code>、<code>shrinkRight</code>、<code>isolation</code>、<code>chambers</code>、<code>conduits</code> 和 <code>vials</code>。">Arrays under <code>inputs</code>/<code>outputs</code> become separate
-          ports. Optional <code>production</code> accepts
-          <code>shrinkLeft</code>, <code>shrinkRight</code>,
-          <code>isolation</code>, <code>chambers</code>,
-          <code>conduits</code> and <code>vials</code>.</span>
-        </p>
         <textarea id="edit-json" rows="14" spellcheck="false">{
   "name": "Advanced browser puzzle",
   "outputMultiplier": 1,
@@ -118,17 +143,13 @@
         </div>
         <p id="advanced-status" class="status" role="status" data-en="Edit JSON, then build." data-zh="编辑 JSON 后构建。">Edit JSON, then build.</p>
       </details>
-    </section>
+      </div>
+    </details>
 
     <section id="layout-editor" class="panel layout-editor">
       <p class="eyebrow" data-en="Machine layout" data-zh="机器布局">Machine layout</p>
       <h2 data-en="Place mechanisms and glyphs" data-zh="放置机械与 glyph">Place mechanisms and glyphs</h2>
-      <p class="fineprint" data-en="The puzzle format stores molecules and production metadata, not free-form mechanisms. This independent <code>.layout.json</code> editor places arms, pistons, barons, tracks and glyphs for planning and preview; it does not alter the puzzle file or the solver's emitted machine." data-zh="puzzle 格式保存分子和 production metadata，不保存自由机械布局。这个独立的 <code>.layout.json</code> 编辑器可摆放 arm、piston、baron、track 和 glyph，用于规划与预览；它不会修改 puzzle 或求解器输出的机器。">
-        The puzzle format stores molecules and production metadata, not free-form
-        mechanisms. This independent <code>.layout.json</code> editor places
-        arms, pistons, barons, tracks and glyphs for planning and preview; it does
-        not alter the puzzle file or the solver's emitted machine.
-      </p>
+      <p class="fineprint" data-en="Planning-only machine layout. Saved as a separate .layout.json; it does not change the puzzle." data-zh="仅用于规划的机器布局。保存为独立的 .layout.json，不修改 puzzle。">Planning-only machine layout. Saved as a separate .layout.json; it does not change the puzzle.</p>
       <div class="layout-toolbar">
         <label><span data-en="Tool" data-zh="工具">Tool</span><select id="layout-tool">
           <option value="arm1">arm1</option><option value="piston">piston</option>
@@ -158,20 +179,6 @@
       <p id="layout-status" class="status" role="status" data-en="Click a cell to place the selected tool." data-zh="点击格子放置当前工具。">Click a cell to place the selected tool.</p>
     </section>
 
-    <section class="notes">
-      <h2 data-en="What runs here" data-zh="这里运行什么">What runs here</h2>
-      <p data-en="The page loads one WebAssembly module containing the upstream Standard port, the puzzle/solution codecs and omsim's byte verifier. The browser calls the solver directly; no server or native worker is involved." data-zh="页面加载单个 WebAssembly 模块，其中包含上游 Standard、puzzle/solution codec 和 omsim 字节验证器。浏览器直接调用求解器，不涉及服务器或 native worker。">
-        The page loads one WebAssembly module containing the upstream Standard
-        port, the puzzle/solution codecs and omsim's byte verifier. The browser
-        calls the solver directly; no server or native worker is involved.
-      </p>
-      <p data-en="GitHub Pages serves these static files. It cannot provide custom COOP/COEP headers, so this first target is deliberately single-threaded. A verified solution is downloaded only after the in-process omsim check passes." data-zh="GitHub Pages 提供这些静态文件，无法设置自定义 COOP/COEP 响应头，因此首个目标刻意采用单线程。只有进程内 omsim 检查通过后才会下载已验解。">
-        GitHub Pages serves these static files. It cannot provide custom
-        COOP/COEP headers, so this first target is deliberately single-threaded.
-        A verified solution is downloaded only after the in-process omsim check
-        passes.
-      </p>
-    </section>
   </main>
   <script src="i18n.js"></script>
   <script src="opusoptima.js"></script>

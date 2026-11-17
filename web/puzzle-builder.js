@@ -25,6 +25,7 @@
     activeIndex: 0,
     tool: 'atom',
     atomType: 1,
+    bondBits: 1,
     selected: null,
     bondStart: null,
     production: null,
@@ -120,11 +121,17 @@
       const p = pixel(q, r);
       parts.push(`<polygon data-q="${q}" data-r="${r}" points="${hexPoints(p.x, p.y, UNIT * 0.95)}" fill="#11161e" stroke="#303744" stroke-width="1"/>`);
     }
-    const bondLine = (a, b, selected) => {
-      const pa = pixel(a.q, a.r), pb = pixel(b.q, b.r);
-      parts.push(`<line x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${selected ? '#f2b84b' : '#8a96a8'}" stroke-width="${selected ? 4 : 3}"/>`);
+    const bondColor = (bits) => {
+      if (bits & 2) return '#ff6b6b';
+      if (bits & 8) return '#f2d14b';
+      if (bits & 4) return '#9ca3af';
+      return '#c4cedd';
     };
-    molecule.bonds.forEach((bond) => bondLine(bond.from, bond.to, state.selected?.bond === bond));
+    const bondLine = (bond, selected) => {
+      const pa = pixel(bond.from.q, bond.from.r), pb = pixel(bond.to.q, bond.to.r);
+      parts.push(`<line x1="${pa.x}" y1="${pa.y}" x2="${pb.x}" y2="${pb.y}" stroke="${selected ? '#f2b84b' : bondColor(bond.bits)}" stroke-width="${selected ? 4 : 3}"/>`);
+    };
+    molecule.bonds.forEach((bond) => bondLine(bond, state.selected?.bond === bond));
     for (const atom of molecule.atoms) {
       const p = pixel(atom.q, atom.r);
       const selected = state.selected?.atom === atom;
@@ -170,8 +177,12 @@
         state.bondStart = atom;
         setStatus(tr('Select the second atom for a bond.', '请选择第二个原子以添加键。'));
       } else if (state.bondStart !== atom) {
-        if (!bondBetween(state.bondStart, atom)) {
-          molecule.bonds.push({ bits: 1, from: { q: state.bondStart.q, r: state.bondStart.r }, to: { q, r } });
+        const existing = bondBetween(state.bondStart, atom);
+        if (existing) {
+          existing.bits = state.bondBits;
+          setStatus(tr('Bond type updated.', '已更新键类型。'), 'ok');
+        } else {
+          molecule.bonds.push({ bits: state.bondBits, from: { q: state.bondStart.q, r: state.bondStart.r }, to: { q, r } });
           setStatus(tr('Bond added.', '已添加键。'), 'ok');
         }
         state.bondStart = null;
@@ -309,6 +320,7 @@
     renderGrid();
     const tool = document.getElementById('builder-tool');
     tool.value = state.tool;
+    document.getElementById('builder-bond').value = String(state.bondBits);
   };
 
   // Build the fixed scaffold once; the dynamic areas render below it.
@@ -326,6 +338,7 @@
         <div id="builder-ports" class="builder-ports"></div>
         <div class="row">
           <label><span data-en="Tool" data-zh="工具">Tool</span><select id="builder-tool"><option value="atom" data-en="Atom" data-zh="原子">Atom</option><option value="bond" data-en="Bond" data-zh="键">Bond</option><option value="erase" data-en="Erase" data-zh="删除">Erase</option></select></label>
+          <label><span data-en="Bond type" data-zh="键类型">Bond type</span><select id="builder-bond"><option value="1">Normal · 1</option><option value="2">Red · 2</option><option value="4">Black · 4</option><option value="8">Yellow · 8</option></select></label>
         </div>
         <div id="builder-palette" class="builder-palette"></div>
         <svg id="builder-grid" role="img" aria-label="Molecule editor"></svg>
@@ -337,6 +350,9 @@
 
   document.getElementById('builder-tool').addEventListener('change', (event) => {
     state.tool = event.target.value; state.bondStart = null; render();
+  });
+  document.getElementById('builder-bond').addEventListener('change', (event) => {
+    state.bondBits = Number(event.target.value); render();
   });
   document.getElementById('builder-name').addEventListener('input', (event) => { state.name = event.target.value; });
   document.getElementById('builder-multiplier').addEventListener('input', (event) => { state.multiplier = Number(event.target.value) || 1; });
