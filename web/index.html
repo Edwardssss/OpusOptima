@@ -10,26 +10,27 @@
   <main class="shell">
     <header class="hero">
       <p class="eyebrow">OpusOptima / WebAssembly</p>
-      <h1>Solve an Opus Magnum puzzle locally.</h1>
-      <p class="lede">
+      <h1 data-en="Solve an Opus Magnum puzzle locally." data-zh="在本地求解 Opus Magnum 谜题。">Solve an Opus Magnum puzzle locally.</h1>
+      <p class="lede" data-en="The Standard solver, the binary codecs and the pinned omsim verifier run in this tab. Nothing is uploaded. This is a single-threaded demo; the native isolated <code>legacy-gate</code> transaction remains the publication authority." data-zh="Standard 求解器、二进制 codec 和锁定版 omsim 验证器都在此标签页内运行，不会上传任何内容。当前是单线程演示；native 隔离的 <code>legacy-gate</code> 发布事务仍是权威路径。">
         The Standard solver, the binary codecs and the pinned omsim verifier run
         in this tab. Nothing is uploaded. This is a single-threaded demo; the
         native isolated <code>legacy-gate</code> transaction remains the
         publication authority.
       </p>
+      <button id="lang-toggle" class="lang-toggle" type="button">中文</button>
     </header>
 
     <section class="panel">
       <label class="drop" id="drop">
         <input id="puzzle" type="file" accept=".puzzle,application/octet-stream">
-        <span class="drop-title">Choose a .puzzle file</span>
-        <span class="drop-hint">or drop it here</span>
+        <span class="drop-title" data-en="Choose a .puzzle file" data-zh="选择 .puzzle 文件">Choose a .puzzle file</span>
+        <span class="drop-hint" data-en="or drop it here" data-zh="或拖放到这里">or drop it here</span>
       </label>
       <div class="row">
-        <button id="solve" disabled>Solve</button>
-        <a id="download" class="secondary disabled" download>Download .solution</a>
+        <button id="solve" disabled data-en="Solve" data-zh="求解">Solve</button>
+        <a id="download" class="secondary disabled" download data-en="Download .solution" data-zh="下载 .solution">Download .solution</a>
       </div>
-      <p id="status" class="status" role="status">Waiting for a puzzle.</p>
+      <p id="status" class="status" role="status" data-en="Waiting for a puzzle." data-zh="等待题目。">Waiting for a puzzle.</p>
       <div id="metrics" class="metrics" hidden>
         <div><span>cycles</span><strong id="m-cycles">—</strong></div>
         <div><span>cost</span><strong id="m-cost">—</strong></div>
@@ -41,8 +42,8 @@
     <section id="viewer" class="panel viewer" hidden>
       <div class="viewer-head">
         <div>
-          <p class="eyebrow">Solution view</p>
-          <h2>Machine layout and tape timeline</h2>
+          <p class="eyebrow" data-en="Solution view" data-zh="解视图">Solution view</p>
+          <h2 data-en="Machine layout and tape timeline" data-zh="机器布局与 tape 时间线">Machine layout and tape timeline</h2>
         </div>
         <div class="transport">
           <button id="play" type="button">Play</button>
@@ -52,41 +53,43 @@
       </div>
       <svg id="scene" role="img" aria-label="Solution machine layout"></svg>
       <div id="tapes" class="tapes"></div>
-      <p class="fineprint">
+      <p class="fineprint" data-en="The animation uses omsim's per-cycle physics trace; the in-process omsim result above is the verification record." data-zh="动画使用 omsim 的逐周期物理轨迹；上方的进程内 omsim 结果就是验证记录。">
         The animation uses omsim's per-cycle physics trace; the in-process omsim
         result above is the verification record.
       </p>
     </section>
 
+    <section id="puzzle-builder" class="panel builder"></section>
+
     <section id="editor" class="panel editor">
-      <p class="eyebrow">Puzzle editor</p>
-      <h2>Build a simple two-molecule puzzle</h2>
-      <p class="fineprint">
+      <p class="eyebrow" data-en="Puzzle editor" data-zh="题目编辑器">Puzzle editor</p>
+      <h2 data-en="Build a simple two-molecule puzzle" data-zh="构建简单的双分子题目">Build a simple two-molecule puzzle</h2>
+      <p class="fineprint" data-en="One input molecule and one output molecule, with optional bonds; no production metadata. Atom lines use game symbols, for example <code>S 0 0</code>; bond lines use <code>bits q1 r1 q2 r2</code>, for example <code>1 0 0 1 0</code>." data-zh="一个输入分子和一个输出分子，可选键；不包含 production metadata。原子行使用游戏符号，例如 <code>S 0 0</code>；键行格式为 <code>bits q1 r1 q2 r2</code>，例如 <code>1 0 0 1 0</code>。">
         One input molecule and one output molecule, with optional bonds; no
         production metadata. Atom lines use game symbols, for example <code>S 0 0</code>;
         bond lines use <code>bits q1 r1 q2 r2</code>, for example <code>1 0 0 1 0</code>.
       </p>
       <div class="editor-grid">
-        <label>Name<input id="edit-name" value="Browser puzzle"></label>
-        <label>Output multiplier<input id="edit-multiplier" type="number" min="1" max="12" value="1"></label>
-        <label>Input atoms<textarea id="edit-input" rows="3">S 0 0</textarea></label>
-        <label>Output atoms<textarea id="edit-output" rows="3">S 0 0</textarea></label>
-        <label>Input bonds<textarea id="edit-input-bonds" rows="2" placeholder="bits q1 r1 q2 r2"></textarea></label>
-        <label>Output bonds<textarea id="edit-output-bonds" rows="2" placeholder="bits q1 r1 q2 r2"></textarea></label>
+        <label><span data-en="Name" data-zh="名称">Name</span><input id="edit-name" value="Browser puzzle"></label>
+        <label><span data-en="Output multiplier" data-zh="输出倍数">Output multiplier</span><input id="edit-multiplier" type="number" min="1" max="12" value="1"></label>
+        <label><span data-en="Input atoms" data-zh="输入原子">Input atoms</span><textarea id="edit-input" rows="3">S 0 0</textarea></label>
+        <label><span data-en="Output atoms" data-zh="输出原子">Output atoms</span><textarea id="edit-output" rows="3">S 0 0</textarea></label>
+        <label><span data-en="Input bonds" data-zh="输入键">Input bonds</span><textarea id="edit-input-bonds" rows="2" placeholder="bits q1 r1 q2 r2"></textarea></label>
+        <label><span data-en="Output bonds" data-zh="输出键">Output bonds</span><textarea id="edit-output-bonds" rows="2" placeholder="bits q1 r1 q2 r2"></textarea></label>
       </div>
       <div class="row">
-        <button id="build" type="button">Build and load</button>
-        <a id="download-puzzle" class="secondary disabled" download>Download .puzzle</a>
+        <button id="build" type="button" data-en="Build and load" data-zh="构建并加载">Build and load</button>
+        <a id="download-puzzle" class="secondary disabled" download data-en="Download .puzzle" data-zh="下载 .puzzle">Download .puzzle</a>
       </div>
-      <p id="editor-status" class="status" role="status">Edit atoms, then build.</p>
+      <p id="editor-status" class="status" role="status" data-en="Edit atoms, then build." data-zh="编辑原子后构建。">Edit atoms, then build.</p>
       <details class="advanced">
-        <summary>Advanced JSON (multi-port and production metadata)</summary>
+        <summary data-en="Advanced JSON (multi-port and production metadata)" data-zh="高级 JSON（多端口与 production metadata）">Advanced JSON (multi-port and production metadata)</summary>
         <p class="fineprint">
-          Arrays under <code>inputs</code>/<code>outputs</code> become separate
+          <span data-en="Arrays under <code>inputs</code>/<code>outputs</code> become separate ports. Optional <code>production</code> accepts <code>shrinkLeft</code>, <code>shrinkRight</code>, <code>isolation</code>, <code>chambers</code>, <code>conduits</code> and <code>vials</code>." data-zh="<code>inputs</code>/<code>outputs</code> 数组会变成独立端口。可选 <code>production</code> 支持 <code>shrinkLeft</code>、<code>shrinkRight</code>、<code>isolation</code>、<code>chambers</code>、<code>conduits</code> 和 <code>vials</code>。">Arrays under <code>inputs</code>/<code>outputs</code> become separate
           ports. Optional <code>production</code> accepts
           <code>shrinkLeft</code>, <code>shrinkRight</code>,
           <code>isolation</code>, <code>chambers</code>,
-          <code>conduits</code> and <code>vials</code>.
+          <code>conduits</code> and <code>vials</code>.</span>
         </p>
         <textarea id="edit-json" rows="14" spellcheck="false">{
   "name": "Advanced browser puzzle",
@@ -110,24 +113,24 @@
   }
 }</textarea>
         <div class="row">
-          <button id="build-json" type="button">Build advanced</button>
-          <a id="download-json-puzzle" class="secondary disabled" download>Download .puzzle</a>
+          <button id="build-json" type="button" data-en="Build advanced" data-zh="构建高级题目">Build advanced</button>
+          <a id="download-json-puzzle" class="secondary disabled" download data-en="Download .puzzle" data-zh="下载 .puzzle">Download .puzzle</a>
         </div>
-        <p id="advanced-status" class="status" role="status">Edit JSON, then build.</p>
+        <p id="advanced-status" class="status" role="status" data-en="Edit JSON, then build." data-zh="编辑 JSON 后构建。">Edit JSON, then build.</p>
       </details>
     </section>
 
     <section id="layout-editor" class="panel layout-editor">
-      <p class="eyebrow">Machine layout</p>
-      <h2>Place mechanisms and glyphs</h2>
-      <p class="fineprint">
+      <p class="eyebrow" data-en="Machine layout" data-zh="机器布局">Machine layout</p>
+      <h2 data-en="Place mechanisms and glyphs" data-zh="放置机械与 glyph">Place mechanisms and glyphs</h2>
+      <p class="fineprint" data-en="The puzzle format stores molecules and production metadata, not free-form mechanisms. This independent <code>.layout.json</code> editor places arms, pistons, barons, tracks and glyphs for planning and preview; it does not alter the puzzle file or the solver's emitted machine." data-zh="puzzle 格式保存分子和 production metadata，不保存自由机械布局。这个独立的 <code>.layout.json</code> 编辑器可摆放 arm、piston、baron、track 和 glyph，用于规划与预览；它不会修改 puzzle 或求解器输出的机器。">
         The puzzle format stores molecules and production metadata, not free-form
         mechanisms. This independent <code>.layout.json</code> editor places
         arms, pistons, barons, tracks and glyphs for planning and preview; it does
         not alter the puzzle file or the solver's emitted machine.
       </p>
       <div class="layout-toolbar">
-        <label>Tool<select id="layout-tool">
+        <label><span data-en="Tool" data-zh="工具">Tool</span><select id="layout-tool">
           <option value="arm1">arm1</option><option value="piston">piston</option>
           <option value="baron">baron</option><option value="track">track</option>
           <option value="glyph-calcification">glyph-calcification</option>
@@ -140,29 +143,29 @@
           <option value="glyph-dispersion">glyph-dispersion</option>
           <option value="erase">erase</option>
         </select></label>
-        <label>Rotation<select id="layout-rotation">
+        <label><span data-en="Rotation" data-zh="旋转">Rotation</span><select id="layout-rotation">
           <option>0</option><option>1</option><option>2</option>
           <option>3</option><option>4</option><option>5</option>
         </select></label>
-        <button id="layout-delete" type="button">Delete selected</button>
-        <button id="layout-clear" type="button">Clear</button>
-        <a id="layout-save" class="secondary" download>Save .layout.json</a>
-        <label class="file-button">Load layout<input id="layout-load" type="file" accept=".json,application/json"></label>
+        <button id="layout-delete" type="button" data-en="Delete selected" data-zh="删除选中">Delete selected</button>
+        <button id="layout-clear" type="button" data-en="Clear" data-zh="清空">Clear</button>
+        <a id="layout-save" class="secondary" download data-en="Save .layout.json" data-zh="保存 .layout.json">Save .layout.json</a>
+        <label class="file-button"><span data-en="Load layout" data-zh="加载布局">Load layout</span><input id="layout-load" type="file" accept=".json,application/json"></label>
       </div>
       <div class="layout-grid"><svg id="layout-svg" role="img" aria-label="Machine layout editor"></svg></div>
       <textarea id="layout-json" rows="5" spellcheck="false" placeholder="Optional layout JSON; Apply replaces the editor contents."></textarea>
-      <div class="row"><button id="layout-apply" type="button">Apply JSON</button></div>
-      <p id="layout-status" class="status" role="status">Click a cell to place the selected tool.</p>
+      <div class="row"><button id="layout-apply" type="button" data-en="Apply JSON" data-zh="应用 JSON">Apply JSON</button></div>
+      <p id="layout-status" class="status" role="status" data-en="Click a cell to place the selected tool." data-zh="点击格子放置当前工具。">Click a cell to place the selected tool.</p>
     </section>
 
     <section class="notes">
-      <h2>What runs here</h2>
-      <p>
+      <h2 data-en="What runs here" data-zh="这里运行什么">What runs here</h2>
+      <p data-en="The page loads one WebAssembly module containing the upstream Standard port, the puzzle/solution codecs and omsim's byte verifier. The browser calls the solver directly; no server or native worker is involved." data-zh="页面加载单个 WebAssembly 模块，其中包含上游 Standard、puzzle/solution codec 和 omsim 字节验证器。浏览器直接调用求解器，不涉及服务器或 native worker。">
         The page loads one WebAssembly module containing the upstream Standard
         port, the puzzle/solution codecs and omsim's byte verifier. The browser
         calls the solver directly; no server or native worker is involved.
       </p>
-      <p>
+      <p data-en="GitHub Pages serves these static files. It cannot provide custom COOP/COEP headers, so this first target is deliberately single-threaded. A verified solution is downloaded only after the in-process omsim check passes." data-zh="GitHub Pages 提供这些静态文件，无法设置自定义 COOP/COEP 响应头，因此首个目标刻意采用单线程。只有进程内 omsim 检查通过后才会下载已验解。">
         GitHub Pages serves these static files. It cannot provide custom
         COOP/COEP headers, so this first target is deliberately single-threaded.
         A verified solution is downloaded only after the in-process omsim check
@@ -170,8 +173,10 @@
       </p>
     </section>
   </main>
+  <script src="i18n.js"></script>
   <script src="opusoptima.js"></script>
   <script src="app.js"></script>
   <script src="layout.js"></script>
+  <script src="puzzle-builder.js"></script>
 </body>
 </html>

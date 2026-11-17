@@ -72,6 +72,7 @@
   const apply = document.getElementById('layout-apply');
   const status = document.getElementById('layout-status');
   const UNIT = 22;
+  const tr = (en, zh) => (globalThis.OpusI18n?.lang === 'zh' ? zh : en);
   let layout = createLayout();
   let selected = null;
 
@@ -140,31 +141,31 @@
           if (hit) {
             layout.objects = layout.objects.filter((object) => object !== hit);
             if (selected === hit) selected = null;
-            setStatus(`Erased ${q},${r}.`);
+            setStatus(tr(`Erased ${q},${r}.`, `已擦除 ${q},${r}。`));
             render();
           }
           return;
         }
-        if (hit) { selected = hit; setStatus(`Selected ${hit.type} at ${q},${r}.`); render(); return; }
+        if (hit) { selected = hit; setStatus(tr(`Selected ${hit.type} at ${q},${r}.`, `已选择 ${q},${r} 的 ${hit.type}。`)); render(); return; }
         if (tool.value === 'track' && selected?.type === 'track') {
           const cells = cellsOf(selected);
           const adjacent = cells.some(([cq, cr]) => Math.abs(cq - q) <= 1 && Math.abs(cr - r) <= 1 &&
             !(cq === q && cr === r) && Math.abs((cq + cr) - (q + r)) <= 1);
           if (adjacent && !cells.some(([cq, cr]) => cq === q && cr === r)) {
             selected.cells = [...cells, [q, r]];
-            setStatus(`Extended track to ${q},${r}.`);
+            setStatus(tr(`Extended track to ${q},${r}.`, `已扩展 track 到 ${q},${r}。`));
             render();
             return;
           }
         }
         selected = addObject(layout, { type: tool.value, q, r, rotation: Number(rotation.value) });
-        setStatus(`Placed ${selected.type} at ${q},${r}.`);
+        setStatus(tr(`Placed ${selected.type} at ${q},${r}.`, `已放置 ${selected.type} 于 ${q},${r}。`));
         render();
       });
     }
   };
 
-  tool.addEventListener('change', () => setStatus(`Tool: ${tool.value}.`));
+  tool.addEventListener('change', () => setStatus(tr(`Tool: ${tool.value}.`, `工具：${tool.value}。`)));
   rotation.addEventListener('change', () => {
     if (selected) { selected.rotation = Number(rotation.value); render(); }
   });
@@ -172,10 +173,10 @@
     if (!selected) return;
     layout.objects = layout.objects.filter((object) => object !== selected);
     selected = null;
-    setStatus('Deleted selected object.');
+    setStatus(tr('Deleted selected object.', '已删除选中对象。'));
     render();
   });
-  clearButton.addEventListener('click', () => { layout = createLayout(); selected = null; setStatus('Layout cleared.'); render(); });
+  clearButton.addEventListener('click', () => { layout = createLayout(); selected = null; setStatus(tr('Layout cleared.', '布局已清空。')); render(); });
   save.addEventListener('click', () => {
     const blob = new Blob([toJSON(layout)], { type: 'application/json' });
     save.href = URL.createObjectURL(blob);
@@ -184,11 +185,11 @@
   });
   load.addEventListener('change', async () => {
     try {
-      layout = fromJSON(await load.files[0].text()); selected = null; setStatus(`Loaded ${layout.objects.length} objects.`, 'ok'); render();
+      layout = fromJSON(await load.files[0].text()); selected = null; setStatus(tr(`Loaded ${layout.objects.length} objects.`, `已加载 ${layout.objects.length} 个对象。`), 'ok'); render();
     } catch (error) { setStatus(String(error.message || error), 'bad'); }
   });
   apply.addEventListener('click', () => {
-    try { layout = fromJSON(json.value); selected = null; setStatus(`Applied ${layout.objects.length} objects.`, 'ok'); render(); }
+    try { layout = fromJSON(json.value); selected = null; setStatus(tr(`Applied ${layout.objects.length} objects.`, `已应用 ${layout.objects.length} 个对象。`), 'ok'); render(); }
     catch (error) { setStatus(String(error.message || error), 'bad'); }
   });
   render();

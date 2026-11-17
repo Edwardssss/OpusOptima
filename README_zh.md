@@ -318,7 +318,7 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 不修改 CLI 默认、文件归档或 native worker 路径。纯 WASM 可以只用 GitHub Pages 托管
 （静态文件、单线程 Web Worker、无自定义 COOP/COEP 头）；但 Pages 不能运行 native CLI、
 `posix_spawn` 验证器或 `libverify.so`，需要这些时让 Pages 只做前端，求解/验证放到
-自建容器或服务器后端。首个目标已经放在 `wasm/`，静态页面在 `web/`：单线程模块包含上游 Standard、
+自建容器或服务器后端。首个目标已经放在 `wasm/`，双语静态页面在 `web/`：单线程模块包含上游 Standard、
 二进制 codec 和 omsim，通过字节 C ABI 暴露 `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_trace` / `opusoptima_make_puzzle` / `opusoptima_make_puzzle_json`，
 由 `.github/workflows/pages.yml` 发布 `web/dist`。本地构建：
 
@@ -326,7 +326,7 @@ node tests/functional_test/LocalCoverage.cjs result/<另一个新的空目录> \
 emcmake cmake -S wasm -B build-wasm -DCMAKE_BUILD_TYPE=Release
 emmake cmake --build build-wasm --parallel 2
 mkdir -p web/dist
-cp web/index.html web/app.js web/style.css web/dist/
+cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/dist/
 cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 ```
 
@@ -337,7 +337,9 @@ cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 逐周期物理轨迹（原子、键、机械臂和碰撞驱动的运动）及逐臂 tape 时间线。
 基础编辑器通过 `opusoptima_make_puzzle` 支持原子和键；高级 JSON 编辑器通过
 `opusoptima_make_puzzle_json` 支持多个输入/输出端口和 production metadata
-（chambers、conduits、vials、shrink/isolation）。另有独立的机器布局编辑器，
+（chambers、conduits、vials、shrink/isolation）。可视化构建器可在六边形网格上
+编辑任意原子、键和端口，并用表单编辑 production；页面支持 EN/中文切换。
+另有独立的机器布局编辑器，
 可在六边形网格上摆放 arm1/piston/baron/track 和 glyph，并保存为 `.layout.json`；
 它是规划/预览格式，不是 `.puzzle` 字段，因为游戏 puzzle 格式本身不存储机械布局。
 带 native 权威的后端仍属后续工作。

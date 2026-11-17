@@ -31,6 +31,7 @@
     instructions: document.getElementById('m-instructions'),
   };
 
+  const tr = (en, zh) => (globalThis.OpusI18n?.lang === 'zh' ? zh : en);
   let modulePromise;
   let selectedFile = null;
   let puzzleBytes = null;
@@ -68,7 +69,7 @@
     scene = null;
     trace = null;
     stopPlayback();
-    setStatus(`${file.name} loaded (${puzzleBytes.length} bytes).`);
+    setStatus(tr(`${file.name} loaded (${puzzleBytes.length} bytes).`, `已加载 ${file.name}（${puzzleBytes.length} 字节）。`));
   };
 
   const callSolver = (module) => {
@@ -174,7 +175,7 @@
     downloadPuzzle.download = `${name}.puzzle`;
     downloadPuzzle.classList.remove('disabled');
     status(`Built "${name}" (${bytes.length} bytes). Press Solve.`, 'ok');
-    setStatus(`Loaded generated puzzle "${name}".`);
+    setStatus(tr(`Loaded generated puzzle "${name}".`, `已加载生成的题目 "${name}"。`));
   };
 
   const buildPuzzle = async () => {
@@ -468,7 +469,7 @@
   const stopPlayback = () => {
     if (playTimer) clearInterval(playTimer);
     playTimer = null;
-    playButton.textContent = 'Play';
+    playButton.textContent = tr('Play', '播放');
   };
 
   solveButton.addEventListener('click', async () => {
@@ -477,15 +478,15 @@
     download.classList.add('disabled');
     download.removeAttribute('href');
     metrics.hidden = true;
-    setStatus('Loading WebAssembly module…');
+    setStatus(tr('Loading WebAssembly module…', '正在加载 WebAssembly 模块…'));
     try {
       const module = await ensureModule();
-      setStatus('Solving with the upstream Standard port…');
+      setStatus(tr('Solving with the upstream Standard port…', '正在使用上游 Standard 求解…'));
       await new Promise((resolve) => setTimeout(resolve, 20));
       const started = performance.now();
       const solution = callSolver(module);
       const elapsed = Math.round(performance.now() - started);
-      setStatus('Verifying with the in-process omsim check…');
+      setStatus(tr('Verifying with the in-process omsim check…', '正在使用进程内 omsim 验证…'));
       const report = callVerifier(module, solution);
       if (report.status !== 'passed') {
         throw new Error(`omsim rejected the candidate: ${report.detail || report.status}`);
@@ -506,7 +507,7 @@
       download.href = URL.createObjectURL(blob);
       download.download = `${base}.solution`;
       download.classList.remove('disabled');
-      setStatus(`Solved and verified in ${elapsed} ms.`, 'ok');
+      setStatus(tr(`Solved and verified in ${elapsed} ms.`, `求解并验证完成，用时 ${elapsed} ms。`), 'ok');
     } catch (error) {
       setStatus(error?.message || String(error), 'bad');
     } finally {
@@ -518,7 +519,7 @@
   playButton.addEventListener('click', () => {
     if (!scene) return;
     if (playTimer) { stopPlayback(); return; }
-    playButton.textContent = 'Pause';
+    playButton.textContent = tr('Pause', '暂停');
     let t = Number(scrub.value);
     playTimer = setInterval(() => {
       t += 1;
@@ -587,4 +588,10 @@
     const file = ev.dataTransfer?.files?.[0];
     if (file) readFile(file).catch((error) => setStatus(String(error), 'bad'));
   });
+
+  window.OpusUI = {
+    ensureModule,
+    loadGeneratedPuzzle: (bytes, name) => useGeneratedPuzzle(bytes, name, setStatus),
+    setStatus,
+  };
 })();

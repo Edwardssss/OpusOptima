@@ -38,6 +38,10 @@ jobs:
         run: emmake cmake --build build-wasm --parallel 2
       - name: Smoke-test the module
         run: |
+          node --check web/app.js
+          node --check web/i18n.js
+          node --check web/layout.js
+          node --check web/puzzle-builder.js
           node web/smoke-test.cjs build-wasm/opusoptima.js asset/puzzle/easy/just-salt.puzzle
           node web/editor-smoke.cjs build-wasm/opusoptima.js
           node web/json-smoke.cjs build-wasm/opusoptima.js
@@ -45,7 +49,7 @@ jobs:
       - name: Assemble static site
         run: |
           mkdir -p web/dist
-          cp web/index.html web/app.js web/style.css web/dist/
+          cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/dist/
           cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
           touch web/dist/.nojekyll
       - uses: actions/configure-pages@v5

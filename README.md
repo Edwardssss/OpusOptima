@@ -438,7 +438,7 @@ or the native worker path. Pure WASM can be hosted on GitHub Pages (static files
 single-thread Web Worker, no custom COOP/COEP headers). Pages cannot run the
 native CLI, `posix_spawn` verifier or `libverify.so`; for those, keep the frontend
 on Pages and put solving/verification on a self-hosted/container backend. The
-first target is in `wasm/` with the static page in `web/`. It builds one
+first target is in `wasm/` with the bilingual static page in `web/`. It builds one
 single-threaded module containing the upstream Standard port, the binary codecs
 and omsim, exposes `opusoptima_solve` / `opusoptima_verify` / `opusoptima_describe` / `opusoptima_trace` / `opusoptima_make_puzzle` / `opusoptima_make_puzzle_json` through a byte C ABI,
 and deploys `web/dist` with `.github/workflows/pages.yml`. Local build:
@@ -447,7 +447,7 @@ and deploys `web/dist` with `.github/workflows/pages.yml`. Local build:
 emcmake cmake -S wasm -B build-wasm -DCMAKE_BUILD_TYPE=Release
 emmake cmake --build build-wasm --parallel 2
 mkdir -p web/dist
-cp web/index.html web/app.js web/style.css web/dist/
+cp web/index.html web/app.js web/i18n.js web/layout.js web/puzzle-builder.js web/style.css web/dist/
 cp build-wasm/opusoptima.js build-wasm/opusoptima.wasm web/dist/
 ```
 
@@ -459,7 +459,9 @@ omsim's per-cycle physics trace (atoms, bonds, arms and collision-driven
 movement) beside the tape timeline. The basic editor supports atoms and bonds;
 the advanced JSON editor supports multiple input/output ports and production
 metadata (chambers, conduits, vials, shrink/isolation flags) through
-`opusoptima_make_puzzle_json`. An independent machine-layout editor places
+`opusoptima_make_puzzle_json`. A visual builder edits arbitrary atoms, bonds and
+ports on a hex grid and exposes production lists without JSON; the page has an
+EN/中文 switch. An independent machine-layout editor places
 arm1/piston/baron/track and glyph objects on a hex grid and saves
 `.layout.json`; it is a planning/preview format, not a `.puzzle` field, because
 the game puzzle format does not store mechanism placement. A server-backed
