@@ -4,16 +4,22 @@
 是有界候选组合；CLI 的额外 portfolio 会优先尝试上游 Standard 移植。
 
 **网页演示：** https://edwardssss.github.io/OpusOptima/
+**English：** [README.md](README.md)
 
 ## 当前状态
+
+对比对象是 **OpusSolver oracle**：在同一 146 题参考题库上，
+[gtw123/OpusSolver@fdedd3f](https://github.com/gtw123/OpusSolver/tree/fdedd3f01a238b941ceba8bace7ea35cbd3b8c41)
+给出的 cost/cycles/area 最优解。
 
 | 指标 | 数值 |
 |---|---|
 | 参考题库覆盖 | 146/146 字节去重题目 |
-| cost / oracle | **0.8567×**（89,825 / 104,855） |
-| cycles / oracle | **0.7420×**（66,427 / 89,524） |
-| area / oracle | **0.8211×**（20,285 / 24,705） |
-| 三项全胜 / 全负 | 55 / 0 |
+| cost：OpusOptima / OpusSolver oracle | **0.8567×**（89,825 / 104,855） |
+| cycles：OpusOptima / OpusSolver oracle | **0.7420×**（66,427 / 89,524） |
+| area：OpusOptima / OpusSolver oracle | **0.8211×**（20,285 / 24,705） |
+| 各槽胜/平/负（cost、cycles、area） | 75/70/1、66/76/4、70/73/3 |
+| 三项全胜 / 全负（对 oracle） | 55 / 0 |
 | 外部 2401 题库抽样 | **300/300** |
 | 完整 C++ 测试 | 1103 项：1098 通过、5 跳过、0 失败 |
 

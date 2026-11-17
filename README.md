@@ -5,17 +5,23 @@ The default `assembly` solver is a bounded portfolio; the upstream Standard port
 offered first by the CLI's extra portfolio.
 
 **Browser demo:** https://edwardssss.github.io/OpusOptima/
+**中文说明：** [README_zh.md](README_zh.md)
 
 ## Status
+
+Comparison target: the **OpusSolver oracle** — the best cost/cycles/area solutions
+produced by [gtw123/OpusSolver@fdedd3f](https://github.com/gtw123/OpusSolver/tree/fdedd3f01a238b941ceba8bace7ea35cbd3b8c41)
+on the same 146-puzzle reference corpus.
 
 | Metric | Value |
 |---|---|
 | Reference corpus | 146/146 byte-distinct puzzles |
-| Cost vs OpusSolver oracle | **0.8567×** (89,825 vs 104,855) |
-| Cycles vs oracle | **0.7420×** (66,427 vs 89,524) |
-| Area vs oracle | **0.8211×** (20,285 vs 24,705) |
-| Puzzles winning all three slots | 55/146 |
-| Puzzles losing all three slots | 0/146 |
+| Cost: OpusOptima vs OpusSolver oracle | **0.8567×** (89,825 vs 104,855) |
+| Cycles: OpusOptima vs OpusSolver oracle | **0.7420×** (66,427 vs 89,524) |
+| Area: OpusOptima vs OpusSolver oracle | **0.8211×** (20,285 vs 24,705) |
+| Slot wins/ties/losses vs oracle (cost, cycles, area) | 75/70/1, 66/76/4, 70/73/3 |
+| Puzzles winning all three slots vs oracle | 55/146 |
+| Puzzles losing all three slots vs oracle | 0/146 |
 | External 2401-puzzle sample | **300/300** |
 | Full C++ suite | 1103 tests: 1098 passed, 5 skipped, 0 failed |
 
